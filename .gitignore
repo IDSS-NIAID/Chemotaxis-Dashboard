@@ -1,0 +1,14 @@
+.RData
+.Rhistory
+.Rproj.user
+*.jpg
+*.RProj
+.DS_Store
+*.mov
+*.csv
+*.tif
+*.txt
+*.gif
+*.png
+*.mp4
+*.zip
