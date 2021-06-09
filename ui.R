@@ -1,9 +1,11 @@
 library(shiny)
 library(shinydashboard)
-library(shinybusy)
+#library(shinybusy)
+library(shinyWidgets)
 
-options(shiny.maxRequestSize=30*1024^2)
-use_busy_spinner()
+# allows for large file upload size
+#options(shiny.maxRequestSize=30*1024^2)
+#use_busy_spinner()
 
 dashboardPage(
     #################### Header ####################
@@ -12,10 +14,10 @@ dashboardPage(
     #################### Sidebar ####################
     dashboardSidebar(
         sidebarMenu(
-            menuItem("File Upload", tabName = 'fileUpload', icon = icon('upload')),
-            menuItem("Figures", tabName = 'figures', icon = icon('chart-line')),
-            menuItem("Videos", tabName = 'videos', icon = icon('film')),
-            menuItem("Download Results", tabName = 'fileDownload', icon = icon('download'))
+            menuItem("Sample Selection", tabName = 'samples', icon = icon('list'))#,
+            #menuItem("Figures", tabName = 'figures', icon = icon('chart-line')),
+            #menuItem("Videos", tabName = 'videos', icon = icon('film')),
+            #menuItem("Download Results", tabName = 'fileDownload', icon = icon('download'))
         )
     ),
     
@@ -24,65 +26,71 @@ dashboardPage(
         
         
         ########## File Upload ##########
-        tabItem(tabName = 'fileUpload',
-                fluidRow(column(1), h3("Upload Files")),
+        tabItem(tabName = 'samples',
+                fluidRow(h3("Select Samples to View")),
+                fluidRow(
+                    column(width = 9, offset = 1,
+                           selectizeGroupUI(
+                               id = "sampleFilters",
+                               inline = FALSE,
+                               params = list(
+                                   experiment = list(inputId = "experiment", title = "Experiment (date)", placeholder = 'select'),
+                                   sample = list(inputId = "sample", title = "Sample", placeholder = 'select'),
+                                   treatment = list(inputId = "treatment", title = "Treatment", placeholder = 'select'),
+                                   channel = list(inputId = "channel", title = "Channel", placeholder = 'select')
+                               )
+                           )
+                    )),
                 fluidRow(
                     column(1),
                     column(9,
-                           fileInput('f',
-                                     'Raw clips for upload',
-                                     multiple = TRUE,
-                                     accept = '.gif'))),
-                fluidRow(
-                    column(1),
-                    column(9,
-                           plotOutput('ori_vid')))
-                ),
+                           tableOutput("selectedSamples")))
+                )#,
         
         
         ########## Figure ##########
-        tabItem(tabName = 'figures',
-                fluidRow(column(1), h3('Figures')),
-                fluidRow(
-                    column(1),
-                    column(10,
-                           plotOutput('hairball'))),
-                fluidRow(
-                    column(1),
-                    column(10,
-                           plotOutput('vy'))),
-                fluidRow(
-                    column(1),
-                    column(10,
-                           plotOutput('vx')))
-                ),
+        # tabItem(tabName = 'figures',
+        #         fluidRow(column(1), h3('Figures')),
+        #         fluidRow(
+        #             column(1),
+        #             column(10,
+        #                    plotOutput('hairball'))),
+        #         fluidRow(
+        #             column(1),
+        #             column(10,
+        #                    plotOutput('vy'))),
+        #         fluidRow(
+        #             column(1),
+        #             column(10,
+        #                    plotOutput('vx')))
+        #         ),
         
         
         ########## Videos ##########
-        tabItem(tabName = 'videos',
-                fluidRow(column(1), h3('Processed Video')),
-                fluidRow(
-                    column(1),
-                    column(12,
-                           plotOutput('processed_vid')))
-                ),
+        # tabItem(tabName = 'videos',
+        #         fluidRow(column(1), h3('Processed Video')),
+        #         fluidRow(
+        #             column(1),
+        #             column(12,
+        #                    plotOutput('processed_vid')))
+        #         ),
         
         
         ########## Downloads #########
-        tabItem(tabName = 'fileDownload',
-                fluidRow(column(1), h3("Download Results")),
-                fluidRow(
-                    column(1),
-                    column(9,
-                           downloadButton('downloadResults', 'Download Results'))),
-                fluidRow(
-                    column(1),
-                    column(9,
-                       downloadButton('downloadFigures', 'Download Figures'))),
-                fluidRow(
-                    column(1),
-                    column(9,
-                           downloadButton('downloadVideo', 'Download Processed Video')))
-                )
+        # tabItem(tabName = 'fileDownload',
+        #         fluidRow(column(1), h3("Download Results")),
+        #         fluidRow(
+        #             column(1),
+        #             column(9,
+        #                    downloadButton('downloadResults', 'Download Results'))),
+        #         fluidRow(
+        #             column(1),
+        #             column(9,
+        #                downloadButton('downloadFigures', 'Download Figures'))),
+        #         fluidRow(
+        #             column(1),
+        #             column(9,
+        #                    downloadButton('downloadVideo', 'Download Processed Video')))
+        #         )
         ))
 )

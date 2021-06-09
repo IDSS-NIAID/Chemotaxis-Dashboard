@@ -129,7 +129,7 @@ channel_summ <- filter(track_summ, !is.na(smooth_v_y)) %>%
                                 ~ smooth.spline(.x, .y, df = 7, keep.data = FALSE))) %>%
     ungroup() %>%
     
-    filter(treatment != 'fmlf (did not work)')
+    filter(is.na(treatment) | treatment != 'fmlf (did not work)')
 
 # additonal measures that may be of interest
 # length of each track
