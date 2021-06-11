@@ -14,8 +14,8 @@ dashboardPage(
     #################### Sidebar ####################
     dashboardSidebar(
         sidebarMenu(
-            menuItem("Sample Selection", tabName = 'samples', icon = icon('list'))#,
-            #menuItem("Figures", tabName = 'figures', icon = icon('chart-line')),
+            menuItem("Sample Selection", tabName = 'samples', icon = icon('list')),
+            menuItem("Figures", tabName = 'figures', icon = icon('chart-line'))#,
             #menuItem("Videos", tabName = 'videos', icon = icon('film')),
             #menuItem("Download Results", tabName = 'fileDownload', icon = icon('download'))
         )
@@ -25,7 +25,7 @@ dashboardPage(
     dashboardBody(tabItems(
         
         
-        ########## File Upload ##########
+        ########## Sample Selection ##########
         tabItem(tabName = 'samples',
                 fluidRow(h3("Select Samples to View")),
                 fluidRow(
@@ -45,25 +45,30 @@ dashboardPage(
                     column(1),
                     column(9,
                            tableOutput("selectedSamples")))
-                )#,
+                ),
         
         
         ########## Figure ##########
-        # tabItem(tabName = 'figures',
-        #         fluidRow(column(1), h3('Figures')),
-        #         fluidRow(
-        #             column(1),
-        #             column(10,
-        #                    plotOutput('hairball'))),
-        #         fluidRow(
-        #             column(1),
-        #             column(10,
-        #                    plotOutput('vy'))),
-        #         fluidRow(
-        #             column(1),
-        #             column(10,
-        #                    plotOutput('vx')))
-        #         ),
+        tabItem(tabName = 'figures',
+                fluidRow(column(1), h3('Figures')),
+                fluidRow(column(10, 
+                                radioButtons('splitPlotsBy', 'Select variable(s) to split by', 
+                                             selected = 'None', inline = TRUE,
+                                             choices = c('Experiment', 'Channel', 'Sample', 'Treatment', 
+                                                         'Sample/Treatment', 'None')))),
+                # fluidRow(
+                #     column(1),
+                #     column(10,
+                #            plotOutput('hairball'))),
+                fluidRow(
+                    column(1),
+                    column(10,
+                           plotOutput('vy'))),
+                fluidRow(
+                    column(1),
+                    column(10,
+                           plotOutput('vx')))
+                )#,
         
         
         ########## Videos ##########

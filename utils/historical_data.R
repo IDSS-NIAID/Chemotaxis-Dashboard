@@ -4,7 +4,7 @@
 #   track inferences have been downloaded and extracted to the root/raw directory (e.g. https://abcs-amp.cancer.gov/uploads/external/178/78ca162546b0f38ad63b453cd016569ded405482)
 
 library(dbplyr)
-library(RSQLite)
+# library(RSQLite)
 
 library(dplyr)
 library(purrr)
@@ -126,12 +126,15 @@ channel_summ <- filter(track_summ, !is.na(smooth_v_y)) %>%
     group_by(experiment, channel, sample, treatment) %>%
     summarize(smooth_v_y = map2(list(unlist(sapply(smooth_v_y, `[`, 'x'))), # pull all Frames
                                 list(unlist(sapply(smooth_v_y, `[`, 'y'))), # pull all smoothed y velocities
+                                ~ smooth.spline(.x, .y, df = 7, keep.data = FALSE)),
+              smooth_v_x = map2(list(unlist(sapply(smooth_v_x, `[`, 'x'))), # pull all Frames
+                                list(unlist(sapply(smooth_v_x, `[`, 'y'))), # pull all smoothed y velocities
                                 ~ smooth.spline(.x, .y, df = 7, keep.data = FALSE))) %>%
     ungroup() %>%
     
     filter(is.na(treatment) | treatment != 'fmlf (did not work)')
 
-# additonal measures that may be of interest
+# additional measures that may be of interest
 # length of each track
 # proportion of cells that made it from top to bottom
 # velocity statistics (mean, sd)
@@ -166,7 +169,7 @@ mutate(nml,
     geom_hline(yintercept = 0, linetype = 2, size = 0.2, color = rgb(0,0,1)) +
     
     facet_wrap(~ treatment) +
-    
+
     ylab('Realitve Velocity (y)') +
     theme(axis.text.x = element_text(size = 6))
 dev.off()

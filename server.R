@@ -6,14 +6,14 @@ library(shinyWidgets)
 library(dplyr)
 
 # library(writexl)
-# 
-# library(ggplot2)
-# library(cowplot)
-# library(patchwork)
-# 
-# theme_cowplot() %>%
-#     theme_set()
-# 
+ 
+library(ggplot2)
+library(cowplot)
+library(patchwork)
+
+theme_cowplot() %>%
+    theme_set()
+ 
 # options(dplyr.summarise.inform = FALSE)
 
 
@@ -27,13 +27,6 @@ root <- system('git rev-parse --show-toplevel', intern = TRUE)
 # load historical data (data.frame has summary data for each channel, called channel_summ)
 paste(root, 'historical.RData', sep = '/') %>%
     load()
-
-# drop smooth spline objects and convert characters to factors for selection tab
-channel_summ_disp <- select(channel_summ, experiment, channel, sample, treatment) %>%
-    mutate(experiment = as.factor(experiment),
-           channel = as.factor(channel),
-           sample = as.factor(sample),
-           treatment = as.factor(treatment))
 
 
 ##########
@@ -60,40 +53,35 @@ shinyServer(function(input, output, session) {
                     `Total # of Obs` = length(smooth_v_y)))
     })
     
-    # ###############
-    # # Figures Tab #
-    # ###############
-    # 
-    # ### read in tracks ###
-    # 
-    # dat <- reactive({
-    #     # samples to read in
-    #     files <- paste0('../../raw/20051108__/', c('CH1_nl/CH1_nl_pre.csv',
-    #                                                'CH2_nl_fMLF8/CH2_nl_fMLF8_pre.csv',
-    #                                                'CH3_nl_fMLF8/CH3_nl_fMLF8_pre.csv',
-    #                                                'CH4_jd/CH4_jd_pre.csv',
-    #                                                'CH5_jd_fMLF8/CH5_jd_fMLF8_pre.csv',
-    #                                                'CH6_jd_fMLF8/CH6_jd_fMLF8_pre.csv'))
-    #     
-    #     # read in samples and bind into a single data frame
-    #     map(files, ~ read_csv(.x, col_types = 'dddd')) %>%
-    #         bind_rows(.id = 'sample') %>%
-    #         mutate(sample = case_when(sample == '1' ~ 'CH1_nl',
-    #                                   sample == '2' ~ 'CH2_nl_fMLf8',
-    #                                   sample == '3' ~ 'CH3_nl_fMLF8',
-    #                                   sample == '4' ~ 'CH4_jd',
-    #                                   sample == '5' ~ 'CH5_jd_fMLF8',
-    #                                   sample == '6' ~ 'CH6_jd_fMLF8',
-    #                                   TRUE          ~ '')) %>%
-    #         
-    #         # velocity
-    #         group_by(sample, Track) %>%
-    #         mutate(v.x = c(NA, (X[-1] - X[-length(X)]) / (Frame[-1] - Frame[-length(Frame)])),
-    #                v.y = c(NA, (Y[-1] - Y[-length(Y)]) / (Frame[-1] - Frame[-length(Frame)])),
-    #                v   = sqrt(v.x^2 + v.y^2) * sign(v.y)) %>% # going down = positive velocity, going up = negative velocity
-    #         ungroup()
-    # })
-    # 
+    # this will pull all summary tracks (one for each experiment) from the filtered data set
+    get_summary_tracks <- function(direction)
+    {
+        if(direction == 'y')
+        {
+            dat <- sample_select_mod() %>%
+                rename(smooth = smooth_v_y)
+        }else{
+            dat <- sample_select_mod() %>%
+                rename(smooth = smooth_v_x)
+        }
+        
+        dat %>%
+            pmap_df(function(smooth, experiment, channel, sample, treatment, ...){
+                tibble(experiment = experiment,
+                       channel = channel,
+                       sample = sample,
+                       treatment = treatment,
+                       Frame = smooth$x,
+                       v = smooth$y)
+            }) %>%
+            
+            mutate(grp = paste(experiment, channel, sep = '_'))
+    }
+    
+    ###############
+    # Figures Tab #
+    ###############
+
     # ### velocity vs time ###
     # 
     # hairball <- function(){
@@ -115,48 +103,49 @@ shinyServer(function(input, output, session) {
     # output$hairball <- renderPlot({
     #     hairball()
     # })
-    # 
-    # vy <- function(){
-    #     isolate({
-    #         filter(dat(), !is.na(v.y)) %>%
-    #             group_by(sample, Frame) %>%
-    #             summarize(v.y = mean(v.y)) %>%
-    #             
-    #             ggplot(aes(Frame, v.y)) +
-    #             geom_smooth(method = 'loess', formula = y~x) +
-    #             
-    #             facet_wrap(~ sample) +
-    #             
-    #             ylab('Relative Velocity (y)')
-    #     })
-    # }
-    #     
-    # output$vy <- renderPlot({
-    #     vy()
-    # })
-    # 
-    # vx <- function(){
-    #     isolate({
-    #         dat_copy <- dat()
-    #         
-    #         filter(dat_copy, !is.na(v.x)) %>%
-    #             group_by(sample, Frame) %>%
-    #             summarize(v.x = mean(v.x)) %>%
-    #             
-    #             ggplot(aes(Frame, v.x)) +
-    #             geom_smooth(method = 'loess', formula = y~x) +
-    #             
-    #             facet_wrap(~ sample) +
-    #             
-    #             ylab('Relative Velocity (x)')    
-    #     })
-    # }
-    # 
-    # output$vx <- renderPlot({
-    #     vx()
-    # })
-    # 
-    # 
+
+    relative_velocity_plot <- function(direction = 'y')
+    {
+        plt <- get_summary_tracks(direction) %>%
+            ggplot(aes(Frame, v, group = grp)) +
+
+            geom_line(color = rgb(0,0,0,.3)) +
+            
+            geom_hline(yintercept = 0, linetype = 2, size = 0.2, color = rgb(0,0,1)) +
+            
+            ylab(paste0('Realitve Velocity (', direction, ')'))
+        
+        if(input$splitPlotsBy == 'None')
+            return(plt)
+        
+        if(input$splitPlotsBy == 'Experiment')
+            return(plt + facet_wrap(~ experiment))
+        
+        if(input$splitPlotsBy == 'Channel')
+            return(plt + facet_wrap(~ channel))
+        
+        if(input$splitPlotsBy == 'Sample')
+            return(plt + facet_wrap(~ sample))
+        
+        if(input$splitPlotsBy == 'Treatment')
+            return(plt + facet_wrap(~ treatment))
+        
+        if(input$splitPlotsBy == 'Sample/Treatment')
+            return(plt + facet_wrap(~ sample + treatment))
+        
+        # just in case...
+        return(plt)
+    }
+
+    output$vy <- renderPlot({
+        relative_velocity_plot('y')
+    })
+
+    output$vx <- renderPlot({
+        relative_velocity_plot('x')
+    })
+
+
     # ##############
     # # Videos Tab #
     # ##############
