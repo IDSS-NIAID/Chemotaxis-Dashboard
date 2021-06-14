@@ -1,12 +1,10 @@
 library(shiny)
 library(shinydashboard)
-library(shinybusy)
 library(shinyWidgets)
 
 library(dplyr)
+library(purrr)
 
-# library(writexl)
- 
 library(ggplot2)
 library(cowplot)
 library(patchwork)
@@ -14,19 +12,13 @@ library(patchwork)
 theme_cowplot() %>%
     theme_set()
  
-# options(dplyr.summarise.inform = FALSE)
-
 
 ####################
 # Global Variables #
 ####################
 
-# root directory of the git repo
-root <- system('git rev-parse --show-toplevel', intern = TRUE)
-
 # load historical data (data.frame has summary data for each channel, called channel_summ)
-paste(root, 'historical.RData', sep = '/') %>%
-    load()
+load('historical.RData')
 
 
 ##########
