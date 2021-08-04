@@ -3,7 +3,6 @@
 # assumptions:
 #   track inferences have been downloaded and extracted to the root/raw directory (e.g. https://abcs-amp.cancer.gov/uploads/external/178/78ca162546b0f38ad63b453cd016569ded405482)
 
-library(dbplyr)
 # library(RSQLite)
 
 library(dplyr)
@@ -112,7 +111,20 @@ track_summ <- filter(dat, !is.na(X) & !is.na(Y)) %>%
               
               # this is a hack to get the entire smooth.spline object to be saved to the tibble for each track
               smooth_v_y = map2(list(Frame[-1]), list(v_y[-1]), ~ smooth.spline(.x, .y, keep.data = FALSE)),
-              smooth_v_x = map2(list(Frame[-1]), list(v_x[-1]), ~ smooth.spline(.x, .y, keep.data = FALSE))) %>%
+              smooth_v_x = map2(list(Frame[-1]), list(v_x[-1]), ~ smooth.spline(.x, .y, keep.data = FALSE)),
+              smooth_x = map2(list(Frame), list(X - X[1]), ~ smooth.spline(.x, .y, keep.data = FALSE)),
+              smooth_y = map2(list(Frame), list(Y - Y[1]), ~ smooth.spline(.x, .y, keep.data = FALSE)),
+              
+              # Chemotactic efficiency (net vertical distance) / (total distance)
+              chemotactic_efficiency = (y_max - y_min) / sum(sqrt((X[-1] - X[-length(X)])^2 + 
+                                                                  (Y[-1] - Y[-length(Y)])^2)),
+              
+              # Angle and Magnitude of migration
+              tmp = abs(atan((X[1] - X[length(X)]) / (Y[1] - Y[length(Y)]))),
+              angle_of_migration = ifelse(Y[length(Y)] > Y[1],
+                                          tmp,
+                                          180 - tmp),
+              total_velocity = sqrt((X[1] - X[length(X)])^2 + (Y[1] - Y[length(Y)])^2) / len) %>%
            # v_peak
            # v_post_peak
            # v_post_peak_acceleration) %>%
@@ -133,6 +145,9 @@ channel_summ <- filter(track_summ, !is.na(smooth_v_y)) %>%
     ungroup() %>%
     
     filter(is.na(treatment) | treatment != 'fmlf (did not work)')
+
+# go ahead and drop some of this stuff that we don't need
+track_summ <- select(track_summ, -smooth_v_y, -smooth_v_x)
 
 # additional measures that may be of interest
 # length of each track
