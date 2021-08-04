@@ -24,20 +24,40 @@ theme_cowplot() %>%
 # root directory of the git repo
 root <- system('git rev-parse --show-toplevel', intern = TRUE)
 
-# directories for each experiment
-# had to remove `&` characters from two directory names
-exp_dirs <- system(paste0('ls ', root, '/raw'), intern = TRUE)
+# all updated results can be found here
+results_dir <- paste(root, 'utils', 'result_csv', sep = '/')
 
-# channels in each data directory
-channel_dirs <- map(exp_dirs, ~ system(paste0('ls ', root, '/raw/', .x), intern = TRUE))
-
-# expand into full paths to data directories
-data_dirs <- paste(root, 'raw', rep(exp_dirs, each = 6), unlist(channel_dirs), sep = '/')
-
+# all results files
+results <- paste('ls', results_dir) %>%
+    system(intern = TRUE)
 
 ###################
 # historical data #
 ###################
+
+# experiment metadata
+results_meta <- tibble(
+    dat = strsplit(results, '_', fixed = TRUE),
+    dt = map_chr(dat, ~ 
+                     {substr(.x[1], 1, 8) %>%
+                      as.Date(format = '%Y%m%d')}),
+    channel = map_int(dat, ~ 
+                          {grep(.x, pattern = 'CH[1-6]', value = TRUE) %>%
+                           substr(3, 3) %>%
+                           as.integer()}),
+    samp = map_chr(dat, ~
+                       {.x[.x != ''][-1] %>%
+                        gsub(pattern = '.csv', replacement = '', fixed = TRUE) %>%
+                        grep(pattern = '^[0-9]$', invert = TRUE, value = TRUE) %>% # drop any single digit numbers
+                        grep(pattern = 'CH[1-6]', invert = TRUE, value = TRUE) %>% # drop channel
+                        grep(pattern = 'fMLF|Basal|Buffer|C5a|SDF|IL.|LTB4', ignore.case = TRUE, invert = TRUE, value = TRUE) %>% # drop attractant
+                        grep(pattern = 'I8RA', invert = TRUE, value = TRUE)}[1]), # catch a typo
+    trt = map_chr(dat, ~ 
+                      {.x %>%
+                       gsub(pattern = '.csv', replacement = '', fixed = TRUE) %>%
+                       grep(.x, pattern = 'fMLF|Basal|Buffer|C5a|SDF|IL.|LTB4|I8RA',
+                            ignore.case = TRUE, value = TRUE)}[1]))
+
 
 # all channels start with CH[1:6]
 if(FALSE)
