@@ -34,7 +34,8 @@ dashboardPage(
                                id = "sampleFilters",
                                inline = FALSE,
                                params = list(
-                                   experiment = list(inputId = "experiment", title = "Experiment (date)", placeholder = 'select'),
+                                   experiment = list(inputId = "experiment", title = "Experiment", placeholder = 'select'),
+                                   date = list(inputId = "dt", title = "Date", placeholder = 'select'),
                                    sample = list(inputId = "sample", title = "Sample", placeholder = 'select'),
                                    treatment = list(inputId = "treatment", title = "Treatment", placeholder = 'select'),
                                    channel = list(inputId = "channel", title = "Channel", placeholder = 'select')

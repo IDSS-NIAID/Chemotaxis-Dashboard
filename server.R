@@ -34,7 +34,7 @@ shinyServer(function(input, output, session) {
         module = selectizeGroupServer,
         id = "sampleFilters",
         data = channel_summ,
-        vars = c('experiment', 'sample', 'treatment', 'channel')
+        vars = c('experiment', 'dt', 'sample', 'treatment', 'channel')
     )
     
     output$selectedSamples <- renderTable({

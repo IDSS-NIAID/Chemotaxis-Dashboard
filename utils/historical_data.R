@@ -1,9 +1,7 @@
 # process historical data
 
 # assumptions:
-#   track inferences have been downloaded and extracted to the root/raw directory (e.g. https://abcs-amp.cancer.gov/uploads/external/178/78ca162546b0f38ad63b453cd016569ded405482)
-
-# library(RSQLite)
+#   track inferences have been downloaded and extracted to the root/utils directory (e.g. https://abcs-amp.cancer.gov/uploads/internal/111/82a695a58ceea6537bf44203885d5916997111a5)
 
 library(dplyr)
 library(purrr)
@@ -37,14 +35,19 @@ results <- paste('ls', results_dir) %>%
 
 # experiment metadata
 results_meta <- tibble(
-    dat = strsplit(results, '_', fixed = TRUE),
-    dt = map_chr(dat, ~ 
-                     {substr(.x[1], 1, 8) %>%
-                      as.Date(format = '%Y%m%d')}),
+    f = results,
+    
+    dat = strsplit(f, '_', fixed = TRUE),
+    
+    dt = {map_chr(dat, `[`, 1) %>% 
+          substr(1, 8) %>% 
+          as.Date(format = '%Y%m%d')},
+    
     channel = map_int(dat, ~ 
                           {grep(.x, pattern = 'CH[1-6]', value = TRUE) %>%
                            substr(3, 3) %>%
                            as.integer()}),
+    
     samp = map_chr(dat, ~
                        {.x[.x != ''][-1] %>%
                         gsub(pattern = '.csv', replacement = '', fixed = TRUE) %>%
@@ -52,79 +55,62 @@ results_meta <- tibble(
                         grep(pattern = 'CH[1-6]', invert = TRUE, value = TRUE) %>% # drop channel
                         grep(pattern = 'fMLF|Basal|Buffer|C5a|SDF|IL.|LTB4', ignore.case = TRUE, invert = TRUE, value = TRUE) %>% # drop attractant
                         grep(pattern = 'I8RA', invert = TRUE, value = TRUE)}[1]), # catch a typo
+    
     trt = map_chr(dat, ~ 
                       {.x %>%
                        gsub(pattern = '.csv', replacement = '', fixed = TRUE) %>%
                        grep(.x, pattern = 'fMLF|Basal|Buffer|C5a|SDF|IL.|LTB4|I8RA',
-                            ignore.case = TRUE, value = TRUE)}[1]))
-
-
-# all channels start with CH[1:6]
-if(FALSE)
-    table(substr(unlist(channel_dirs), 1, 3))
+                            ignore.case = TRUE, value = TRUE)}[1])) %>%
+    
+    mutate(samp = tolower(samp), # inconsistent capitalization
+           ledges = map_chr(f, ~ readLines(paste(results_dir, .x, sep = '/'), n = 1)), # top and bottom ledges
+           topLedge = map_int(ledges, ~ as.integer(strsplit(.x, ',', fixed = TRUE)[[1]][3])),
+           bottomLedge = map_int(ledges, ~ as.integer(strsplit(.x, ',', fixed = TRUE)[[1]][4]))) %>%
+    
+    select(-dat, -ledges)
+    
 
 # read in data
-dat <- pmap(list(rep(exp_dirs, each = 6), unlist(channel_dirs), data_dirs),
-            function(experiment, channel, data_dir){
-                # look for files (just go with pre-filtered data for now
-                f <- gsub(pattern = ' ', replacement = '\\ ', data_dir, fixed = TRUE) %>%
-                    gsub(pattern = '(', replacement = '\\(', fixed = TRUE) %>%
-                    gsub(pattern = ')', replacement = '\\)', fixed = TRUE) %>%
-                    map_chr(~ paste('ls', .x, '| grep pre.csv')) %>%
-                    system(intern = TRUE) #%>%
-                    #gsub(pattern = '_pre', replacement = '', fixed = TRUE)
-
-                # extract meta-data from channel
-                channel <- strsplit(channel, '_', fixed = TRUE)[[1]]
-                
-                channel_num <- as.integer(substr(channel[1], 3, 3))
-                
-                if(length(channel) >= 2)
-                {
-                    samp <- tolower(channel[2])
-                }else{
-                    samp <- NA
-                }
-                
-                if(length(channel) >= 3)
-                {
-                    trt <- tolower(channel[3])
-                }else{
-                    trt <- NA
-                }
-                
-                
-                # some are missing tracks
-                if(length(f) == 1)
-                {
-                    dat <- read_csv(paste(data_dir, f, sep = '/'), col_types = 'dddd') %>%
-                        mutate(experiment = experiment,
-                               channel = channel_num,
-                               sample = samp,
-                               treatment = trt) %>%
-                        select(experiment, channel, sample, treatment, Track, Frame, X, Y)
-                }else{
-                    dat <- tibble(experiment = experiment,
-                                  channel = channel_num,
-                                  sample = samp,
-                                  treatment = trt,
-                                  Track = as.numeric(NA),
-                                  Frame = as.numeric(NA),
-                                  X = as.numeric(NA),
-                                  Y = as.numeric(NA))
-                }
-                
-                return(dat)
-            }) %>%
-    bind_rows()
+dat <- map2_df(results_dir, results, ~ 
+    {
+        paste(.x, .y, sep = '/') %>%
+        read_csv(col_types = 'dddd', skip = 1) %>%
+        mutate(f = .y)
+    }) %>%
+    
+    bind_rows() %>%
+    
+    left_join(results_meta, by = 'f') %>%
+    
+    # convert Y coordinates to [0,1] scale where 0 is the top ledge and 1 is the bottom ledge
+    # negative values will be above the top ledge and values greater than 1 are below the bottom ledge
+    # X values will be on the same scale (i.e. traveling .1 in the X direction is the same number of pixels as .1 in the Y direction)
+    mutate(scale = bottomLedge - topLedge,
+           Y = (Y - topLedge) / scale,
+           X = X / scale)# %>%
+    
+    #select(-scale)
+        
+# for debugging
+# a = "20051108___CH1_nl.csv"
+# b = 1
+# c = 'nl'
+# d = NA
+# e = 37
 
 # summary of each track
 track_summ <- filter(dat, !is.na(X) & !is.na(Y)) %>% 
-    group_by(experiment, channel, sample, treatment, Track) %>%
+    #filter(f == a, channel == b, samp == c, is.na(trt), Track == e) %>% # for debugging
+    group_by(f, dt, channel, samp, trt, Track) %>%
     mutate(v_x = c(NA, (X[-1] - X[-length(X)]) / (Frame[-1] - Frame[-length(Frame)])),
            v_y = c(NA, (Y[-1] - Y[-length(Y)]) / (Frame[-1] - Frame[-length(Frame)])),
-           v = sqrt(v_x^2 + v_y^2) * sign(v_y)) %>% # going down = positive velocity, going up = negative velocity
+           v = sqrt(v_x^2 + v_y^2) * sign(v_y), # going down = positive velocity, going up = negative velocity
            
+    # check that we have more than 1 observation
+           l = sum(!is.na(X))) %>% 
+    filter(l > 4) %>%
+    
+    # calculate velocity in different directions and smooth       
     summarize(len = sum(!is.na(X)),
               y_min = min(Y, na.rm = TRUE),
               y_max = max(Y, na.rm = TRUE),
@@ -151,11 +137,11 @@ track_summ <- filter(dat, !is.na(X) & !is.na(Y)) %>%
     ungroup() %>%
     
     # drop any "cells" that don't move at all (+/- a few pixels)
-    filter(y_max - y_min > 3)
+    filter(y_max - y_min > 0.01)
 
 # summary of each channel
 channel_summ <- filter(track_summ, !is.na(smooth_v_y)) %>%
-    group_by(experiment, channel, sample, treatment) %>%
+    group_by(f, dt, channel, samp, trt) %>%
     summarize(smooth_v_y = map2(list(unlist(sapply(smooth_v_y, `[`, 'x'))), # pull all Frames
                                 list(unlist(sapply(smooth_v_y, `[`, 'y'))), # pull all smoothed y velocities
                                 ~ smooth.spline(.x, .y, df = 7, keep.data = FALSE)),
@@ -164,7 +150,10 @@ channel_summ <- filter(track_summ, !is.na(smooth_v_y)) %>%
                                 ~ smooth.spline(.x, .y, df = 7, keep.data = FALSE))) %>%
     ungroup() %>%
     
-    filter(is.na(treatment) | treatment != 'fmlf (did not work)')
+    filter(is.na(trt) | trt != 'fMLF (did not work)') %>%
+    
+    # remove '.csv' from file names
+    mutate(f = gsub('.csv', '', f, fixed = TRUE))
 
 # go ahead and drop some of this stuff that we don't need
 track_summ <- select(track_summ, -smooth_v_y, -smooth_v_x)
@@ -176,6 +165,13 @@ track_summ <- select(track_summ, -smooth_v_y, -smooth_v_x)
 # peak velocity
 # post-peak velocity
 # post-peak acceleration
+
+channel_summ <- rename(channel_summ, 
+                       sample = samp,
+                       treatment = trt,
+                       date = dt) %>%
+    mutate(experiment = map_chr(f, ~ strsplit(.x, '_CH', fixed = TRUE)[[1]][1]),
+           date = as.character(date)) # this is required to get dropdown search to work
 
 save(channel_summ, file = paste(root, 'historical.RData', sep = '/'))
 
