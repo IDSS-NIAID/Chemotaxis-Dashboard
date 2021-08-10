@@ -14,8 +14,8 @@ dashboardPage(
     #################### Sidebar ####################
     dashboardSidebar(
         sidebarMenu(
-            menuItem("Sample Selection", tabName = 'samples', icon = icon('list')),
-            menuItem("Figures", tabName = 'figures', icon = icon('chart-line'))#,
+            menuItem("Cross-Experiment Summary", tabName = 'cross_experiment_summary_tab', icon = icon('list'))
+            #menuItem("Figures", tabName = 'figures', icon = icon('chart-line'))#,
             #menuItem("Videos", tabName = 'videos', icon = icon('film')),
             #menuItem("Download Results", tabName = 'fileDownload', icon = icon('download'))
         )
@@ -25,8 +25,8 @@ dashboardPage(
     dashboardBody(tabItems(
         
         
-        ########## Sample Selection ##########
-        tabItem(tabName = 'samples',
+        ########## Cross-Experiment Summary Tab ##########
+        tabItem(tabName = 'cross_experiment_summary_tab',
                 fluidRow(h3("Select Samples to View")),
                 fluidRow(
                     column(width = 9, offset = 1,
@@ -45,22 +45,13 @@ dashboardPage(
                 fluidRow(
                     column(1),
                     column(9,
-                           tableOutput("selectedSamples")))
-                ),
-        
-        
-        ########## Figure ##########
-        tabItem(tabName = 'figures',
-                fluidRow(column(1), h3('Figures')),
+                           tableOutput("selectedSamples"))),
+                fluidRow(h3("Cross-Experiment Figures")),
                 fluidRow(column(10, 
                                 radioButtons('splitPlotsBy', 'Select variable(s) to split by', 
                                              selected = 'None', inline = TRUE,
                                              choices = c('Experiment', 'Channel', 'Sample', 'Treatment', 
                                                          'Sample/Treatment', 'None')))),
-                # fluidRow(
-                #     column(1),
-                #     column(10,
-                #            plotOutput('hairball'))),
                 fluidRow(
                     column(1),
                     column(10,
@@ -69,34 +60,6 @@ dashboardPage(
                     column(1),
                     column(10,
                            plotOutput('vx')))
-                )#,
-        
-        
-        ########## Videos ##########
-        # tabItem(tabName = 'videos',
-        #         fluidRow(column(1), h3('Processed Video')),
-        #         fluidRow(
-        #             column(1),
-        #             column(12,
-        #                    plotOutput('processed_vid')))
-        #         ),
-        
-        
-        ########## Downloads #########
-        # tabItem(tabName = 'fileDownload',
-        #         fluidRow(column(1), h3("Download Results")),
-        #         fluidRow(
-        #             column(1),
-        #             column(9,
-        #                    downloadButton('downloadResults', 'Download Results'))),
-        #         fluidRow(
-        #             column(1),
-        #             column(9,
-        #                downloadButton('downloadFigures', 'Download Figures'))),
-        #         fluidRow(
-        #             column(1),
-        #             column(9,
-        #                    downloadButton('downloadVideo', 'Download Processed Video')))
-        #         )
+                )
         ))
 )
