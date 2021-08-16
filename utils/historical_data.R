@@ -96,15 +96,24 @@ dat <- map2_df(results_dir, results, ~
 # b = 1
 # c = 'nl'
 # d = NA
-# e = 37
+# e = 2
 
 # summary of each track
 track_summ <- filter(dat, !is.na(X) & !is.na(Y)) %>% 
     #filter(f == a, channel == b, samp == c, is.na(trt), Track == e) %>% # for debugging
     group_by(f, dt, channel, samp, trt, Track) %>%
-    mutate(v_x = c(NA, (X[-1] - X[-length(X)]) / (Frame[-1] - Frame[-length(Frame)])),
-           v_y = c(NA, (Y[-1] - Y[-length(Y)]) / (Frame[-1] - Frame[-length(Frame)])),
-           v = sqrt(v_x^2 + v_y^2) * sign(v_y), # going down = positive velocity, going up = negative velocity
+    mutate(
+        # this is the frame where the cell first crosses the upper ledge
+        cross_at = case_when(    Y[1] >= 0  ~ Frame[1],
+                             all(Y    <  0) ~ as.double(NA),
+                             TRUE           ~ suppressWarnings(min(Frame[c(FALSE, Y[-length(Y)] < 0 & Y[-1] >= 0)], na.rm = TRUE))),
+        
+        # X and Y are already scaled - translate X st each cell starts at (0,~0) when first crossing top ledge
+        X = X - X[Frame == cross_at],
+            
+        v_x = c(NA, (X[-1] - X[-length(X)]) / (Frame[-1] - Frame[-length(Frame)])),
+        v_y = c(NA, (Y[-1] - Y[-length(Y)]) / (Frame[-1] - Frame[-length(Frame)])),
+        v = sqrt(v_x^2 + v_y^2) * sign(v_y), # going down = positive velocity, going up = negative velocity
            
     # check that we have more than 1 observation
            l = sum(!is.na(X))) %>% 
@@ -118,8 +127,8 @@ track_summ <- filter(dat, !is.na(X) & !is.na(Y)) %>%
               # this is a hack to get the entire smooth.spline object to be saved to the tibble for each track
               smooth_v_y = map2(list(Frame[-1]), list(v_y[-1]), ~ smooth.spline(.x, .y, keep.data = FALSE)),
               smooth_v_x = map2(list(Frame[-1]), list(v_x[-1]), ~ smooth.spline(.x, .y, keep.data = FALSE)),
-              smooth_x = map2(list(Frame), list(X - X[1]), ~ smooth.spline(.x, .y, keep.data = FALSE)),
-              smooth_y = map2(list(Frame), list(Y - Y[1]), ~ smooth.spline(.x, .y, keep.data = FALSE)),
+              smooth_x = map2(list(Frame), list(X), ~ smooth.spline(.x, .y, keep.data = FALSE)),
+              smooth_y = map2(list(Frame), list(Y), ~ smooth.spline(.x, .y, keep.data = FALSE)),
               
               # Chemotactic efficiency (net vertical distance) / (total distance)
               chemotactic_efficiency = (y_max - y_min) / sum(sqrt((X[-1] - X[-length(X)])^2 + 
@@ -173,7 +182,33 @@ channel_summ <- rename(channel_summ,
     mutate(experiment = map_chr(f, ~ strsplit(.x, '_CH', fixed = TRUE)[[1]][1]),
            date = as.character(date)) # this is required to get dropdown search to work
 
-save(channel_summ, file = paste(root, 'historical.RData', sep = '/'))
+track_summ <- rename(track_summ,
+                     sample= samp,
+                     treatment = trt,
+                     date = dt) %>%
+    mutate(experiment = map_chr(f, ~ strsplit(.x, '_CH', fixed = TRUE)[[1]][1]))
+
+# this significantly speeds up the selection module for track_summ
+track_summ_select <- select(track_summ, date, experiment) %>%
+    unique()
+
+
+save(channel_summ, track_summ_select, file = paste(root, 'data/historical.RData', sep = '/'))
+
+# save individual track data (if not already present)
+ind_tracks <- paste0('ls ', root, '/data') %>%
+    system(intern = TRUE)
+
+for(i in track_summ_select$experiment)
+{
+    f <- paste0(root, '/data/', i, '.RData')
+    
+    if(!any(grepl(f, ind_tracks)))
+    {
+        dat <- subset(track_summ, experiment == i)
+        save(dat, file = f)
+    }
+}
 
 ######################
 # normal buffer data #

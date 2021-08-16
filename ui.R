@@ -14,8 +14,8 @@ dashboardPage(
     #################### Sidebar ####################
     dashboardSidebar(
         sidebarMenu(
-            menuItem("Cross-Experiment Summary", tabName = 'cross_experiment_summary_tab', icon = icon('list'))
-            #menuItem("Figures", tabName = 'figures', icon = icon('chart-line'))#,
+            menuItem("Cross-Experiment Summary", tabName = 'cross_experiment_summary_tab', icon = icon('list')),
+            menuItem("Single-Experiment Figures", tabName = 'single_experiment_figures', icon = icon('chart-line'))#,
             #menuItem("Videos", tabName = 'videos', icon = icon('film')),
             #menuItem("Download Results", tabName = 'fileDownload', icon = icon('download'))
         )
@@ -35,7 +35,7 @@ dashboardPage(
                                inline = FALSE,
                                params = list(
                                    experiment = list(inputId = "experiment", title = "Experiment", placeholder = 'select'),
-                                   date = list(inputId = "dt", title = "Date", placeholder = 'select'),
+                                   date = list(inputId = "date", title = "Date", placeholder = 'select'),
                                    sample = list(inputId = "sample", title = "Sample", placeholder = 'select'),
                                    treatment = list(inputId = "treatment", title = "Treatment", placeholder = 'select'),
                                    channel = list(inputId = "channel", title = "Channel", placeholder = 'select')
@@ -60,6 +60,26 @@ dashboardPage(
                     column(1),
                     column(10,
                            plotOutput('vx')))
+                ),
+        
+        ########## Single-Experiment Figures ##########
+        tabItem(tabName = 'single_experiment_figures',
+                fluidRow(h3("Select Experiment to View")),
+                fluidRow(
+                    column(width = 9, offset = 1,
+                           selectizeGroupUI(
+                               id = "expFilters",
+                               inline = FALSE,
+                               params = list(
+                                   experiment = list(inputId = "experiment", title = "Experiment", placeholder = 'select'),
+                                   date = list(inputId = "date", title = "Date", placeholder = 'select')
+                               )
+                           ))
+                ),
+                fluidRow(
+                    column(1),
+                    column(10,
+                           plotOutput('tracks_time'))
                 )
         ))
-)
+))
