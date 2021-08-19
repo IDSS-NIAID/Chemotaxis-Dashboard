@@ -80,6 +80,11 @@ dashboardPage(
                     column(1),
                     column(10,
                            plotOutput('tracks_time'))
+                ),
+                fluidRow(
+                    column(1),
+                    column(10,
+                           plotOutput('tracks_v'))
                 )
         ))
 ))

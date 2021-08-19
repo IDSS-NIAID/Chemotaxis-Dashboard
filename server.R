@@ -26,6 +26,21 @@ load('data/historical.RData')
 ##########
 shinyServer(function(input, output, session) {
     
+    # global figure to return when there is nothing to plot
+    plot_nothing <- function()
+    {
+        tibble(x = 1, y = 1, label = 'Please pick a subset to plot') %>%
+            ggplot(aes(x = x, y = y, label = label)) +
+            geom_text() +
+            ylab('') +
+            xlab('') +
+            theme(axis.title = element_blank(),
+                  axis.text = element_blank(),
+                  axis.ticks = element_blank(),
+                  axis.line = element_blank()) %>%
+            return()
+    }
+    
     ################################
     # Cross-Experiment Summary Tab #
     ################################
@@ -75,16 +90,7 @@ shinyServer(function(input, output, session) {
         
         if(nrow(dat) == nrow(channel_summ))
         {
-            tibble(x = 1, y = 1, label = 'Please pick a subset to plot') %>%
-                ggplot(aes(x = x, y = y, label = label)) +
-                geom_text() +
-                ylab('') +
-                xlab('') +
-                theme(axis.title = element_blank(),
-                      axis.text = element_blank(),
-                      axis.ticks = element_blank(),
-                      axis.line = element_blank()) %>%
-                return()
+            plot_nothing()
         }else{
             plt <- get_summary_tracks(dat, direction) %>%
                 ggplot(aes(Frame, v, group = grp)) +
@@ -133,6 +139,7 @@ shinyServer(function(input, output, session) {
     # Single-Experiment Figures #
     #############################
     
+    # experiment selection module
     exp_select_mod <- callModule(
         module = selectizeGroupServer,
         id = "expFilters",
@@ -140,46 +147,43 @@ shinyServer(function(input, output, session) {
         vars = c('experiment', 'date')
     )
     
-    # this will collapse all tracks from the desired experiment into a flat tibble
-    collapse_tracks <- function(dat)
-    {
-        pmap_df(dat, function(experiment, channel, sample, treatment, Track, smooth_x, smooth_y, ...){
-                tibble(experiment = experiment,
-                       channel = channel,
-                       sample = sample,
-                       treatment = treatment,
-                       Track = Track,
-                       Frame = smooth_x$x,
-                       X = smooth_x$y,
-                       Y = smooth_y$y)
-        })
-    }
+    # get tracks for an experiment
+        # this will collapse all tracks from the desired experiment into a flat tibble
+        # (only call this if we have exactly one experiment in the subset)
+    dat_sub <- reactive({
+        f <- exp_select_mod()$experiment
+
+        load(paste0('data/', f, '.RData'))
+        
+        exp_summ
+    })
     
+    # plot time-coded track paths
     output$tracks_time <- renderPlot({
         
         # pull the experiment to plot
-        dat_sub <- exp_select_mod()
+        tmp <- exp_select_mod()
         
         # if the subset of all experiments contains only 1 experiment, proceed
-        if(length(unique(dat_sub$experiment)) > 1)
+        if(length(unique(tmp$experiment)) > 1)
         {
-            plot(NA, NA, ylim = 0:1, xlim = 0:1, bty = 'n', xaxt = 'n', yaxt = 'n', ylab = '', xlab = '')
-            text(.5, .5, 'Please pick a single experiment')
+            plot_nothing()
         }else{
-            load(paste0('data/', dat_sub$experiment, '.RData'))
-            
-            collapse_tracks(dat) %>%
-            arrange(channel, Track, Frame) %>%
-            mutate(lab = paste0(channel, ": ", sample, ", ", treatment)) %>%
-            ggplot(aes(x = X, y = Y, group = Track, color = Frame)) +
-            geom_path() +
-            facet_wrap(~ lab) +
-            scale_color_gradient2(low  = 'blue',
-                                  mid  = rgb(  0, .62, .45),
-                                  high = rgb(.9, .62, 0),
-                                  midpoint = 60) +
-            geom_hline(yintercept = 0, linetype = 2) +
-            geom_hline(yintercept = 1, linetype = 2)
+            dat_sub()$tracks_time # see historical_data.R and one_experiment.R for pre-processing of these figures
+        }
+    })
+    
+    # plot velocity measures
+    output$tracks_v <- renderPlot({
+        # pull the experiment to plot
+        tmp <- exp_select_mod()
+        
+        # if the subset of all experiments contains only 1 experiment, proceed
+        if(length(unique(tmp$experiment)) > 1)
+        {
+            plot_nothing()
+        }else{
+            dat_sub()$tracks_v # see historical_data.R and one_experiment.R for pre-processing of these figures
         }
     })
 })
