@@ -8,8 +8,7 @@ library(purrr)
 library(readr)
 library(tidyr)
 
-library(lme4)
-library(splines)
+library(fda)
 
 options(dplyr.summarise.inform = FALSE)
 

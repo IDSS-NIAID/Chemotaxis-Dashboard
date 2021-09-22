@@ -2,6 +2,20 @@
 # process data from one experiment and save
 # this is called from historical_data.R (check there for package dependencies)
 
+missing_info <- function()
+{
+    tibble(x = 1, y = 1, label = 'Too much missing information') %>%
+        ggplot(aes(x = x, y = y, label = label)) +
+        geom_text() +
+        ylab('') +
+        xlab('') +
+        theme(axis.title = element_blank(),
+              axis.text = element_blank(),
+              axis.ticks = element_blank(),
+              axis.line = element_blank()) %>%
+        return()
+}
+
 one_experiment <- function(dat_sub)
 {
     # start summarization of tracks
@@ -13,17 +27,34 @@ one_experiment <- function(dat_sub)
                                      TRUE           ~ suppressWarnings(min(Frame[c(FALSE, Y[-length(Y)] < 0 & Y[-1] >= 0)], na.rm = TRUE))),
         
             # X and Y are already scaled - translate X st each cell starts at (0,~0) when first crossing top ledge
-            X = X - X[Frame == cross_at],
+            X = X - X[Frame == cross_at]) %>%
+        ungroup()
         
             # calculate velocity over time
-            v_x = c(NA, (X[-1] - X[-length(X)]) / (Frame[-1] - Frame[-length(Frame)])),
-            v_y = c(NA, (Y[-1] - Y[-length(Y)]) / (Frame[-1] - Frame[-length(Frame)])),
-            v = sqrt(v_x^2 + v_y^2) * sign(v_y), # going down = positive velocity, going up = negative velocity
-        
-            # check that we have more than 1 observation
-            l = sum(!is.na(X))) %>% 
-        filter(l > 4)
+        #     v_x = c(NA, (X[-1] - X[-length(X)]) / (Frame[-1] - Frame[-length(Frame)])),
+        #     v_y = c(NA, (Y[-1] - Y[-length(Y)]) / (Frame[-1] - Frame[-length(Frame)])),
+        #     v = sqrt(v_x^2 + v_y^2) * sign(v_y), # going down = positive velocity, going up = negative velocity
+        # 
+        #     # check that we have more than 1 observation
+        #     l = sum(!is.na(X))) %>% 
+        # filter(l > 4)
 
+    ##### Functional Data Analysis #####
+    trts <- paste(unique(dat_sub$treatment))
+    samps <- unique(dat_sub$sample)
+    
+    for(i in trts)
+    {
+        # random vs directed comparison for each sample for treatment, i
+        rand_vs_directed <- foreach(j = samps) %do%
+        {
+            tmp <- filter(dat_sub, paste(treatment) == i & paste(sample) == j & !is.na(X) & !is.na(Y)) %>%
+                dplyr::select(Frame, Track, X, Y) %>%
+                pivot_wider(names_from = Track, values_from = c(X, Y))
+            
+            fdaregre(tmp, c(sum(grepl('X', names(tmp))), sum(grepl('Y', names(tmp)))), c('Random', 'Directed'))
+        }
+    }
     
     ##### channel summaries #####
     channel_summ <- summarize(dat_sub, len = sum(!is.na(X)),
