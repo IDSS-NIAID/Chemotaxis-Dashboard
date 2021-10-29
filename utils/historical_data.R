@@ -8,7 +8,7 @@ library(purrr)
 library(readr)
 library(tidyr)
 
-library(fda)
+library(fdakma)
 
 options(dplyr.summarise.inform = FALSE)
 
@@ -30,7 +30,7 @@ registerDoParallel(cores = detectCores())
 root <- system('git rev-parse --show-toplevel', intern = TRUE)
 
 # all updated results can be found here
-results_dir <- paste(root, 'utils', 'result_csv', sep = '/')
+results_dir <- paste(root, 'utils', 'results_csv', sep = '/')
 
 # all results files
 results <- paste('ls', results_dir) %>%
@@ -76,19 +76,16 @@ results_meta <- tibble(
                        grep(.x, pattern = 'fMLF|Basal|Buffer|C5a|SDF|IL.|LTB4|I8RA',
                             ignore.case = TRUE, value = TRUE)}[1])) %>%
     
-    mutate(sample = tolower(sample), # inconsistent capitalization
-           ledges = map_chr(f, ~ readLines(paste(results_dir, .x, sep = '/'), n = 1)), # top and bottom ledges
-           topLedge = map_int(ledges, ~ as.integer(strsplit(.x, ',', fixed = TRUE)[[1]][3])),
-           bottomLedge = map_int(ledges, ~ as.integer(strsplit(.x, ',', fixed = TRUE)[[1]][4]))) %>%
+    mutate(sample = tolower(sample)) %>% # inconsistent capitalization
     
-    select(-dat, -ledges)
+    dplyr::select(-dat)
     
 
 ##### read in data #####
 dat <- map2_df(results_dir, results, ~ 
     {
         paste(.x, .y, sep = '/') %>%
-        read_csv(col_types = 'dddd', skip = 1) %>%
+        read_delim(delim = '\t', col_types = 'dddd') %>%
         mutate(f = .y)
     }) %>%
     
@@ -96,22 +93,15 @@ dat <- map2_df(results_dir, results, ~
     
     left_join(results_meta, by = 'f') %>%
     
-    # convert Y coordinates to [0,1] scale where 0 is the top ledge and 1 is the bottom ledge
-    # negative values will be above the top ledge and values greater than 1 are below the bottom ledge
-    # X values will be on the same scale (i.e. traveling .1 in the X direction is the same number of pixels as .1 in the Y direction)
-    mutate(scale = bottomLedge - topLedge,
-           Y = (Y - topLedge) / scale,
-           X = X / scale,
-           
     # pull experiment name
-           experiment = map_chr(f, ~ strsplit(.x, '_CH', fixed = TRUE)[[1]][1])) %>%
+    mutate(experiment = map_chr(f, ~ strsplit(.x, '_CH', fixed = TRUE)[[1]][1])) %>%
     
     filter(!is.na(X) & !is.na(Y))
 
 
 ##### track_summ_select #####
 # this significantly speeds up the selection module for track_summ
-track_summ_select <- select(dat, date, experiment) %>%
+track_summ_select <- dplyr::select(dat, date, experiment) %>%
     unique() %>%
     mutate(date = as.character(date)) # need date as character for subset widget in Shiny
 
@@ -128,6 +118,7 @@ track_summ_select <- select(dat, date, experiment) %>%
 ## Tables of statistics
 ### velocity_stats
 
+# dat_sub <- filter(dat, experiment == track_summ_select$experiment[1])
 channel_summ <- foreach(current_experiment = track_summ_select$experiment[1:8], .combine = rbind) %dopar%
     {
         filter(dat, experiment == current_experiment) %>%

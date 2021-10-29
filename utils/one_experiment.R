@@ -2,6 +2,7 @@
 # process data from one experiment and save
 # this is called from historical_data.R (check there for package dependencies)
 
+#' function to display "Too much missing information" message in place of a regular figure
 missing_info <- function()
 {
     tibble(x = 1, y = 1, label = 'Too much missing information') %>%
@@ -16,32 +17,192 @@ missing_info <- function()
         return()
 }
 
-one_experiment <- function(dat_sub)
+#' Functional data analysis comparison of two functions, f1 and f2
+#' 
+#' @param .data A subset of dat_sub with variables, f1 and g1, for permutation testing
+#' @param frames A vector of frames over which the function, f, is defined
+#' @param f A vector or matrix of responses for f
+#' @param g A vector or matrix of responses for g
+#' @param nperms Number of permutations for permutation testing
+#' @param frames.g A vector of frames over which the function, g, is defined
+#' 
+#' @value A named vector containing the similarity measure and permutation p-value
+#' .data <- filter(dat_sub, channel == 1) %>% dplyr::select(Track, Frame, X, Y) %>% rename(f = X, g = Y)
+#' frames <- channel_summ$frames[[1]]
+#' f <- channel_summ$x[[1]]
+#' g <- channel_summ$y[[1]]
+compare_two_functions <- function(.data, frames.f, f, g, nperms, frames.g = frames.f)
 {
-    # start summarization of tracks
+    # similarity measure
+    dissim <- kma.similarity(x.f = frames.f, y0.f = f, x.g = frames.g, y0.g = g, similarity.method = 'd0.L2')
+    
+    # permutation test
+    tracks <- unique(.data$Track)
+    
+    perms <- replicate(nperms, 
+    {
+        # pick tracks to shuffle
+        pick_track <- as.logical(rbinom(length(tracks), 1, 0.5))
+        
+        # shuffle f and g
+        shuffled <- mutate(.data, 
+               f.tmp = ifelse(Track %in% tracks[pick_track], g, f),
+               g     = ifelse(Track %in% tracks[pick_track], f, g),
+               f     = f.tmp)
+        
+        # smooth f and g
+        f <- with(shuffled, smooth.spline(Frame, f))
+        g <- with(shuffled, smooth.spline(Frame, g))
+        
+        # calculate similarity
+        kma.similarity(x.f = f$x, y0.f = f$y, x.g = g$x, y0.g = g$y, similarity.method = 'd0.L2')
+    })
+    
+    # return permutation test p-value, null hypothesis is that f and g are the same
+    c(dissim = dissim,
+      p = sum(dissim < perms) / nperms) %>%
+        return()
+}
+
+#' Analysis of data for each experiment
+#' 
+#' @param dat_sub data frame (tibble) containing the subset of data for a single experiment
+#' @param nperms number of permutations to use in permutation test statistics
+#' 
+#' @value A data frame containing channel-level summaries of the data in dat_sub. A list containing experiment-level statistics is also saved to an RData file.
+one_experiment <- function(dat_sub, nperms = 10000)
+{
+    ##################################
+    # Prep dat_sub for summarization #
+    ##################################
+    
     dat_sub <- group_by(dat_sub, f, date, experiment, channel, sample, treatment, Track) %>%
         mutate(
             # this is the frame where the cell first crosses the upper ledge
             cross_at = case_when(    Y[1] >= 0  ~ Frame[1],
-                                     all(Y    <  0) ~ as.double(NA),
+                                     all(Y    <  0) ~ Frame[1], # if it never crosses the top ledge, use time 0 as the starting point
                                      TRUE           ~ suppressWarnings(min(Frame[c(FALSE, Y[-length(Y)] < 0 & Y[-1] >= 0)], na.rm = TRUE))),
         
             # X and Y are already scaled - translate X st each cell starts at (0,~0) when first crossing top ledge
-            X = X - X[Frame == cross_at]) %>%
-        ungroup()
+            X = X - X[Frame == cross_at],
+            
+            y_min = min(Y),
+            y_max = max(Y)) %>%
+        ungroup() %>%
         
+        # drop any "cells" that don't move at all (+/- a few pixels)
+        filter(y_max - y_min > 0.01 &
+               # drop this one that didn't work
+               (is.na(treatment) | treatment != 'fMLF (did not work)')) %>%
+        
+        # remove '.csv' from file names
+        mutate(f = gsub('.csv', '', f, fixed = TRUE))
+    
+    
+    #############################
+    # Track-level summarization #
+    #############################
+    
+    track_summ <- group_by(dat_sub, channel, sample, treatment, Track) %>%
+        
+        # make sure we have enough observations to use the track
+        mutate(l = sum(!is.na(X))) %>%
+        filter(l > 3) %>%
+        
+        # calculate smooth functions of X and Y over time
+        summarize(
+            x = map2(list(Frame), list(X), ~ with(smooth.spline(.x, .y), splinefun(x, y))),
+            y = map2(list(Frame), list(Y), ~ with(smooth.spline(.x, .y), splinefun(x, y))),
+            frames = map(list(Frame), ~ unique(.x))) %>%
+        ungroup() %>%
+        
+        mutate(
             # calculate velocity over time
-        #     v_x = c(NA, (X[-1] - X[-length(X)]) / (Frame[-1] - Frame[-length(Frame)])),
-        #     v_y = c(NA, (Y[-1] - Y[-length(Y)]) / (Frame[-1] - Frame[-length(Frame)])),
-        #     v = sqrt(v_x^2 + v_y^2) * sign(v_y), # going down = positive velocity, going up = negative velocity
-        # 
-        #     # check that we have more than 1 observation
-        #     l = sum(!is.na(X))) %>% 
-        # filter(l > 4)
+            v_x = map2(x, frames, function(x, f) x(f, deriv = 1)),
+            v_y = map2(y, frames, function(y, f) y(f, deriv = 1)),
+            v = map2(v_x, v_y, ~ sqrt(.x^2 + .y^2) * sign(.y)), # going down = positive velocity, going up = negative velocity
 
-    ##### Functional Data Analysis #####
-    trts <- paste(unique(dat_sub$treatment))
-    samps <- unique(dat_sub$sample)
+            # convert functions of x and y back to values
+            x = map2(x, frames, function(x, f) x(f)),
+            y = map2(y, frames, function(y, f) y(f)))
+    
+    
+    ###############################
+    # Channel-level summarization #
+    ###############################
+    
+    channel_summ <- group_by(dat_sub, f, date, experiment, channel, sample, treatment) %>%
+        
+        # calculate smooth functions of X and Y over time
+        summarize(
+            x = map2(list(Frame), list(X), ~ with(smooth.spline(.x, .y), splinefun(x, y))),
+            y = map2(list(Frame), list(Y), ~ with(smooth.spline(.x, .y), splinefun(x, y))),
+            frames = map(list(Frame), ~ unique(.x))) %>%
+        ungroup() %>%
+        
+        mutate(
+            # calculate velocity over time
+            v_x = map2(x, frames, function(x, f) x(f, deriv = 1)),
+            v_y = map2(y, frames, function(y, f) y(f, deriv = 1)),
+            v = map2(v_x, v_y, ~ sqrt(.x^2 + .y^2) * sign(.y)), # going down = positive velocity, going up = negative velocity
+            
+            # convert functions of x and y back to values
+            x = map2(x, frames, function(x, f) x(f)),
+            y = map2(y, frames, function(y, f) y(f)),
+            
+            # directed vs undirected statistics for each channel
+            directed_v_undirected = pmap(list(chan = channel, frames = frames, f = x, g = y),
+                                         function(chan, frames, f, g)
+                                             filter(dat_sub, channel == chan) %>%
+                                             dplyr::select(Track, Frame, X, Y) %>% 
+                                             rename(f = X, g = Y) %>%
+                                             compare_two_functions(frames, f, g, nperms)))
+
+
+    ##############################
+    # Experiment-level summaries #
+    ##############################
+    
+    exp_summ <- list()
+
+    trts <- paste(unique(channel_summ$treatment))
+    samps <- unique(channel_summ$sample)
+    
+    ### within_grp: Within-group statistics
+    exp_summ$within_grp <- list()
+    for(i in trts)
+        for(j in samps)
+        {
+            tmp <- filter(channel_summ, paste(treatment) == i & sample == j)
+            
+            # if is more than one channel in this treatment/sample group...
+            if(nrow(tmp) > 1)
+            {
+                # make comparison for all pairs in this set
+                for(k in combn(tmp$channel, 2)[1,])
+                    for(l in combn(tmp$channel, 2)[2,])
+                    {
+                        f <- filter(dat_sub, paste(treatment) == i & sample == j & channel == k) %>%
+                            with(smooth.spline(Frame, Y))
+                        g <- filter(dat_sub, paste(treatment) == i & sample == j & channel == l) %>%
+                            with(smooth.spline(Frame, Y))
+                        
+                        compare_two_functions(
+                    }
+            }
+        }
+    
+    ### between_trt: Between-treatment statistics
+
+    # for each treatment/sample group
+    ## calculate smoothed curves (including 1st derivative, velocity) by channel
+    ## compare smoothed curves within each group (when more than one channel exists)
+    
+    # compare between treatment/sample groups
+    ## calculate within-group smoothed curves (including 1st derivative, velocity) - summarizing across channels
+    ## compare smoothed curves between groups
+    
+    # comparisons are done via permutation testing using similarity measures from fdakma::kma.similarity()
     
     for(i in trts)
     {
@@ -51,51 +212,12 @@ one_experiment <- function(dat_sub)
             tmp <- filter(dat_sub, paste(treatment) == i & paste(sample) == j & !is.na(X) & !is.na(Y)) %>%
                 dplyr::select(Frame, Track, X, Y) %>%
                 pivot_wider(names_from = Track, values_from = c(X, Y))
-            
+
             fdaregre(tmp, c(sum(grepl('X', names(tmp))), sum(grepl('Y', names(tmp)))), c('Random', 'Directed'))
         }
     }
     
-    ##### channel summaries #####
-    channel_summ <- summarize(dat_sub, len = sum(!is.na(X)),
-                            y_min = min(Y, na.rm = TRUE),
-                            y_max = max(Y, na.rm = TRUE),
-                            
-                            # Smoothed Velocity Curves
-                            # this is a hack to get the entire smooth.spline object to be saved to the tibble for each track
-                            smooth_v_y = map2(list(Frame[-1]), list(v_y[-1]), ~ smooth.spline(.x, .y, keep.data = FALSE)),
-                            smooth_v_x = map2(list(Frame[-1]), list(v_x[-1]), ~ smooth.spline(.x, .y, keep.data = FALSE)),
-                            smooth_x = map2(list(Frame), list(X), ~ smooth.spline(.x, .y, keep.data = FALSE)),
-                            smooth_y = map2(list(Frame), list(Y), ~ smooth.spline(.x, .y, keep.data = FALSE))) %>%
-                            
-        # v_peak
-        # v_post_peak
-        # v_post_peak_acceleration) %>%
-        ungroup() %>%
-        
-        # drop any "cells" that don't move at all (+/- a few pixels)
-        filter(y_max - y_min > 0.01) %>%
-    
-        # drop anything that is missing smoothed curve
-        filter(!is.na(smooth_v_y)) %>%
-        group_by(f, date, channel, sample, treatment) %>%
-        summarize(smooth_v_y = map2(list(unlist(sapply(smooth_v_y, `[`, 'x'))), # pull all Frames
-                                    list(unlist(sapply(smooth_v_y, `[`, 'y'))), # pull all smoothed y velocities
-                                    ~ smooth.spline(.x, .y, df = 7, keep.data = FALSE)),
-                  smooth_v_x = map2(list(unlist(sapply(smooth_v_x, `[`, 'x'))), # pull all Frames
-                                    list(unlist(sapply(smooth_v_x, `[`, 'y'))), # pull all smoothed y velocities
-                                    ~ smooth.spline(.x, .y, df = 7, keep.data = FALSE))) %>%
-        ungroup() %>%
-        
-        filter(is.na(treatment) | treatment != 'fMLF (did not work)') %>%
-        
-        # remove '.csv' from file names
-        mutate(f = gsub('.csv', '', f, fixed = TRUE))
-    
-    
-    ##### Experiment-level summaries #####
-    exp_summ <- list()
-    
+
     ### tracks_time: time-coded tracks
     exp_summ$tracks_time <- arrange(dat_sub, channel, Track, Frame) %>%
         
