@@ -8,6 +8,7 @@ library(purrr)
 library(ggplot2)
 library(cowplot)
 library(patchwork)
+library(splines)
 
 theme_cowplot() %>%
     theme_set()
