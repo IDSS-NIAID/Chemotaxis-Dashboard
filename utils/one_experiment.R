@@ -57,6 +57,8 @@ compare_two_functions <- function(.data, frames.f, f, g, nperms, frames.g = fram
     grps <- dplyr::select(.data, Track, matches(lab)) %>%
       unique() %>%
       dplyr::select(-Track) %>%
+      unlist() %>%
+      paste() %>% # need this to catch 'NA' as an option
       table()
       
     # labels for permutation test
@@ -218,14 +220,12 @@ one_experiment <- function(dat_sub, nperms = 10000)
                                              dplyr::select(Track, Frame, X, Y) %>% 
                                              rename(f = X, g = Y) %>%
                                              compare_two_functions(frames, f, g, nperms)))
-
+### do a tiered approach here - 100 perms, if p < 0.1 then 1000, if p < 0.01 then 10000, ...
 
     ##############################
     # Experiment-level summaries #
     ##############################
     
-    exp_summ <- list()
-
     trts <- paste(unique(channel_summ$treatment))
     samps <- unique(channel_summ$sample)
     
@@ -236,65 +236,106 @@ one_experiment <- function(dat_sub, nperms = 10000)
       mutate(nchannels = length(unique(channel))) %>%
 
       # drop any groups that only have one channel (nothing to compare)
-      dplyr::filter(nchannels > 1) %>%
+      dplyr::filter(nchannels > 1)
+    
+    # if we have different within-group statistics to calculate...
+    if(nrow(within_grp) > 0)
+    {
+      within_grp <- within_grp %>%
         
-      # create one row per two-way comparison (I think this will return an empty tibble when the input tibble is empty...)
-      summarize(channel_a = combn(unique(channel), 2)[1,],
-                channel_b = combn(unique(channel), 2)[2,],
-                a_vs_b = list('')) %>%
-      ungroup()
+        # create one row per two-way comparison
+        summarize(channel_a = combn(unique(channel), 2)[1,],
+                  channel_b = combn(unique(channel), 2)[2,],
+                  a_vs_b = list('')) %>%
+        ungroup()
                                   
-    # make comparisons for all pairs
-    for(i in 1:nrow(within_grp))
-    {
-      # get functions to compare
-      f <- filter(dat_sub, paste(treatment) == paste(within_grp$treatment[i]) &
-                           sample == within_grp$sample[i] &
-                           channel == within_grp$channel_a[i]) %>%
-        with(list(smooth.spline(Frame, X),
-                  smooth.spline(Frame, Y)))
-      g <- filter(dat_sub, paste(treatment) == paste(within_grp$treatment[i]) &
-                    sample == within_grp$sample[i] &
-                    channel == within_grp$channel_b[i]) %>%
-        with(list(smooth.spline(Frame, X),
-                  smooth.spline(Frame, Y)))
+      # make comparisons for all pairs
+      for(i in 1:nrow(within_grp))
+      {
+        # get functions to compare
+        f <- filter(dat_sub, paste(treatment) == paste(within_grp$treatment[i]) &
+                             sample == within_grp$sample[i] &
+                             channel == within_grp$channel_a[i]) %>%
+          with(list(smooth.spline(Frame, X),
+                    smooth.spline(Frame, Y)))
+        g <- filter(dat_sub, paste(treatment) == paste(within_grp$treatment[i]) &
+                             sample == within_grp$sample[i] &
+                             channel == within_grp$channel_b[i]) %>%
+          with(list(smooth.spline(Frame, X),
+                    smooth.spline(Frame, Y)))
       
-      # calculate similarity and p-value
-      within_grp$a_vs_b[[i]] <- filter(dat_sub, paste(treatment) == paste(within_grp$treatment[i]) &
-                                         sample == within_grp$sample[i] &
-                                         channel %in% c(within_grp$channel_a[i], within_grp$channel_b[i])) %>%
-        mutate(f = X) %>%
-        compare_two_functions(f = sapply(f, function(.x) .x$y), frames.f = f[[1]]$x, 
-                              g = sapply(g, function(.x) .x$y), frames.g = g[[1]]$x,
-                              nperms = 10, lab = 'channel')
+        # calculate similarity and p-value
+        within_grp$a_vs_b[[i]] <- filter(dat_sub, paste(treatment) == paste(within_grp$treatment[i]) &
+                                                  sample == within_grp$sample[i] &
+                                                  channel %in% c(within_grp$channel_a[i], within_grp$channel_b[i])) %>%
+          mutate(f = X) %>%
+          compare_two_functions(f = sapply(f, function(.x) .x$y), frames.f = f[[1]]$x, 
+                                g = sapply(g, function(.x) .x$y), frames.g = g[[1]]$x,
+                                nperms = nperms, lab = 'channel')
+      }
+    }else{
+      within_grp <- tibble(date = as.Date(NA),
+                           experiment = '',
+                           sample = '',
+                           treatment = '',
+                           channel_a = -1,
+                           channel_b = -1,
+                           a_vs_b = list('')) %>%
+        filter(channel_a != -1)
     }
       
 
-    ### between_trt: Between-treatment statistics
-
-    # for each treatment/sample group
-    ## calculate smoothed curves (including 1st derivative, velocity) by channel
-    ## compare smoothed curves within each group (when more than one channel exists)
+    ### btw_trt: Between-treatment statistics (same sample, different treatment)
+    btw_trt <- group_by(dat_sub, date, experiment, sample) %>%
+      
+      # check to see how many channels we have in each group  
+      mutate(ntrts = length(unique(treatment))) %>%
+      
+      # drop any groups that only have one channel (nothing to compare)
+      dplyr::filter(ntrts > 1)
     
-    # compare between treatment/sample groups
-    ## calculate within-group smoothed curves (including 1st derivative, velocity) - summarizing across channels
-    ## compare smoothed curves between groups
-    
-    # comparisons are done via permutation testing using similarity measures from fdakma::kma.similarity()
-    
-    for(i in trts)
+    # if we have different between-treatment statistics to calculate...
+    if(nrow(btw_trt) > 0)
     {
-        # random vs directed comparison for each sample for treatment, i
-        rand_vs_directed <- foreach(j = samps) %do%
-        {
-            tmp <- filter(dat_sub, paste(treatment) == i & paste(sample) == j & !is.na(X) & !is.na(Y)) %>%
-                dplyr::select(Frame, Track, X, Y) %>%
-                pivot_wider(names_from = Track, values_from = c(X, Y))
-
-            fdaregre(tmp, c(sum(grepl('X', names(tmp))), sum(grepl('Y', names(tmp)))), c('Random', 'Directed'))
-        }
+      btw_trt <- btw_trt %>%
+        
+        # create one row per two-way comparison
+        summarize(trt_a = paste(combn(unique(treatment), 2)[1,]),
+                  trt_b = paste(combn(unique(treatment), 2)[2,]),
+                  a_vs_b = list('')) %>%
+        ungroup()
+      
+      # make comparisons for all pairs
+      for(i in 1:nrow(btw_trt))
+      {
+        # get functions to compare
+        f <- filter(dat_sub, paste(treatment) == paste(btw_trt$trt_a[i]) &
+                      sample == btw_trt$sample[i]) %>%
+          with(list(smooth.spline(Frame, X),
+                    smooth.spline(Frame, Y)))
+        g <- filter(dat_sub, paste(treatment) == paste(btw_trt$trt_b[i]) &
+                      sample == btw_trt$sample[i]) %>%
+          with(list(smooth.spline(Frame, X),
+                    smooth.spline(Frame, Y)))
+        
+        # calculate similarity and p-value
+        within_grp$a_vs_b[[i]] <- filter(dat_sub, paste(treatment) %in% c(paste(btw_trt$trt_a[i]), paste(btw_trt$trt_b[i])) &
+                                                  sample == btw_trt$sample[i]) %>%
+          mutate(f = X) %>%
+          compare_two_functions(f = sapply(f, function(.x) .x$y), frames.f = f[[1]]$x, 
+                                g = sapply(g, function(.x) .x$y), frames.g = g[[1]]$x,
+                                nperms = nperms, lab = 'treatment')
+      }
+    }else{
+      btw_trt <- tibble(date = as.Date(NA),
+                        experiment = '',
+                        sample = '',
+                        trt_a = '',
+                        trt_b = '',
+                        a_vs_b = list('')) %>%
+        filter(!is.na(date))
     }
-    
+
 
     ### tracks_time: time-coded tracks
     exp_summ$tracks_time <- arrange(dat_sub, channel, Track, Frame) %>%
