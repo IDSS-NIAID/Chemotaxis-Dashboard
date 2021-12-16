@@ -23,7 +23,7 @@ missing_info <- function()
 #' @param frames A vector of frames over which the function, f, is defined
 #' @param f A vector or matrix of responses for f
 #' @param g A vector or matrix of responses for g
-#' @param nperms Number of permutations for permutation testing
+#' @param sig.figs Integer, maximum significant digits for p-values obtained by permutation testing
 #' @param frames.g A vector of frames over which the function, g, is defined
 #' @param lab A character string indicating which variable is to be shuffled in the permutations. If NULL, then it is assumed that the two variables to be compared are `f` and `g`.
 #' 
@@ -45,7 +45,7 @@ missing_info <- function()
 #' frames <- channel_summ$frames[[1]]
 #' f <- channel_summ$x[[1]]
 #' g <- channel_summ$y[[1]]
-compare_two_functions <- function(.data, frames.f, f, g, nperms, frames.g = frames.f, lab = NULL)
+compare_two_functions <- function(.data, frames.f, f, g, sig.figs, frames.g = frames.f, lab = NULL)
 {
 
   if(is.null(lab))
@@ -75,65 +75,74 @@ compare_two_functions <- function(.data, frames.f, f, g, nperms, frames.g = fram
                                             x.g = frames.g, y0.g = g, 
                                             similarity.method = 'd0.L2'))
   
-  perms <- replicate(nperms, 
+  # permutation test
+  for(i in 2:max(2, sig.figs))
   {
-    # shuffle f and g
-    if(is.null(lab))
+  
+    perms <- replicate(1*10^i, 
     {
-      # pick tracks to shuffle
-      pick_track <- as.logical(rbinom(length(tracks), 1, 0.5))
-
-      shuffled <- mutate(.data, 
-                         f.tmp = ifelse(Track %in% tracks[pick_track], g, f),
-                         g     = ifelse(Track %in% tracks[pick_track], f, g),
-                         f     = f.tmp)
+      # shuffle f and g
+      if(is.null(lab))
+      {
+        # pick tracks to shuffle
+        pick_track <- as.logical(rbinom(length(tracks), 1, 0.5))
+  
+        shuffled <- mutate(.data, 
+                           f.tmp = ifelse(Track %in% tracks[pick_track], g, f),
+                           g     = ifelse(Track %in% tracks[pick_track], f, g),
+                           f     = f.tmp)
+            
+        # smooth f and g
+        f <- with(shuffled, smooth.spline(Frame, f))
+        g <- with(shuffled, smooth.spline(Frame, g))
+      }else{
+        # pick tracks to be in group 1, the others fall into group 2 (should exactly two groups)
+        grp1 <- sample(tracks, grps[1])
           
-      # smooth f and g
-      f <- with(shuffled, smooth.spline(Frame, f))
-      g <- with(shuffled, smooth.spline(Frame, g))
-    }else{
-      # pick tracks to be in group 1, the others fall into group 2 (should exactly two groups)
-      grp1 <- sample(tracks, grps[1])
-          
-      # shuffle
-      shuffled <- mutate(.data,
-                         lab = ifelse(perm_lab %in% grp1, names(grps)[1], names(grps)[2]))
+        # shuffle
+        shuffled <- mutate(.data,
+                           lab = ifelse(perm_lab %in% grp1, names(grps)[1], names(grps)[2]))
                              
-      # smooth f and g
-      f <- dplyr::filter(shuffled, lab == names(grps)[1]) %>%   # filter by shuffled group
-        with(list(smooth.spline(Frame, X),                      # smooth undirected function
-                  smooth.spline(Frame, Y)))                     # smooth directed function
+        # smooth f and g
+        f <- dplyr::filter(shuffled, lab == names(grps)[1]) %>%   # filter by shuffled group
+          with(list(smooth.spline(Frame, X),                      # smooth undirected function
+                    smooth.spline(Frame, Y)))                     # smooth directed function
       
-      f <- list(x = sapply(f, function(.x) .x$x),
-                y = sapply(f, function(.x) .x$y))               # return two columns (un/directed) of smoothed functions
+        f <- list(x = sapply(f, function(.x) .x$x),
+                  y = sapply(f, function(.x) .x$y))               # return two columns (un/directed) of smoothed functions
         
-      g <- dplyr::filter(shuffled, lab == names(grps)[2]) %>%   # filter by shuffled group
-        with(list(smooth.spline(Frame, X),                      # smooth undirected function
-                  smooth.spline(Frame, Y)))                     # smooth directed function
+        g <- dplyr::filter(shuffled, lab == names(grps)[2]) %>%   # filter by shuffled group
+          with(list(smooth.spline(Frame, X),                      # smooth undirected function
+                    smooth.spline(Frame, Y)))                     # smooth directed function
       
-      g <- list(x = sapply(g, function(.x) .x$x),
-                y = sapply(g, function(.x) .x$y))               # return two columns (un/directed) of smoothed functions
-    }
+        g <- list(x = sapply(g, function(.x) .x$x),
+                  y = sapply(g, function(.x) .x$y))               # return two columns (un/directed) of smoothed functions
+      }
         
-    # calculate similarity
-    suppressWarnings(kma.similarity(x.f = f$x, y0.f = f$y, 
-                                    x.g = g$x, y0.g = g$y,
-                                    similarity.method = 'd0.L2'))
-  })
+      # calculate similarity
+      suppressWarnings(kma.similarity(x.f = f$x, y0.f = f$y, 
+                                      x.g = g$x, y0.g = g$y,
+                                      similarity.method = 'd0.L2'))
+    })
     
     # return permutation test p-value, null hypothesis is that f and g are the same
-    c(dissim = dissim,
-      p = sum(dissim < perms) / nperms) %>%
-        return()
+    retval <- c(dissim = dissim,
+                p = sum(dissim < perms) / 1*10^i)
+    
+    if(retval['p'] > 1*10^-(i - 1))
+      break
+  }
+  
+  return(retval)
 }
 
 #' Analysis of data for each experiment
 #' 
 #' @param dat_sub data frame (tibble) containing the subset of data for a single experiment
-#' @param nperms number of permutations to use in permutation test statistics
+#' @param sig.figs maximum significant digits for p-values obtained by permutation testing
 #' 
 #' @value A data frame containing channel-level summaries of the data in dat_sub. A list containing experiment-level statistics is also saved to an RData file.
-one_experiment <- function(dat_sub, nperms = 10000)
+one_experiment <- function(dat_sub, sig.figs = 4)
 {
     ##################################
     # Prep dat_sub for summarization #
@@ -219,7 +228,7 @@ one_experiment <- function(dat_sub, nperms = 10000)
                                              filter(dat_sub, channel == chan) %>%
                                              dplyr::select(Track, Frame, X, Y) %>% 
                                              rename(f = X, g = Y) %>%
-                                             compare_two_functions(frames, f, g, nperms)))
+                                             compare_two_functions(frames, f, g, sig.figs)))
 ### do a tiered approach here - 100 perms, if p < 0.1 then 1000, if p < 0.01 then 10000, ...
 
     ##############################
@@ -273,7 +282,7 @@ one_experiment <- function(dat_sub, nperms = 10000)
           mutate(f = X) %>%
           compare_two_functions(f = sapply(f, function(.x) .x$y), frames.f = f[[1]]$x, 
                                 g = sapply(g, function(.x) .x$y), frames.g = g[[1]]$x,
-                                nperms = nperms, lab = 'channel')
+                                sig.figs = sig.figs, lab = 'channel')
       }
     }else{
       within_grp <- tibble(date = as.Date(NA),
@@ -328,7 +337,7 @@ one_experiment <- function(dat_sub, nperms = 10000)
           mutate(f = X) %>%
           compare_two_functions(f = sapply(f, function(.x) .x$y), frames.f = f[[1]]$x, 
                                 g = sapply(g, function(.x) .x$y), frames.g = g[[1]]$x,
-                                nperms = nperms, lab = 'treatment')
+                                sig.figs = sig.figs, lab = 'treatment')
       }
     }else{
       btw_trt <- tibble(date = as.Date(NA),
@@ -382,7 +391,7 @@ one_experiment <- function(dat_sub, nperms = 10000)
           mutate(f = X) %>%
           compare_two_functions(f = sapply(f, function(.x) .x$y), frames.f = f[[1]]$x, 
                                 g = sapply(g, function(.x) .x$y), frames.g = g[[1]]$x,
-                                nperms = nperms, lab = 'sample')
+                                sig.figs = sig.figs, lab = 'sample')
       }
     }else{
       btw_samp <- tibble(date = as.Date(NA),
