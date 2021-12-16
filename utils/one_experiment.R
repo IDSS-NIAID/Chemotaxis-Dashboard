@@ -229,7 +229,6 @@ one_experiment <- function(dat_sub, sig.figs = 4)
                                              dplyr::select(Track, Frame, X, Y) %>% 
                                              rename(f = X, g = Y) %>%
                                              compare_two_functions(frames, f, g, sig.figs)))
-### do a tiered approach here - 100 perms, if p < 0.1 then 1000, if p < 0.01 then 10000, ...
 
     ##############################
     # Experiment-level summaries #
@@ -265,19 +264,19 @@ one_experiment <- function(dat_sub, sig.figs = 4)
       {
         # get functions to compare
         f <- filter(dat_sub, paste(treatment) == paste(within_grp$treatment[i]) &
-                             sample == within_grp$sample[i] &
+                             paste(sample) == paste(within_grp$sample[i]) &
                              channel == within_grp$channel_a[i]) %>%
           with(list(smooth.spline(Frame, X),
                     smooth.spline(Frame, Y)))
         g <- filter(dat_sub, paste(treatment) == paste(within_grp$treatment[i]) &
-                             sample == within_grp$sample[i] &
+                             paste(sample) == paste(within_grp$sample[i]) &
                              channel == within_grp$channel_b[i]) %>%
           with(list(smooth.spline(Frame, X),
                     smooth.spline(Frame, Y)))
       
         # calculate similarity and p-value
         within_grp$a_vs_b[[i]] <- filter(dat_sub, paste(treatment) == paste(within_grp$treatment[i]) &
-                                                  sample == within_grp$sample[i] &
+                                                  paste(sample) == paste(within_grp$sample[i]) &
                                                   channel %in% c(within_grp$channel_a[i], within_grp$channel_b[i])) %>%
           mutate(f = X) %>%
           compare_two_functions(f = sapply(f, function(.x) .x$y), frames.f = f[[1]]$x, 
