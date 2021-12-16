@@ -226,6 +226,8 @@ one_experiment <- function(dat_sub, nperms = 10000)
     # Experiment-level summaries #
     ##############################
     
+    exp_summ <- list()
+    
     trts <- paste(unique(channel_summ$treatment))
     samps <- unique(channel_summ$sample)
     
@@ -284,6 +286,8 @@ one_experiment <- function(dat_sub, nperms = 10000)
         filter(channel_a != -1)
     }
       
+    exp_summ$within_grp <- within_grp
+    
 
     ### btw_trt: Between-treatment statistics (same sample, different treatment)
     btw_trt <- group_by(dat_sub, date, experiment, sample) %>%
@@ -319,8 +323,8 @@ one_experiment <- function(dat_sub, nperms = 10000)
                     smooth.spline(Frame, Y)))
         
         # calculate similarity and p-value
-        within_grp$a_vs_b[[i]] <- filter(dat_sub, paste(treatment) %in% c(paste(btw_trt$trt_a[i]), paste(btw_trt$trt_b[i])) &
-                                                  sample == btw_trt$sample[i]) %>%
+        btw_trt$a_vs_b[[i]] <- filter(dat_sub, paste(treatment) %in% c(paste(btw_trt$trt_a[i]), paste(btw_trt$trt_b[i])) &
+                                               sample == btw_trt$sample[i]) %>%
           mutate(f = X) %>%
           compare_two_functions(f = sapply(f, function(.x) .x$y), frames.f = f[[1]]$x, 
                                 g = sapply(g, function(.x) .x$y), frames.g = g[[1]]$x,
@@ -336,6 +340,62 @@ one_experiment <- function(dat_sub, nperms = 10000)
         filter(!is.na(date))
     }
 
+    exp_summ$btw_trt <- btw_trt
+    
+    
+    ### btw_samp: Between-sample comparison statistics (same treatment, different sample)
+    btw_samp <- group_by(dat_sub, date, experiment, treatment) %>%
+      
+      # check to see how many channels we have in each group  
+      mutate(nsamps = length(unique(sample))) %>%
+      
+      # drop any groups that only have one channel (nothing to compare)
+      dplyr::filter(nsamps > 1)
+    
+    # if we have different between-treatment statistics to calculate...
+    if(nrow(btw_samp) > 0)
+    {
+      btw_samp <- btw_samp %>%
+        
+        # create one row per two-way comparison
+        summarize(a = paste(combn(unique(sample), 2)[1,]),
+                  b = paste(combn(unique(sample), 2)[2,]),
+                  a_vs_b = list('')) %>%
+        ungroup()
+      
+      # make comparisons for all pairs
+      for(i in 1:nrow(btw_samp))
+      {
+        # get functions to compare
+        f <- filter(dat_sub, paste(sample) == paste(btw_samp$a[i]) &
+                      paste(treatment) == paste(btw_samp$treatment[i])) %>%
+          with(list(smooth.spline(Frame, X),
+                    smooth.spline(Frame, Y)))
+        g <- filter(dat_sub, paste(sample) == paste(btw_samp$b[i]) &
+                      paste(treatment) == paste(btw_samp$treatment[i])) %>%
+          with(list(smooth.spline(Frame, X),
+                    smooth.spline(Frame, Y)))
+        
+        # calculate similarity and p-value
+        btw_samp$a_vs_b[[i]] <- filter(dat_sub, paste(sample) %in% c(paste(btw_samp$a[i]), paste(btw_samp$b[i])) &
+                                                paste(treatment) == paste(btw_samp$treatment[i])) %>%
+          mutate(f = X) %>%
+          compare_two_functions(f = sapply(f, function(.x) .x$y), frames.f = f[[1]]$x, 
+                                g = sapply(g, function(.x) .x$y), frames.g = g[[1]]$x,
+                                nperms = nperms, lab = 'sample')
+      }
+    }else{
+      btw_samp <- tibble(date = as.Date(NA),
+                         experiment = '',
+                         treatment = '',
+                         trt_a = '',
+                         trt_b = '',
+                         a_vs_b = list('')) %>%
+        filter(!is.na(date))
+    }
+    
+    exp_summ$btw_samp <- btw_samp
+    
 
     ### tracks_time: time-coded tracks
     exp_summ$tracks_time <- arrange(dat_sub, channel, Track, Frame) %>%
@@ -360,19 +420,28 @@ one_experiment <- function(dat_sub, nperms = 10000)
         geom_hline(yintercept = 1, linetype = 2)
     
     ### tracks_v: velocity measures
-    exp_summ$tracks_v <- pivot_longer(dat_sub, starts_with('v'), names_to = 'd', values_to = 'v') %>%
-        mutate(joint_channels = case_when(channel  ==  1   ~ paste0('1: ', sample, ', ', treatment),
-                                          channel %in% 2:3 ~ paste0('2/3: ', sample, ', ', treatment),
-                                          channel  ==  4   ~ paste0('4: ', sample, ', ', treatment),
-                                          TRUE             ~ paste0('5/6: ',  sample, ', ', treatment)),
-               grp = paste(sample, treatment, d, channel)) %>%
-        filter(d != 'v' & !is.na(v)) %>%
-        arrange(channel, d, Track, Frame) %>%
+    exp_summ$tracks_v <- pivot_longer(track_summ, starts_with('v'), names_to = 'd', values_to = 'v') %>%
+      filter(d != 'v') %>%
+      
+      # split out velocity curves for each track
+      group_by(channel, Track, sample, treatment, d) %>%
+      summarize(v = unlist(v),
+                Frame = unlist(frames)) %>%
+      mutate(grp = paste(channel, d)) %>%
+      ungroup() %>%
+    
+      # join channels that have the same sample and treatment
+      group_by(sample, treatment, d) %>%
+      mutate(joint_channels = paste0(paste(unique(channel), collapse = '/'), ": ", unique(sample), ', ', unique(treatment))) %>%
+      ungroup() %>%
+
+      # sort and plot
+      arrange(channel, d, Track, Frame) %>%
         
-        ggplot(aes(Frame, v, group = grp, color = d)) +
-        
-        stat_smooth(method = lm, formula = y ~ bs(x, df = 3), se = FALSE) +
-        stat_smooth(method = lm, formula = y ~ 1, se = FALSE, linetype = 2, size = .5) +
+      ggplot(aes(Frame, v, group = grp, color = d)) +
+
+      stat_smooth(method = lm, formula = y ~ bs(x, df = 3), se = FALSE) +
+      stat_smooth(method = lm, formula = y ~ 1, se = FALSE, linetype = 2, size = .5) +
         
         facet_grid(~ joint_channels) +
         
