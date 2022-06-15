@@ -58,7 +58,7 @@ shinyServer(function(input, output, session) {
              tibble(`#Samples` = length(unique(sample)),
                     `#Experiements` = length(unique(experiment)),
                     `#Treatments` = length(unique(treatment)),
-                    `Total # of Obs` = length(smooth_v_y)))
+                    `Total # of Obs` = length(v_y)))
     })
     
     # this will pull all summary tracks (one for each experiment) from the filtered data set
@@ -66,19 +66,21 @@ shinyServer(function(input, output, session) {
     {
         if(direction == 'y')
         {
-            dat <- rename(dat, smooth = smooth_v_y)
+            dat <- rename(dat, smooth = v_y)
         }else{
-            dat <- rename(dat, smooth = smooth_v_x)
+            dat <- rename(dat, smooth = v_x)
         }
-        
+      
+      str(dat)  
+      
         dat %>%
-            pmap_df(function(smooth, experiment, channel, sample, treatment, ...){
+            pmap_df(function(smooth, experiment, channel, sample, treatment, frames, ...){
                 tibble(experiment = experiment,
                        channel = channel,
                        sample = sample,
                        treatment = treatment,
-                       Frame = smooth$x,
-                       v = smooth$y)
+                       Frame = frames,
+                       v = smooth)
             }) %>%
             
             mutate(grp = paste(experiment, channel, sep = '_'))
@@ -89,7 +91,7 @@ shinyServer(function(input, output, session) {
     {
         dat <- sample_select_mod()
         
-        if(nrow(dat) == nrow(channel_summ))
+        if(nrow(dat) == nrow(channel_summ) & nrow(channel_summ) > 6)
         {
             plot_nothing()
         }else{

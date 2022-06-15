@@ -119,7 +119,7 @@ track_summ_select <- dplyr::select(dat, date, experiment) %>%
 ### velocity_stats
 
 # dat_sub <- filter(dat, experiment == track_summ_select$experiment[1])
-channel_summ <- foreach(current_experiment = track_summ_select$experiment[1:8], .combine = rbind) %dopar%
+channel_summ <- foreach(current_experiment = track_summ_select$experiment, .combine = rbind) %dopar%
     {
         filter(dat, experiment == current_experiment) %>%
             one_experiment()
