@@ -76,6 +76,9 @@ compare_two_functions <- function(.data, frames.f, f, g, sig.figs, frames.g = fr
                                             similarity.method = 'd0.L2'))
   
   # permutation test
+  # shuffles labels on data then generates distribution of test statistic for each shuffle
+  # then calculates p-value for actual data's statistic as compared to the simulated test statistic
+  # will shuffle ~10^i times (min i = 2 = 100 shuffles)
   for(i in 2:max(2, sig.figs))
   {
   
@@ -196,7 +199,26 @@ one_experiment <- function(dat_sub, sig.figs = 4)
 
             # convert functions of x and y back to values
             x = map2(x, frames, function(x, f) x(f)),
-            y = map2(y, frames, function(y, f) y(f)))
+            y = map2(y, frames, function(y, f) y(f)),
+            
+            # Chemotactic efficiency
+            # calculate total change in y direction - return a value for each track
+            delta_y = map_dbl(y, ~diff(range(.x))),
+            # calculate the total distance travelled using the distance formula
+            distance_travelled = map2_dbl(x,y,~sum( sqrt( (.x[-1]-.x[-length(.x)])^2+(.y[-1]-.y[-length(.y)])^2 ) )),
+            # chemotactic efficiency for each track is the change in Y (delta_y) divided by the total distance (distance_travelled) 
+            ce = delta_y / distance_travelled,
+            
+            # Angle of migration
+            # We need the total change in x direction to calculate the angle of migration
+            delta_x = map_dbl(x, ~diff(range(.x))),
+            #this finds the angle of migration between the start and end point, in radians
+            angle_migration = abs(atan(delta_x/delta_y))
+            
+            
+            ) 
+    
+    
     
     
     ###############################
@@ -411,12 +433,12 @@ one_experiment <- function(dat_sub, sig.figs = 4)
         mutate(lab = paste0(channel, ": ", sample, ", ", treatment)) %>%
         
         ggplot(aes(x = X, y = Y, group = Track, color = Frame)) +
-        geom_path() +
+        geom_path() + #connects observations in the order in which they appear in the dataset
         
         ylab('Non-directed Movement') +
         xlab('Directed Movement') +
         
-        facet_wrap(~ lab) +
+        facet_wrap(~ lab) + #produces multi-panel plot, separate by 'lab'
         
         scale_y_reverse() +
         scale_color_gradient2(low  = 'blue',
@@ -424,16 +446,17 @@ one_experiment <- function(dat_sub, sig.figs = 4)
                               high = rgb(.9, .62, 0),
                               midpoint = 60) +
         
-        geom_hline(yintercept = 0, linetype = 2) +
-        geom_hline(yintercept = 1, linetype = 2)
+        geom_hline(yintercept = 0, linetype = 2) + #draws a horizontal line at y = 0
+        geom_hline(yintercept = 1, linetype = 2) #draws a horizontal line at y = 1
     
     ### tracks_v: velocity measures
     exp_summ$tracks_v <- pivot_longer(track_summ, starts_with('v'), names_to = 'd', values_to = 'v') %>%
-      filter(d != 'v') %>%
+      filter(d != 'v') %>% #filters out first row (I think)
+      #d = direction, pivot_longer makes data frame longer by making a column 'd' for direction (x-undirected, y-directed)
       
       # split out velocity curves for each track
-      group_by(channel, Track, sample, treatment, d) %>%
-      summarize(v = unlist(v),
+      group_by(channel, Track, sample, treatment, d) %>% #making data frame longer allows us to split by directed and undirected (d)
+      summarize(v = unlist(v), #list -> vector
                 Frame = unlist(frames)) %>%
       mutate(grp = paste(channel, d)) %>%
       ungroup() %>%
@@ -445,7 +468,8 @@ one_experiment <- function(dat_sub, sig.figs = 4)
 
       # sort and plot
       arrange(channel, d, Track, Frame) %>%
-        
+      
+      #plots velocity (v) over time (Frame), grouping the data by grp which is channel and direction, coloring them by direction  
       ggplot(aes(Frame, v, group = grp, color = d)) +
 
       stat_smooth(method = lm, formula = y ~ bs(x, df = 3), se = FALSE) +
