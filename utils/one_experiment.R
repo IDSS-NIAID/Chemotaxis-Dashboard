@@ -224,8 +224,8 @@ one_experiment <- function(dat_sub, sig.figs = 4)
             ) 
     
     #I am not sure where in the code this fits best but the proportion of cells crossing the threshold is equal to the sum of finished divided by the length of finished
-    prop_finished <- sum(track_summ$finished)/length(track_summ$finished)
-    
+    #prop_finished <- sum(track_summ$finished)/length(track_summ$finished)
+   
     
     ###############################
     # Channel-level summarization #
@@ -250,7 +250,7 @@ one_experiment <- function(dat_sub, sig.figs = 4)
             x = map2(x, frames, function(x, f) x(f)),
             y = map2(y, frames, function(y, f) y(f)),
             
-            # directed vs undirected statistics for each channel
+            #directed vs undirected statistics for each channel
             directed_v_undirected = pmap(list(chan = channel, frames = frames, f = x, g = y),
                                          function(chan, frames, f, g)
                                              filter(dat_sub, channel == chan) %>%
@@ -259,11 +259,24 @@ one_experiment <- function(dat_sub, sig.figs = 4)
                                              compare_two_functions(frames, f, g, sig.figs)
                                          ),
             
-            # proportion of cells in the channel that make it from top to bottom
-            
-            
             )
-
+    
+    # Proportion of cells in the channel that make it from top to bottom
+    # Takes the sum of track_summ$finished for each channel and divides it by the corresponding length of track_sum$finished
+    # I ended up resorting to writing a for loop for this, even though I know it isn't very efficient
+    # I wasn't sure what I could do to access both channel_summ and track_summ, as I think both are needed for this calculation
+    
+    # initializing empty vector which will be filled with proportions of cells completing path
+    finished_by_channel <- c()
+    # the for loop will iterate once through for each channel and filter by the data for that channel
+    for (i in 1:length(channel_summ$channel)){
+      temp <- filter(track_summ, channel == i) #filtering by the data for each channel in turn
+      prop_finished <- sum(temp$finished) / length(temp$finished) #the proportion finished is equal to the sum of the 'finished' column in track_summ divided by the total entries in track_summ for that channel
+      finished_by_channel <- append(finished_by_channel, prop_finished) #appending our calculated proportion to a vector. in the end this vector will contain all of the proportions finished for each channel
+    }
+    channel_summ <- cbind(channel_summ,finished_by_channel) #binding the proportion finished for each channel to the channel_summ dataframe
+  #channel_summ$finished_by_channel #testing
+  
     ##############################
     # Experiment-level summaries #
     ##############################
