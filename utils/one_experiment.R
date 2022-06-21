@@ -213,12 +213,18 @@ one_experiment <- function(dat_sub, sig.figs = 4)
             # We need the total change in x direction to calculate the angle of migration
             delta_x = map_dbl(x, ~diff(range(.x))),
             #this finds the angle of migration between the start and end point, in radians
-            angle_migration = abs(atan(delta_x/delta_y))
+            angle_migration = abs(atan(delta_x/delta_y)),
             
+            # Proportion of cells making it past the threshold
+            # at the track level, we want to know if the cell ever passes the y-position 1
+            # to understand that, we set a variable "finished" to be 1 if the cell crosses the threshold and 0 if it does not
+            max_y = map_dbl(y, ~max(.x)), 
+            finished = ifelse(max_y >= 1, 1, 0)
             
             ) 
     
-    
+    #I am not sure where in the code this fits best but the proportion of cells crossing the threshold is equal to the sum of finished divided by the length of finished
+    prop_finished <- sum(track_summ$finished)/length(track_summ$finished)
     
     
     ###############################
@@ -250,7 +256,13 @@ one_experiment <- function(dat_sub, sig.figs = 4)
                                              filter(dat_sub, channel == chan) %>%
                                              dplyr::select(Track, Frame, X, Y) %>% 
                                              rename(f = X, g = Y) %>%
-                                             compare_two_functions(frames, f, g, sig.figs)))
+                                             compare_two_functions(frames, f, g, sig.figs)
+                                         ),
+            
+            # proportion of cells in the channel that make it from top to bottom
+            
+            
+            )
 
     ##############################
     # Experiment-level summaries #
