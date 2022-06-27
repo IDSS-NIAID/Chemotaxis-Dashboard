@@ -196,7 +196,7 @@ one_experiment <- function(dat_sub, sig.figs = 4)
             v_x = map2(x, frames, function(x, f) x(f, deriv = 1)),
             v_y = map2(y, frames, function(y, f) y(f, deriv = 1)),
             v = map2(v_x, v_y, ~ sqrt(.x^2 + .y^2) * sign(.y)), # going down = positive velocity, going up = negative velocity
-
+        
             # convert functions of x and y back to values
             x = map2(x, frames, function(x, f) x(f)),
             y = map2(y, frames, function(y, f) y(f)),
@@ -214,6 +214,27 @@ one_experiment <- function(dat_sub, sig.figs = 4)
             delta_x = map_dbl(x, ~diff(range(.x))),
             #this finds the angle of migration between the start and end point, in radians
             angle_migration = abs(atan(delta_x/delta_y)),
+<<<<<<< Updated upstream
+=======
+            
+            
+            # ### tracks_v_stats: velocity statistics
+            nl_buffer_vs_nl_trt_x <- filter(dat_sub, sample == 'nl') %>%
+                mutate(trt = ifelse(channel == 1, 'buffer', as.character(treatment))) %>%
+            # linear model of velocity (v) per track and summary statistics
+            av_velocity = lmer(v ~ Track, data),
+            summary_velocity= summary(av_velocity),
+            
+            #peak velocity
+            max_v = map2(max(v)),
+            #calculates time when velocity is at max
+            #time_max_v= map2(frames, v=max_v)
+            
+            
+            
+            
+            
+>>>>>>> Stashed changes
             
             # Proportion of cells making it past the threshold
             # at the track level, we want to know if the cell ever passes the y-position 1
@@ -512,7 +533,7 @@ one_experiment <- function(dat_sub, sig.figs = 4)
     # nl_buffer_vs_nl_trt_x <- filter(dat_sub, sample == 'nl') %>%
     #     mutate(trt = ifelse(channel == 1, 'buffer', as.character(treatment))) %>%
     #     
-    #     lmer(formula = 
+         
 
     # ### Chemotactic efficiency
     # # (net vertical distance) / (total distance)
