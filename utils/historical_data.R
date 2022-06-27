@@ -34,7 +34,20 @@ results_dir <- paste(root, 'utils', 'results_csv', sep = '/')
 
 # all results files
 results <- paste('ls', results_dir) %>%
-    system(intern = TRUE)
+  system(intern = TRUE)
+
+# get current branch
+branch <- system('git branch', intern = TRUE)
+
+# keep correct data, contingent on branch
+if('* testing' %in% branch)
+{
+  # keep only testing data (they have dates in 1900's)
+  results <- results[grepl('1900', results)]
+}else{
+  # keep only those starting with 20 (i.e. drop testing data with dates in 1900's)
+  results <- results[grepl('20', results)]
+}
 
 #########
 # Utils #
