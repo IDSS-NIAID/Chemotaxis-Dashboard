@@ -7,11 +7,14 @@ install.packages('gganimate')
 install.packages('transformr')
 install.packages('ggplot2')
 
+
 #load in these packages
 library(ggplot2)
 library(dplyr)
 library(gganimate)
 library(gridExtra)
+library(RColorBrewer)
+
 
 ##############
 # User Input #
@@ -51,6 +54,14 @@ xmax <- max(dat$X)
 ymin <- min(dat$Y)
 ymax <- max(dat$Y)
 
+# generates color function for specific subsets of tracks when needed
+myColors <- brewer.pal(9,"Set1") #using a color set from the package
+#need to assign the different colors from the set to each level from track variable
+names(myColors) <- levels(Tracks)
+# color scale variable adds color scheme in ggplot formula using mycolors scheme created
+##add colorScale function to any ggplot to customize color
+colorScale <- scale_colour_manual(name = "Track",values = myColors) 
+
 ####################
 # Generating plots #
 ####################
@@ -63,7 +74,8 @@ path_plots <- function(dat, channel, starting_frame, steps){
   for (i in starting_frame:steps){
     temp <- filter(dat, Frame <= i) #makes a subset of the data including only the desired frames
     #plots this subset of the data, color coordinated by track
-    p <- ggplot(temp, mapping = aes(X, Y, color = Track, group = Track)) + geom_path()+ xlim(xmin,xmax) + ylim(ymin,ymax)+ ggtitle(paste("Frame",i)) 
+    p <- ggplot(temp, mapping = aes(X, Y, color = factor(Track), group = Track)) + geom_path()+ xlim(xmin,xmax) + ylim(ymin,ymax)+ 
+      ggtitle(paste("Frame",i)) 
     print(p)
     #ggsave(paste("track_plot_output/testingPlots_",i,".png",sep=""),p)
     #at the end of the loop, we should have slides that show the movement of the cells frame by frame
@@ -77,13 +89,37 @@ point_plots <- function(dat, channel, starting_frame, steps){
   for (i in starting_frame:steps){
     temp <- filter(dat, Frame == i) #makes a subset of the data including only the desired frames
     #plots this subset of the data, color coordinated by track
-    p <- ggplot(temp, mapping = aes(X, Y, color = Track, group = Track)) + geom_point()+ xlim(xmin,xmax) + ylim(ymin,ymax)+ ggtitle(paste("Frame",i)) 
+    p <- ggplot(temp, mapping = aes(X, Y, color = factor(Track), group = Track)) + geom_point()+ xlim(xmin,xmax) + ylim(ymin,ymax)+ ggtitle(paste("Frame",i)) 
     print(p)
     #ggsave(paste("track_plot_output/testingPlots_",i,".png",sep=""),p)
     #at the end of the loop, we should have slides that show the movement of the cells frame by frame
   }
   dev.off()
 }
+
+#function for highlighting specific track
+
+#need to select a specific track to highlight assign num to track 56
+num<- 56
+#easier to type Track 
+Tracks<- test_data$Track
+
+#Creating conditional inputs based on track selection and color selection
+##These inputs will be used iin the highlighting ggplot function
+track_select<- if_else(Tracks== num, 'red',"black")
+#another conditional input used for opacity
+track_select_op<- if_else(Tracks== num, 2,.20)
+
+#ggplot function creating a point graphs with specific color and opacity based
+##on the track chosen to be highlighted
+highlight <- ggplot(test_data, mapping = 
+                      aes(X,Y, color=(Track), group=Track)) + 
+  geom_point(color= track_select, alpha=track_select_op)
+
+#calling function test if it works
+highlight
+
+
 
 ###########
 # Testing #
