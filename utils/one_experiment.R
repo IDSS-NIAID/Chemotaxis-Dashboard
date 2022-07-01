@@ -550,7 +550,5 @@ one_experiment <- function(dat_sub, sig.figs = 4)
     
     ##### Save and Return Results #####
     
-    save(exp_summ, file = paste0('data/', unique(dat_sub$experiment), '.RData'))
-    
-    return(channel_summ)
+    save(exp_summ, channel_summ, file = paste0('data/', unique(dat_sub$experiment), '.RData'))
 }
