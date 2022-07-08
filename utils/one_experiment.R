@@ -143,9 +143,10 @@ compare_two_functions <- function(.data, frames.f, f, g, sig.figs, frames.g = fr
 #' 
 #' @param dat_sub data frame (tibble) containing the subset of data for a single experiment
 #' @param sig.figs maximum significant digits for p-values obtained by permutation testing
+#' @param root path to the root directory of this repository (or wherever else you want to be saving data - will save to `root/data/.`)
 #' 
 #' @value A data frame containing channel-level summaries of the data in dat_sub. A list containing experiment-level statistics is also saved to an RData file.
-one_experiment <- function(dat_sub, sig.figs = 4)
+one_experiment <- function(dat_sub, root = '', sig.figs = 4)
 {
     ##################################
     # Prep dat_sub for summarization #
@@ -213,36 +214,31 @@ one_experiment <- function(dat_sub, sig.figs = 4)
             # We need the total change in x direction to calculate the angle of migration
             delta_x = map_dbl(x, ~diff(range(.x))),
             #this finds the angle of migration between the start and end point, in radians
-            angle_migration = abs(atan(delta_x/delta_y)),
-<<<<<<< Updated upstream
-=======
-            
-            
-            # ### tracks_v_stats: velocity statistics
-            nl_buffer_vs_nl_trt_x <- filter(dat_sub, sample == 'nl') %>%
-                mutate(trt = ifelse(channel == 1, 'buffer', as.character(treatment))) %>%
-            # linear model of velocity (v) per track and summary statistics
-            av_velocity = lmer(v ~ Track, data),
-            summary_velocity= summary(av_velocity),
-            
-            #peak velocity
-            max_v = map2(max(v)),
-            #calculates time when velocity is at max
-            #time_max_v= map2(frames, v=max_v)
-            
-            
-            
-            
-            
->>>>>>> Stashed changes
-            
-            # Proportion of cells making it past the threshold
-            # at the track level, we want to know if the cell ever passes the y-position 1
-            # to understand that, we set a variable "finished" to be 1 if the cell crosses the threshold and 0 if it does not
-            max_y = map_dbl(y, ~max(.x)), 
-            finished = ifelse(max_y >= 1, 1, 0)
-            
-            ) 
+            angle_migration = abs(atan(delta_x/delta_y))#,
+# 
+#             
+#             #peak velocity
+#             max_v = map2_dbl(v, ~max(.x)),
+#             #calculates time when velocity is at max
+#             #time_max_v= map2(frames, v=max_v)
+# 
+# 
+#             # Proportion of cells making it past the threshold
+#             # at the track level, we want to know if the cell ever passes the y-position 1
+#             # to understand that, we set a variable "finished" to be 1 if the cell crosses the threshold and 0 if it does not
+#             max_y = map_dbl(y, ~max(.x)),
+#             finished = ifelse(max_y >= 1, 1, 0)
+
+            )
+    
+    # ### tracks_v_stats: velocity statistics
+    # nl_buffer_vs_nl_trt_x <- filter(dat_sub, sample == 'nl') %>%
+    #   mutate(trt = ifelse(channel == 1, 'buffer', as.character(treatment))) #%>%
+    # # linear model of velocity (v) per track and summary statistics
+    # av_velocity = lmer(v ~ Track, data),
+    # summary_velocity= summary(av_velocity),
+    # 
+    
     
     #I am not sure where in the code this fits best but the proportion of cells crossing the threshold is equal to the sum of finished divided by the length of finished
     #prop_finished <- sum(track_summ$finished)/length(track_summ$finished)
@@ -550,7 +546,5 @@ one_experiment <- function(dat_sub, sig.figs = 4)
     
     ##### Save and Return Results #####
     
-    save(exp_summ, file = paste0('data/', unique(dat_sub$experiment), '.RData'))
-    
-    return(channel_summ)
+    save(channel_summ, exp_summ, file = paste0(root, '/data/', unique(dat_sub$experiment), '.RData'))
 }
