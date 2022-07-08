@@ -36,18 +36,18 @@ all_min_dist <- function(dat){
 }
 
 # THRESHOLD BY FRAME
-# Returns a list of frames where the selected track's closest neighbor is within the threshold distance
+# Returns a list of frames where the selected track's closest neighbor is outside the threshold distance
 # Can be used to have more flexibility when selecting tracks, can eliminate only bad frames instead of whole track
 thresholding_by_frame <- function(listname,threshold,track_num){
   cur_track <- listname[[track_num]]
-  bad_frame <- c()
+  good_frames <- c()
   for (i in 1:length(cur_track)){
-    if (cur_track[i] < threshold){
+    if (cur_track[i] > threshold){
       #if the distance is less than the threshold, appends the Frame to the list of bad frames
-      bad_frame <- append(bad_frame, i)
+      good_frames <- append(good_frames, i)
     } 
   }
-  return(bad_frame)
+  return(good_frames)
 }
 
 # THRESHOLD BY TRACK
@@ -79,58 +79,36 @@ find_tracks <- function(dat,threshold){
   return(tracks_vec)
 }
 
-# FINDING ALL INELIGIBLE FRAMES
-# returns a list of all ineligible frames for each track based on a threshold
-# returns frames where the track gets too close to another track
+# FINDING ALL ELIGIBLE FRAMES
+# creates a csv file of all frames where each track does not get too close to another track
 # gives more flexibility in choosing tracks to examine
 # if the user wishes to eliminate frames before the selected 'starting line', they should set toFilter to TRUE and choose a starting line
-# the function will then append these frames to the list of ineligible frames for each track
-find_frames <- function(dat,threshold,toFilter = FALSE,starting_line = NULL){
+# the function will then remove these frames from the list of eligible frames for each track
+find_frames <- function(filename,threshold,toFilter = FALSE,starting_line = NULL){
+  labelName <- tools::file_path_sans_ext(basename(filename))
+  dat <- read.delim(filename, sep = ",")
   theList <- all_min_dist(dat) #getting all min distances
-  frames_list <- list()
   for (i in 1:length(theList)){
     t <- thresholding_by_frame(theList,threshold,i)
     if(toFilter){
       f <- filter_start(dat,starting_line,i) #finds frames before starting line
-      temp <- intersect(f,t) #finding frames both within threshold and before starting line
-      f <- f[!(f %in% temp)]
-      t <- sort(append(f,t)) 
+      temp <- intersect(f,t) #finding frames that are outside threshold but before starting line
+      t <- t[!(t %in% temp)] #removing the before-start frames
     }
-    frames_list[[i]] <- t
+    cat(paste(t,collapse=","),"\n",file = paste("good_frames/",labelName,"_goodFrames.csv",sep=""),append = TRUE)
   }
-  return(frames_list)
 }
 
-# MAKE CSV OF BAD FRAMES
-# turns list of 'bad frames' for each track into one csv per file
-# toFilter is automatically set to FALSE unless otherwise noted
-# if the user wants to filter out frames before the starting line, they shoudl set toFilter to TRUE and add a starting line
-# this function calls find_frames and writes the output list to a csv
-make_csv <- function(dat,threshold,labelName,toFilter = FALSE,starting_line = NULL){
-  theList <- find_frames(dat,threshold,toFilter,starting_line)
-  len <- max(lengths(theList))
-  myDf <- t(map_dfc(theList, function(l) {
-    c(l, rep(0, len - length(l))) #fills empty slots with 0 (can also be set to NA) in order to make the list rectangular
-  }))
-  write.csv(myDf, paste("bad_frames/",labelName,"_badFrames.csv"))
-}
-  
 ###########
 # Testing #
 ###########
 
-#filename <- "trackResults/20180215_CH2_NL_fMLF/20180215_CH2_NL_fMLF.csv"
-filename <- "trackResults/20180215_CH1_NL_Basal/20180215_CH1_NL_Basal.csv"
-labelName <- tools::file_path_sans_ext(basename(filename))
-dat <- read.delim(filename, sep = ",")
+filename <- "trackResults/20171106__CH6_BQ_fMLF/20171106__CH6_BQ_fMLF.csv"
 threshold <- 35
-make_csv(dat,threshold,labelName,TRUE,100)
+find_frames(filename,threshold,TRUE,100)
 
-find_frames(dat,threshold,TRUE,100)
-filter_start(dat,100,12)
+# TESTING IF FILE READS IN OK
+labelName <- "20171106__CH6_BQ_fMLF"
+filename2 <- paste("good_frames/",labelName,"_goodFrames.csv",sep="")
+dat2 <- readLines(filename2)
 
-# QUESTIONS:
-# Is there a more efficient / easier way to store the data than csv?
-# Is there a way to save the data without adding a lot of zeros or NA? is 0 or NA preferred?
-# (look up sparse matrix)
-# Should we work to vectorize some of these functions since there are a lot of for loops?
