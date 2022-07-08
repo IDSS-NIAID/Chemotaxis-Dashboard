@@ -43,8 +43,8 @@ colorScale <- scale_colour_manual(name = "Track",values = myColors)
 
 # PATH PLOTS: plots the frame-by-frame path of each Track 
 # the following code should create a pdf file and plot the desired frame-by-frame plots inside
-path_plots <- function(dat, channel, starting_frame, steps){
-  pdf(file = paste("track_plot_output/",channel,"_path_plot.pdf",sep=""))
+path_plots <- function(dat, labelName, starting_frame, steps){
+  pdf(file = paste("track_plot_output/",labelName,"_path_plot.pdf",sep=""))
   for (i in starting_frame:steps){
     temp <- filter(dat, Frame <= i) #makes a subset of the data including only the desired frames
     #plots this subset of the data, color coordinated by track
@@ -57,12 +57,12 @@ path_plots <- function(dat, channel, starting_frame, steps){
 }
 
 # POINT PLOTS: plots only the position of each cell at each time point
-point_plots <- function(dat, channel, starting_frame, steps){
-  pdf(file = paste("track_plot_output/",channel,"_point_plot.pdf",sep=""))
+point_plots <- function(dat, labelName, starting_frame, steps, size_input){
+  pdf(file = paste("track_plot_output/",labelName,"_point_plot.pdf",sep=""))
   for (i in starting_frame:steps){
     temp <- filter(dat, Frame == i) #makes a subset of the data including only the desired frames
     #plots this subset of the data, color coordinated by track
-    p <- ggplot(temp, mapping = aes(X, Y, color = factor(Track), group = Track)) + geom_point()+ xlim(xmin,xmax) + ylim(ymin,ymax)+ ggtitle(paste("Frame",i)) 
+    p <- ggplot(temp, mapping = aes(X, Y, color = factor(Track), group = Track)) + geom_point(size = size_input)+ xlim(xmin,xmax) + ylim(ymin,ymax)+ ggtitle(paste("Frame",i)) 
     print(p)
     #at the end of the loop, we should have slides that show the movement of the cells frame by frame
   }
@@ -82,12 +82,12 @@ highlight <- function(dat,num){
   ##on the track chosen to be highlighted
   highlight <- ggplot(dat, mapping = 
                         aes(X,Y, color=(Track), group=Track)) + 
-    geom_point(color= track_select, alpha=track_select_op)+ xlim(xmin,xmax) + ylim(ymin,ymax)
+    geom_path(color= track_select, alpha=track_select_op)+ xlim(xmin,xmax) + ylim(ymin,ymax)
   print(highlight)
 }
 
-highlight_plots <- function(dat,channel,starting_frame,steps,num){
-  pdf(file = paste("track_plot_output/",channel,"_highlight_plot.pdf_",num,sep=""))
+highlight_plots <- function(dat,labelName,starting_frame,steps,num){
+  pdf(file = paste("track_plot_output/",labelName,"_highlight_plot_", num, ".pdf",sep=""))
   for (i in starting_frame:steps){
     temp <- filter(dat, Frame <= i) #makes a subset of the data including only the desired frames
     #plots this subset of the data, color coordinated by track
@@ -97,12 +97,25 @@ highlight_plots <- function(dat,channel,starting_frame,steps,num){
   dev.off()
 }
 
+# COLORPLOT: highlights each completed track one at a time
+# produces a pdf with one page per track, with the particular track highlighted
+# useful for comparing tracks to the raw data
+colorplot <- function(dat,labelName){
+  pdf(file = paste("track_plot_output/",labelName,"_colorplot_path.pdf",sep=""))
+  for (i in starting_track:ending_track){
+    #plots this subset of the data, color coordinated by track
+    p <- ggplot(dat, mapping = aes(X, Y, color = ifelse(Track == i,"red","blue"), group = Track)) + geom_path()+ xlim(xmin,xmax) + ylim(ymin,ymax)+ ggtitle(paste("Track",i)) 
+    print(p)
+  }
+  dev.off()
+}
+
 ###########
 # Testing #
 ###########
 #choosing a file to test the code on
-filename = "results_csv/20140904279_CH6.csv"
-channel = "20140904279_CH6"
+filename <- "results_csv/20140904279_CH6.csv"
+labelName <- tools::file_path_sans_ext(basename(filename))
 
 #reading in the data set 
 test_data <- read.delim(filename, sep = "\t")
@@ -130,9 +143,9 @@ ymax <- max(dat$Y)
 num <- 15
 
 #function calls
-point_plots(dat,channel,starting_frame,steps)
-path_plots(dat,channel,starting_frame,steps)
+point_plots(dat,labelName,starting_frame,steps)
+path_plots(dat,labelName,starting_frame,steps)
 highlight(dat,num)
-highlight_plots(dat,channel,starting_frame,steps,num)
+highlight_plots(dat,labelName,starting_frame,steps,num)
 
 
