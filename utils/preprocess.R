@@ -32,6 +32,8 @@ theme_cowplot() %>%
 tmp <- commandArgs(TRUE) %>%
   strsplit('=', fixed = TRUE)
 
+# for debugging: args <- list(experiment='20070308')
+# for debugging: args <- list(experiment='20140904279')
 args <- map(tmp, ~ .x[2])
 names(args) <- map_chr(tmp, ~ .x[1])
 
