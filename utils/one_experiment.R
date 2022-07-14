@@ -130,7 +130,7 @@ compare_two_functions <- function(.data, frames.f, f, g, sig.figs, frames.g = fr
     
     # return permutation test p-value, null hypothesis is that f and g are the same
     retval <- c(dissim = dissim,
-                p = sum(dissim < perms) / 1*10^i)
+                p = sum(dissim < perms) / (1*10^i))
     
     if(retval['p'] > 1*10^-(i - 1))
       break
@@ -214,7 +214,7 @@ one_experiment <- function(dat_sub, root = '', sig.figs = 4)
             # We need the total change in x direction to calculate the angle of migration
             delta_x = map_dbl(x, ~diff(range(.x))),
             #this finds the angle of migration between the start and end point, in radians
-            angle_migration = abs(atan(delta_x/delta_y))#,
+            angle_migration = abs(atan(delta_x/delta_y)),
 # 
 #             
 #             #peak velocity
@@ -223,11 +223,11 @@ one_experiment <- function(dat_sub, root = '', sig.figs = 4)
 #             #time_max_v= map2(frames, v=max_v)
 # 
 # 
-#             # Proportion of cells making it past the threshold
-#             # at the track level, we want to know if the cell ever passes the y-position 1
-#             # to understand that, we set a variable "finished" to be 1 if the cell crosses the threshold and 0 if it does not
-#             max_y = map_dbl(y, ~max(.x)),
-#             finished = ifelse(max_y >= 1, 1, 0)
+            # Proportion of cells making it past the threshold
+            # at the track level, we want to know if the cell ever passes the y-position 1
+            # to understand that, we set a variable "finished" to be 1 if the cell crosses the threshold and 0 if it does not
+            max_y = map_dbl(y, ~max(.x)),
+            finished = ifelse(max_y >= 1, 1, 0)
 
             )
     
