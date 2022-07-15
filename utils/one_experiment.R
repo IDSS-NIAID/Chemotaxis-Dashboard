@@ -218,7 +218,7 @@ one_experiment <- function(dat_sub, root = '', sig.figs = 4)
 # 
 #             
 #             #peak velocity
-#             max_v = map2_dbl(v, ~max(.x)),
+             max_v = map_dbl(v, ~max(.x)),
 #             #calculates time when velocity is at max
 #             #time_max_v= map2(frames, v=max_v)
 # 
@@ -238,11 +238,6 @@ one_experiment <- function(dat_sub, root = '', sig.figs = 4)
     # av_velocity = lmer(v ~ Track, data),
     # summary_velocity= summary(av_velocity),
     # 
-    
-    
-    #I am not sure where in the code this fits best but the proportion of cells crossing the threshold is equal to the sum of finished divided by the length of finished
-    #prop_finished <- sum(track_summ$finished)/length(track_summ$finished)
-   
     
     ###############################
     # Channel-level summarization #
@@ -273,26 +268,32 @@ one_experiment <- function(dat_sub, root = '', sig.figs = 4)
                                              filter(dat_sub, channel == chan) %>%
                                              dplyr::select(Track, Frame, X, Y) %>% 
                                              rename(f = X, g = Y) %>%
-                                             compare_two_functions(frames, f, g, sig.figs)
+                                             compare_two_functions(frames, f, g, 2)
                                          ),
             
             )
     
     # Proportion of cells in the channel that make it from top to bottom
     # Takes the sum of track_summ$finished for each channel and divides it by the corresponding length of track_sum$finished
-    # I ended up resorting to writing a for loop for this, even though I know it isn't very efficient
-    # I wasn't sure what I could do to access both channel_summ and track_summ, as I think both are needed for this calculation
-    
+    # Also adding channel averages for chemotactic efficiency and angle of migration
+  
     # initializing empty vector which will be filled with proportions of cells completing path
     finished_by_channel <- c()
+    ce_by_channel <- c()
+    angle_by_channel <- c()
     # the for loop will iterate once through for each channel and filter by the data for that channel
     for (i in 1:length(channel_summ$channel)){
       temp <- filter(track_summ, channel == i) #filtering by the data for each channel in turn
       prop_finished <- sum(temp$finished) / length(temp$finished) #the proportion finished is equal to the sum of the 'finished' column in track_summ divided by the total entries in track_summ for that channel
       finished_by_channel <- append(finished_by_channel, prop_finished) #appending our calculated proportion to a vector. in the end this vector will contain all of the proportions finished for each channel
+      
+      avg_ce <- sum(temp$ce) / length(temp$ce) #finding average chemotactic efficiency for channel
+      ce_by_channel <- append(ce_by_channel,avg_ce)
+      
+      avg_angle <- sum(temp$angle_migration) / length(temp$angle_migration) #finding average angle of migration
+      angle_by_channel <- append(angle_by_channel,avg_angle)
     }
-    channel_summ <- cbind(channel_summ,finished_by_channel) #binding the proportion finished for each channel to the channel_summ dataframe
-  #channel_summ$finished_by_channel #testing
+    channel_summ <- cbind(channel_summ,finished_by_channel,ce_by_channel,angle_by_channel) #binding the proportion finished for each channel to the channel_summ dataframe
   
     ##############################
     # Experiment-level summaries #
