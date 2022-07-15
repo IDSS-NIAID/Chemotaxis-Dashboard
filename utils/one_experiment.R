@@ -213,16 +213,15 @@ one_experiment <- function(dat_sub, root = '', sig.figs = 4)
             # Angle of migration
             # We need the total change in x direction to calculate the angle of migration
             delta_x = map_dbl(x, ~diff(range(.x))),
-            #this finds the angle of migration between the start and end point, in radians
-            angle_migration = abs(atan(delta_x/delta_y)),
-# 
-#             
-#             #peak velocity
-             max_v = map_dbl(v, ~max(.x)),
-#             #calculates time when velocity is at max
-#             #time_max_v= map2(frames, v=max_v)
-# 
-# 
+            # this finds the angle of migration between the start and end point, converts from radians to degrees
+            # zero degrees would represent a net movement straight in the vertical direction. angle is measured from this vertical line of 0 degrees
+            angle_migration = 180*(abs(atan(delta_x/delta_y)))/pi,
+
+            #peak velocity
+            max_v = map_dbl(v, ~max(.x)),
+            #calculates time when velocity is at max
+             #time_max_v= map2(frames, v=max_v)
+ 
             # Proportion of cells making it past the threshold
             # at the track level, we want to know if the cell ever passes the y-position 1
             # to understand that, we set a variable "finished" to be 1 if the cell crosses the threshold and 0 if it does not
@@ -230,6 +229,8 @@ one_experiment <- function(dat_sub, root = '', sig.figs = 4)
             finished = ifelse(max_y >= 1, 1, 0)
 
             )
+    #deleting columns with intermediate variables (used for calculation but not needed in end file)
+    track_summ <- select(track_summ, -c(delta_y,delta_x,distance_travelled,max_y))
     
     # ### tracks_v_stats: velocity statistics
     # nl_buffer_vs_nl_trt_x <- filter(dat_sub, sample == 'nl') %>%
@@ -279,21 +280,28 @@ one_experiment <- function(dat_sub, root = '', sig.figs = 4)
   
     # initializing empty vector which will be filled with proportions of cells completing path
     finished_by_channel <- c()
-    ce_by_channel <- c()
-    angle_by_channel <- c()
+    ce_summ <- list()
+    angle_summ <- list()
+    max_v_summ <- list()
+    
     # the for loop will iterate once through for each channel and filter by the data for that channel
     for (i in 1:length(channel_summ$channel)){
       temp <- filter(track_summ, channel == i) #filtering by the data for each channel in turn
       prop_finished <- sum(temp$finished) / length(temp$finished) #the proportion finished is equal to the sum of the 'finished' column in track_summ divided by the total entries in track_summ for that channel
       finished_by_channel <- append(finished_by_channel, prop_finished) #appending our calculated proportion to a vector. in the end this vector will contain all of the proportions finished for each channel
       
-      avg_ce <- sum(temp$ce) / length(temp$ce) #finding average chemotactic efficiency for channel
-      ce_by_channel <- append(ce_by_channel,avg_ce)
+      #summary statistics for the chemotactic efficiency of the cells in each channel
+      stats_ce <- list(min = min(temp$ce),first_q = quantile(temp$ce,0.25),median = median(temp$ce),third_q=quantile(temp$ce,0.75),max=max(temp$ce),mean=mean(temp$ce),range=range(temp$ce)[2]-range(temp$ce)[1])
+      ce_summ[[i]] <- list(stats_ce)
       
-      avg_angle <- sum(temp$angle_migration) / length(temp$angle_migration) #finding average angle of migration
-      angle_by_channel <- append(angle_by_channel,avg_angle)
+      #summary statistics for the angle of migration of the cells in each channel
+      stats_angle <- list(min = min(temp$angle_migration),first_q = quantile(temp$angle_migration,0.25),median = median(temp$angle_migration),third_q=quantile(temp$angle_migration,0.75),max=max(temp$angle_migration),mean=mean(temp$angle_migration),range=range(range(temp$angle_migration)[2]-range(temp$angle_migration)[1]))
+      angle_summ[[i]] <- stats_angle
+      
+      stats_max_v <- list(min = min(temp$max_v),first_q = quantile(temp$max_v,0.25),median = median(temp$max_v),third_q=quantile(temp$max_v,0.75),max=max(temp$max_v),mean=mean(temp$max_v),range=range(temp$max_v)[2]-range(temp$max_v)[1])
+      max_v_summ[[i]] <- stats_max_v
     }
-    channel_summ <- cbind(channel_summ,finished_by_channel,ce_by_channel,angle_by_channel) #binding the proportion finished for each channel to the channel_summ dataframe
+    channel_summ <- channel_summ %>% mutate(ce_summ = ce_summ, angle_summ = angle_summ, finished = finished_by_channel, max_v_summ = max_v_summ)
   
     ##############################
     # Experiment-level summaries #
@@ -547,5 +555,5 @@ one_experiment <- function(dat_sub, root = '', sig.figs = 4)
     
     ##### Save and Return Results #####
     
-    save(channel_summ, exp_summ, file = paste0(root, '/data/', unique(dat_sub$experiment), '.RData'))
+    save(track_summ, channel_summ, exp_summ, file = paste0(root, '/data/', unique(dat_sub$experiment), '.RData'))
 }
