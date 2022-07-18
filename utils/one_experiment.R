@@ -534,6 +534,15 @@ one_experiment <- function(dat_sub, root = '', sig.figs = 4)
         ylab('Relative Velocity') +
         geom_hline(yintercept = 0, linetype = 3, size = .5)
     
+    ### angle of migration
+    exp_summ$angle_migration_plot <- track_summ %>% group_by(channel,sample,treatment) %>% ggplot(aes(x=channel,y=angle_migration,group=channel)) + geom_violin(scale = "width",width = 0.5,trim=FALSE) + ylab("Angle of migration (degrees from vertical)") + geom_jitter(width = 0.1,size = 0.1,colour = 'grey') + geom_boxplot(width = 0.05) 
+    
+    ### chemotactic efficiency
+    exp_summ$ce_plot <- track_summ %>% group_by(channel,sample,treatment) %>% ggplot(aes(x=channel,y=ce,group=channel)) + geom_violin(scale = "width",width = 0.5,trim=FALSE) + ylab("Chemotactic efficiency (% of movement that is vertical)") + geom_jitter(width = 0.1,size = 0.1,colour = 'grey') + geom_boxplot(width = 0.05) 
+    
+    ### percent finishing path
+    exp_summ$finished_plot <- channel_summ %>% group_by(sample,treatment) %>% ggplot(aes(x=channel,y=finished,group=channel)) + geom_bar(stat="identity",fill = "#364DD1") + ylab("Proportion of cells completing path")
+    
     # ### tracks_v_stats: velocity statistics
     # nl_buffer_vs_nl_trt_x <- filter(dat_sub, sample == 'nl') %>%
     #     mutate(trt = ifelse(channel == 1, 'buffer', as.character(treatment))) %>%

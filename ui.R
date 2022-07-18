@@ -85,6 +85,23 @@ dashboardPage(
                     column(1),
                     column(10,
                            plotOutput('tracks_v'))
-                )
-        ))
+                ),
+                fluidRow(
+                  column(1),
+                  column(10,
+                         plotOutput('angle_migration_plot'))
+                ),
+                fluidRow(
+                  column(1),
+                  column(10,
+                         plotOutput('ce_plot'))
+                ),
+                fluidRow(
+                  column(1),
+                  column(10,
+                         plotOutput('finished_plot'))
+                  
+        )
+        )
 ))
+)

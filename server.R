@@ -189,4 +189,46 @@ shinyServer(function(input, output, session) {
             dat_sub()$tracks_v # see historical_data.R and one_experiment.R for pre-processing of these figures
         }
     })
+    
+    output$angle_migration_plot <- renderPlot({
+      
+      # pull the experiment to plot
+      tmp <- exp_select_mod()
+      
+      # if the subset of all experiments contains only 1 experiment, proceed
+      if(length(unique(tmp$experiment)) > 1)
+      {
+        plot_nothing()
+      }else{
+        dat_sub()$angle_migration_plot # see historical_data.R and one_experiment.R for pre-processing of these figures
+      }
+    })
+    
+    output$ce_plot <- renderPlot({
+      
+      # pull the experiment to plot
+      tmp <- exp_select_mod()
+      
+      # if the subset of all experiments contains only 1 experiment, proceed
+      if(length(unique(tmp$experiment)) > 1)
+      {
+        plot_nothing()
+      }else{
+        dat_sub()$ce_plot # see historical_data.R and one_experiment.R for pre-processing of these figures
+      }
+    })
+    
+    output$finished_plot <- renderPlot({
+      
+      # pull the experiment to plot
+      tmp <- exp_select_mod()
+      
+      # if the subset of all experiments contains only 1 experiment, proceed
+      if(length(unique(tmp$experiment)) > 1)
+      {
+        plot_nothing()
+      }else{
+        dat_sub()$finished_plot # see historical_data.R and one_experiment.R for pre-processing of these figures
+      }
+    })
 })
