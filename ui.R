@@ -100,8 +100,16 @@ dashboardPage(
                   column(1),
                   column(10,
                          plotOutput('finished_plot'))
-                  
-        )
-        )
+                ),
+                fluidRow(column(10, 
+                        radioButtons('chooseSummStats', 'Select statistics to view', 
+                                     selected = 'None', inline = TRUE,
+                                     choices = c('Proportion Finished', 'Angle of Migration', 'Chemotactic Efficiency', 'Velocity','None')))) ,
+                fluidRow(
+                  column(1),
+                  column(10,tableOutput('stats_table'))
+                )
+                ) 
+                
 ))
 )

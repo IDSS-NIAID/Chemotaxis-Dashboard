@@ -179,7 +179,7 @@ one_experiment <- function(dat_sub, root = '', sig.figs = 4)
     # Track-level summarization #
     #############################
     
-    track_summ <- group_by(dat_sub, channel, sample, treatment, Track) %>%
+    track_summ <- group_by(dat_sub, channel, sample, treatment, Track, experiment) %>%
         
         # make sure we have enough observations to use the track
         mutate(l = sum(!is.na(X))) %>%
@@ -292,10 +292,10 @@ one_experiment <- function(dat_sub, root = '', sig.figs = 4)
       
       #summary statistics for the chemotactic efficiency of the cells in each channel
       stats_ce <- list(min = min(temp$ce),first_q = quantile(temp$ce,0.25),median = median(temp$ce),third_q=quantile(temp$ce,0.75),max=max(temp$ce),mean=mean(temp$ce),range=range(temp$ce)[2]-range(temp$ce)[1])
-      ce_summ[[i]] <- list(stats_ce)
+      ce_summ[[i]] <- stats_ce
       
       #summary statistics for the angle of migration of the cells in each channel
-      stats_angle <- list(min = min(temp$angle_migration),first_q = quantile(temp$angle_migration,0.25),median = median(temp$angle_migration),third_q=quantile(temp$angle_migration,0.75),max=max(temp$angle_migration),mean=mean(temp$angle_migration),range=range(range(temp$angle_migration)[2]-range(temp$angle_migration)[1]))
+      stats_angle <- list(min = min(temp$angle_migration),first_q = quantile(temp$angle_migration,0.25),median = median(temp$angle_migration),third_q=quantile(temp$angle_migration,0.75),max=max(temp$angle_migration),mean=mean(temp$angle_migration),range=(range(temp$angle_migration)[2]-range(temp$angle_migration)[1]))
       angle_summ[[i]] <- stats_angle
       
       stats_max_v <- list(min = min(temp$max_v),first_q = quantile(temp$max_v,0.25),median = median(temp$max_v),third_q=quantile(temp$max_v,0.75),max=max(temp$max_v),mean=mean(temp$max_v),range=range(temp$max_v)[2]-range(temp$max_v)[1])
@@ -500,8 +500,10 @@ one_experiment <- function(dat_sub, root = '', sig.figs = 4)
         geom_hline(yintercept = 0, linetype = 2) + #draws a horizontal line at y = 0
         geom_hline(yintercept = 1, linetype = 2) #draws a horizontal line at y = 1
     
-    ### tracks_v: velocity measures
-    exp_summ$tracks_v <- pivot_longer(track_summ, starts_with('v'), names_to = 'd', values_to = 'v') %>%
+
+     
+    ### tracks_v: velocity over time graphs
+    exp_summ$tracks_v <-  pivot_longer(track_summ, starts_with('v'), names_to = 'd', values_to = 'v') %>%
       filter(d != 'v') %>% #filters out first row (I think)
       #d = direction, pivot_longer makes data frame longer by making a column 'd' for direction (x-undirected, y-directed)
       
@@ -510,23 +512,25 @@ one_experiment <- function(dat_sub, root = '', sig.figs = 4)
       summarize(v = unlist(v), #list -> vector
                 Frame = unlist(frames)) %>%
       mutate(grp = paste(channel, d)) %>%
-      ungroup() %>%
+      ungroup()  %>% 
     
+   
       # join channels that have the same sample and treatment
       group_by(sample, treatment, d) %>%
-      mutate(joint_channels = paste0(paste(unique(channel), collapse = '/'), ": ", unique(sample), ', ', unique(treatment))) %>%
-      ungroup() %>%
-
-      # sort and plot
-      arrange(channel, d, Track, Frame) %>%
-      
+        mutate(joint_channels = paste0(paste(unique(channel), collapse = '/'), ": ", unique(sample), ', ', unique(treatment))) %>%
+        ungroup() %>%
+        
+        # sort and plot
+        arrange(channel, d, Track, Frame) %>%
+    
+    
       #plots velocity (v) over time (Frame), grouping the data by grp which is channel and direction, coloring them by direction  
       ggplot(aes(Frame, v, group = grp, color = d)) +
 
       stat_smooth(method = lm, formula = y ~ bs(x, df = 3), se = FALSE) +
       stat_smooth(method = lm, formula = y ~ 1, se = FALSE, linetype = 2, size = .5) +
         
-        facet_grid(~ joint_channels) +
+        #facet_grid(~ joint_channels) +
         
         scale_color_manual(values = c('black', 'gold3'), labels = c('Undirected', 'Directed')) +
         theme(legend.title = element_blank(),
@@ -534,14 +538,39 @@ one_experiment <- function(dat_sub, root = '', sig.figs = 4)
         ylab('Relative Velocity') +
         geom_hline(yintercept = 0, linetype = 3, size = .5)
     
+    #if sample and treatment are available, split by these labels; if not, use channels
+    if(!(any(is.na(track_summ$sample)))){
+      exp_summ$tracks_v <- exp_summ$tracks_v + facet_grid(~joint_channels)
+    }else{
+      exp_summ$tracks_v <- exp_summ$tracks_v + facet_grid(~channel)
+    }
+    
     ### angle of migration
-    exp_summ$angle_migration_plot <- track_summ %>% group_by(channel,sample,treatment) %>% ggplot(aes(x=channel,y=angle_migration,group=channel)) + geom_violin(scale = "width",width = 0.5,trim=FALSE) + ylab("Angle of migration (degrees from vertical)") + geom_jitter(width = 0.1,size = 0.1,colour = 'grey') + geom_boxplot(width = 0.05) 
+    #track_summ <- mutate(track_summ,labs=paste0(channel, ": ", sample, ", ", treatment))
+    exp_summ$angle_migration_plot <- track_summ %>% group_by(channel,sample,treatment) %>% ggplot(aes(x=as.character(channel),y=angle_migration,group=channel)) + geom_violin(scale = "width",width = 0.5,trim=FALSE) + ylab("Migration angle (degrees from vertical)") + geom_jitter(width = 0.1,size = 0.75,alpha=0.3) + geom_boxplot(width = 0.05) +
+       xlab("Channel")
     
     ### chemotactic efficiency
-    exp_summ$ce_plot <- track_summ %>% group_by(channel,sample,treatment) %>% ggplot(aes(x=channel,y=ce,group=channel)) + geom_violin(scale = "width",width = 0.5,trim=FALSE) + ylab("Chemotactic efficiency (% of movement that is vertical)") + geom_jitter(width = 0.1,size = 0.1,colour = 'grey') + geom_boxplot(width = 0.05) 
+    exp_summ$ce_plot <- track_summ %>% group_by(channel,sample,treatment) %>% ggplot(aes(x=as.character(channel),y=ce,group=channel)) + geom_violin(scale = "width",width = 0.5,trim=FALSE) + ylab("Chemotactic efficiency (% vertical movement)") + geom_jitter(width = 0.1,size = 0.75,alpha=0.3) + geom_boxplot(width = 0.05) +
+       xlab("Channel")
     
     ### percent finishing path
-    exp_summ$finished_plot <- channel_summ %>% group_by(sample,treatment) %>% ggplot(aes(x=channel,y=finished,group=channel)) + geom_bar(stat="identity",fill = "#364DD1") + ylab("Proportion of cells completing path")
+    exp_summ$finished_plot <- channel_summ %>% group_by(sample,treatment) %>% ggplot(aes(x=as.character(channel),y=finished,group=channel)) + geom_bar(stat="identity",fill = "#364DD1") + ylab("Proportion of cells completing path") +
+      xlab("Channel")
+    
+    # table for percent finishing path
+    exp_summ$finished_table <- channel_summ %>% select(channel,finished)
+    
+    # table for angle of migration summary statistics
+    exp_summ$angle_table <- data.frame(data.frame(t(sapply(channel_summ$angle_summ,c))))
+    exp_summ$angle_table <- cbind(channel_summ$channel,exp_summ$angle_table)
+    names(exp_summ$angle_table) <- c("Channel","Min","First Quartile","Median","Third Quartile","Maximum","Mean","Range")
+    
+    # table for chemotactic efficiency
+    exp_summ$ce_table <- data.frame(data.frame(t(sapply(channel_summ$ce_summ,c))))
+    exp_summ$ce_table <- cbind(channel_summ$channel,exp_summ$ce_table)
+    names(exp_summ$ce_table) <- c("Channel","Min","First Quartile","Median","Third Quartile","Maximum","Mean","Range")
+
     
     # ### tracks_v_stats: velocity statistics
     # nl_buffer_vs_nl_trt_x <- filter(dat_sub, sample == 'nl') %>%
@@ -561,6 +590,7 @@ one_experiment <- function(dat_sub, root = '', sig.figs = 4)
     #                             180 - tmp),
     # total_velocity = sqrt((X[1] - X[length(X)])^2 + (Y[1] - Y[length(Y)])^2) / len) %>%
     
+   
     
     ##### Save and Return Results #####
     

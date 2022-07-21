@@ -42,6 +42,10 @@ shinyServer(function(input, output, session) {
             return()
     }
     
+    empty_table <- function(){
+      data.frame()
+    }
+    
     ################################
     # Cross-Experiment Summary Tab #
     ################################
@@ -86,7 +90,7 @@ shinyServer(function(input, output, session) {
             mutate(grp = paste(experiment, channel, sep = '_'))
     }
     
-    # generalized realtive velocity plot
+    # generalized relative velocity plot
     relative_velocity_plot <- function(direction = 'y')
     {
         dat <- sample_select_mod()
@@ -102,7 +106,7 @@ shinyServer(function(input, output, session) {
                 
                 geom_hline(yintercept = 0, linetype = 2, size = 0.2, color = rgb(0,0,1)) +
                 
-                ylab(paste0('Realitve Velocity (', direction, ')'))
+                ylab(paste0('Relaitve Velocity (', direction, ')'))
             
             if(input$splitPlotsBy == 'None')
                 return(plt)
@@ -132,7 +136,7 @@ shinyServer(function(input, output, session) {
         relative_velocity_plot('y')
     })
 
-    # plot realative velocity for x (horizontal/undirected velocity)
+    # plot relative velocity for x (horizontal/undirected velocity)
     output$vx <- renderPlot({
         relative_velocity_plot('x')
     })
@@ -160,6 +164,7 @@ shinyServer(function(input, output, session) {
         
         exp_summ
     })
+    
     
     # plot time-coded track paths
     output$tracks_time <- renderPlot({
@@ -231,4 +236,20 @@ shinyServer(function(input, output, session) {
         dat_sub()$finished_plot # see historical_data.R and one_experiment.R for pre-processing of these figures
       }
     })
+    
+  output$stats_table <- renderTable({
+    tmp <- exp_select_mod()
+    if(input$chooseSummStats == 'Proportion Finished'){
+      dat_sub()$finished_table
+    }
+    else if(input$chooseSummStats == 'Angle of Migration'){
+      dat_sub()$angle_table
+    }
+    else if(input$chooseSummStats == 'Chemotactic Efficiency'){
+      dat_sub()$ce_table
+    } 
+    else{
+      empty_table()
+    }
+  })
 })
