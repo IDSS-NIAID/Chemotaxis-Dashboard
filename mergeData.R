@@ -1,3 +1,10 @@
+######################
+# Merge .RData files #
+######################
+
+# Run this script after running preprocess.R on however many experiments you are interested in
+# This script will merge any new files in Chemotaxis-Dashboard/data into historical.RData, so that they can be used in the Shiny App
+
 # make sure these packages are loaded
 library(dplyr)
 
@@ -76,6 +83,3 @@ track_summ_select <- dplyr::select(channel_summ, date, experiment) %>%
 
 # Save out file as "historical.RData" in the data directory
 save(track_summ, channel_summ, exp_summ, track_summ_select, file = paste(data_dir, '/historical.RData', sep = '/'))
-
-
-
