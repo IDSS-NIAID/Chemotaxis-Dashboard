@@ -223,19 +223,6 @@ shinyServer(function(input, output, session) {
       }
     })
     
-    output$finished_plot <- renderPlot({
-      
-      # pull the experiment to plot
-      tmp <- exp_select_mod()
-      
-      # if the subset of all experiments contains only 1 experiment, proceed
-      if(length(unique(tmp$experiment)) > 1)
-      {
-        plot_nothing()
-      }else{
-        dat_sub()$finished_plot # see historical_data.R and one_experiment.R for pre-processing of these figures
-      }
-    })
     
   output$stats_table <- renderTable({
     tmp <- exp_select_mod()

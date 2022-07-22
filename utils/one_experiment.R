@@ -554,12 +554,10 @@ one_experiment <- function(dat_sub, root = '', sig.figs = 4)
     exp_summ$ce_plot <- track_summ %>% group_by(channel,sample,treatment) %>% ggplot(aes(x=as.character(channel),y=ce,group=channel)) + geom_violin(scale = "width",width = 0.5,trim=FALSE) + ylab("Chemotactic efficiency (% vertical movement)") + geom_jitter(width = 0.1,size = 0.75,alpha=0.3) + geom_boxplot(width = 0.05) +
        xlab("Channel")
     
-    ### percent finishing path
-    exp_summ$finished_plot <- channel_summ %>% group_by(sample,treatment) %>% ggplot(aes(x=as.character(channel),y=finished,group=channel)) + geom_bar(stat="identity",fill = "#364DD1") + ylab("Proportion of cells completing path") +
-      xlab("Channel")
     
     # table for percent finishing path
     exp_summ$finished_table <- channel_summ %>% select(channel,finished)
+    names(exp_summ$finished_table) <- c("Channel","Proportion cells finishing path")
     
     # table for angle of migration summary statistics
     exp_summ$angle_table <- data.frame(data.frame(t(sapply(channel_summ$angle_summ,c))))
