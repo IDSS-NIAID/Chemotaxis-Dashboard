@@ -239,4 +239,42 @@ shinyServer(function(input, output, session) {
       empty_table()
     }
   })
+  
+  
+  output$downloadTime <- downloadHandler(
+    # I want the filename to include the experiment automatically, but I'm not sure how to do that
+    filename = function() paste0(dat_sub()$experiment,"_timeTracks.png"),
+    content = function(file){
+        png(file)
+        print(dat_sub()$tracks_time)
+        dev.off()
+    }
+  )
+  
+  output$downloadv <- downloadHandler(
+    filename = function() paste0(dat_sub()$experiment,"_vPlot.png"),
+    content = function(file){
+      png(file)
+      print(dat_sub()$tracks_v)
+      dev.off()
+    }
+  )
+  
+  output$downloadAngle <- downloadHandler(
+    filename = function() paste0(dat_sub()$experiment,"_AngleMigrationViolin.png"),
+    content = function(file){
+      png(file)
+      print(dat_sub()$angle_migration_plot)
+      dev.off()
+    }
+  )
+  
+  output$downloadCe <- downloadHandler(
+    filename = function() paste0(dat_sub()$experiment,"_ceViolin.png"),
+    content = function(file){
+      png(file)
+      print(dat_sub()$angle_migration_plot)
+      dev.off()
+    }
+  )
 })

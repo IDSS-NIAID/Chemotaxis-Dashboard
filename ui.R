@@ -77,9 +77,17 @@ dashboardPage(
                            ))
                 ),
                 fluidRow(
+                  column(1),
+                  column(10,downloadButton("downloadAllFigs", "Download All Figures"),downloadButton("downloadAll","Download All Figures + Stats"))
+                ),
+                fluidRow(
                     column(1),
                     column(10,
                            plotOutput('tracks_time'))
+                ),
+                fluidRow(
+                  column(1),
+                  column(10,downloadButton("downloadTime", "Download"))
                 ),
                 fluidRow(
                     column(1),
@@ -88,13 +96,25 @@ dashboardPage(
                 ),
                 fluidRow(
                   column(1),
+                  column(10,downloadButton("downloadv", "Download"))
+                ),
+                fluidRow(
+                  column(1),
                   column(10,
                          plotOutput('angle_migration_plot'))
                 ),
                 fluidRow(
                   column(1),
+                  column(10,downloadButton("downloadAngle", "Download"))
+                ),
+                fluidRow(
+                  column(1),
                   column(10,
                          plotOutput('ce_plot'))
+                ),
+                fluidRow(
+                  column(1),
+                  column(10,downloadButton("downloadCe", "Download"))
                 ),
                 fluidRow(column(10, 
                         radioButtons('chooseSummStats', 'Select statistics to view', 
