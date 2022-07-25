@@ -219,9 +219,11 @@ one_experiment <- function(dat_sub, root = '', sig.figs = 4)
 
             #peak velocity
             max_v = map_dbl(v, ~max(.x)),
-            #calculates time when velocity is at max
-             #time_max_v= map2(frames, v=max_v)
- 
+            ##summary statistics velocity
+            
+            #average velocity
+            av_velocity = map_dbl(v, ~mean(.x)),
+                                    
             # Proportion of cells making it past the threshold
             # at the track level, we want to know if the cell ever passes the y-position 1
             # to understand that, we set a variable "finished" to be 1 if the cell crosses the threshold and 0 if it does not
@@ -232,13 +234,7 @@ one_experiment <- function(dat_sub, root = '', sig.figs = 4)
     #deleting columns with intermediate variables (used for calculation but not needed in end file)
     track_summ <- select(track_summ, -c(delta_y,delta_x,distance_travelled,max_y))
     
-    # ### tracks_v_stats: velocity statistics
-    # nl_buffer_vs_nl_trt_x <- filter(dat_sub, sample == 'nl') %>%
-    #   mutate(trt = ifelse(channel == 1, 'buffer', as.character(treatment))) #%>%
-    # # linear model of velocity (v) per track and summary statistics
-    # av_velocity = lmer(v ~ Track, data),
-    # summary_velocity= summary(av_velocity),
-    # 
+  
     
     ###############################
     # Channel-level summarization #
