@@ -243,7 +243,7 @@ shinyServer(function(input, output, session) {
   
   output$downloadTime <- downloadHandler(
     # I want the filename to include the experiment automatically, but I'm not sure how to do that
-    filename = function() paste0(dat_sub()$experiment,"_timeTracks.png"),
+    filename = function() paste0(exp_select_mod()$experiment,"_timeTracks.png"),
     content = function(file){
         png(file)
         print(dat_sub()$tracks_time)
@@ -252,7 +252,7 @@ shinyServer(function(input, output, session) {
   )
   
   output$downloadv <- downloadHandler(
-    filename = function() paste0(dat_sub()$experiment,"_vPlot.png"),
+    filename = function() paste0(exp_select_mod()$experiment,"_vPlot.png"),
     content = function(file){
       png(file)
       print(dat_sub()$tracks_v)
@@ -261,7 +261,7 @@ shinyServer(function(input, output, session) {
   )
   
   output$downloadAngle <- downloadHandler(
-    filename = function() paste0(dat_sub()$experiment,"_AngleMigrationViolin.png"),
+    filename = function() paste0(exp_select_mod()$experiment,"_AngleMigrationViolin.png"),
     content = function(file){
       png(file)
       print(dat_sub()$angle_migration_plot)
@@ -270,11 +270,46 @@ shinyServer(function(input, output, session) {
   )
   
   output$downloadCe <- downloadHandler(
-    filename = function() paste0(dat_sub()$experiment,"_ceViolin.png"),
+    filename = function() paste0(exp_select_mod()$experiment,"_ceViolin.png"),
     content = function(file){
       png(file)
-      print(dat_sub()$angle_migration_plot)
+      print(dat_sub()$ce_plot)
       dev.off()
     }
   )
+  
+  output$downloadAllFigs <- downloadHandler(
+    filename = function() paste0(exp_select_mod()$experiment,"_allFigs.pdf"),
+    content = function(file){
+      pdf(file)
+      print(dat_sub()$tracks_time)
+      print(dat_sub()$tracks_v)
+      print(dat_sub()$angle_migration_plot)
+      print(dat_sub()$ce_plot)
+      dev.off()
+    }
+  )
+  
+  output$downloadFinished <- downloadHandler(
+    filename = function() paste0(exp_select_mod()$experiment,"_finished.csv"),
+    content = function(file){
+      write.csv(dat_sub()$finished_table,file)
+    }
+  )
+  
+  #for some reason, even though it is the same code as above, this doesn't work
+  output$downloadAngleTab <- downloadHandler(
+    filename = function() paste0(exp_select_mod()$experiment,"_angle.csv"),
+    content = function(file){
+      write.csv(as.matrix(dat_sub()$angle_table),file)
+    }
+  )
+  
+  output$downloadCeTab <- downloadHandler(
+    filename = function() paste0(exp_select_mod()$experiment,"_ce.csv"),
+    content = function(file){
+      write.csv(as.matrix(dat_sub()$ce_table),file)
+    }
+  )
+  
 })

@@ -78,7 +78,7 @@ dashboardPage(
                 ),
                 fluidRow(
                   column(1),
-                  column(10,downloadButton("downloadAllFigs", "Download All Figures"),downloadButton("downloadAll","Download All Figures + Stats"))
+                  column(10,downloadButton("downloadAllFigs", "Download All Figures"))
                 ),
                 fluidRow(
                     column(1),
@@ -123,6 +123,12 @@ dashboardPage(
                 fluidRow(
                   column(1),
                   column(10,tableOutput('stats_table'))
+                ),
+                fluidRow(
+                  column(1),
+                  column(10,downloadButton("downloadFinished","Download 'Finished' Stats"),
+                         downloadButton("downloadAngleTab","Download 'Angle' Stats"),
+                         downloadButton("downloadCeTab","Download 'Chemotactic Effiency' Stats"))
                 )
                 ) 
                 
