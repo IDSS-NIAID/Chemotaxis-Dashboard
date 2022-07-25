@@ -9,8 +9,9 @@
 #' Here is an example call using default data locations:
 #' `Rscript make_swarm.R`
 #' 
-#' Here is another example, specifying alternate data locations:
+#' Here is another couple of examples, specifying alternate data locations:
 #' `Rscript make_swarm.R --args csvPath=/data/IDSS_projects/chemotaxis_results/results_csv datPath=/data/IDSS_projects/chemotaxis_results/data`
+#' `Rscript make_swarm.R --args root=~/Chemotaxis-Dashboard`
 
 library(dplyr)
 library(purrr)
@@ -76,4 +77,5 @@ experimentsToProcess <- csv_files[toProcess] %>%
 # write swarm file #
 ####################
 
-paste0('module load R; cd ', args$root, '; Rscript utils/preprocess.R --args experiment=', experimentsToProcess, collapse = '\n')
+paste0('module load R; cd ', args$root, '; Rscript utils/preprocess.R --args experiment=', experimentsToProcess, collapse = '\n') %>%
+  cat(file = 'swarmfile')
