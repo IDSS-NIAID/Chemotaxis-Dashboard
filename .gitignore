@@ -14,3 +14,6 @@
 *.zip
 *.pdf
 *.RData
+data
+results_csv
+
