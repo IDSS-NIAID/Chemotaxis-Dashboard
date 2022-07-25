@@ -84,9 +84,7 @@ find_tracks <- function(dat,threshold){
 # gives more flexibility in choosing tracks to examine
 # if the user wishes to eliminate frames before the selected 'starting line', they should set toFilter to TRUE and choose a starting line
 # the function will then remove these frames from the list of eligible frames for each track
-find_frames <- function(filename,threshold,toFilter = FALSE,starting_line = NULL){
-  labelName <- tools::file_path_sans_ext(basename(filename))
-  dat <- read.delim(filename, sep = ",")
+find_frames <- function(dat,threshold,toFilter = FALSE,starting_line = NULL){
   theList <- all_min_dist(dat) #getting all min distances
   for (i in 1:length(theList)){
     t <- thresholding_by_frame(theList,threshold,i)
@@ -95,6 +93,7 @@ find_frames <- function(filename,threshold,toFilter = FALSE,starting_line = NULL
       temp <- intersect(f,t) #finding frames that are outside threshold but before starting line
       t <- t[!(t %in% temp)] #removing the before-start frames
     }
+    labelName <- paste0(dat$experiment[1],"_CH",dat$channel[1])
     cat(paste(t,collapse=","),"\n",file = paste("good_frames/",labelName,"_goodFrames.csv",sep=""),append = TRUE)
   }
 }
@@ -104,8 +103,10 @@ find_frames <- function(filename,threshold,toFilter = FALSE,starting_line = NULL
 ###########
 
 filename <- "trackResults/20171106__CH6_BQ_fMLF/20171106__CH6_BQ_fMLF.csv"
+labelName <- tools::file_path_sans_ext(basename(filename))
+dat <- read.delim(filename, sep = ",")
 threshold <- 35
-find_frames(filename,threshold,TRUE,100)
+find_frames(dat,threshold,TRUE,100)
 
 # TESTING IF FILE READS IN OK
 labelName <- "20171106__CH6_BQ_fMLF"
