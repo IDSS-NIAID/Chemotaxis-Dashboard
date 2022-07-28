@@ -19,7 +19,12 @@ theme_cowplot() %>%
 ####################
 
 # load historical data (data.frame has summary data for each channel, called channel_summ)
-load('data/historical.RData')
+if(file.exists('data/historical.RData'))
+{
+  load('data/historical.RData')
+}else{
+  load('testdata/historical.RData')
+}
 
 
 ##########
@@ -160,7 +165,12 @@ shinyServer(function(input, output, session) {
     dat_sub <- reactive({
         f <- exp_select_mod()$experiment
 
-        load(paste0('data/', f, '.RData'))
+        if(file.exists(paste0('data/', f, '.RData')))
+        {
+          load(paste0('data/', f, '.RData'))
+        }else{
+          load(paste0('testdata/', f, '.RData'))
+        }
         
         exp_summ
     })
