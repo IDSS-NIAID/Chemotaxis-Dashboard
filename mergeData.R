@@ -35,8 +35,6 @@ if(length(data_files)==0){
 # therefore, if historical.RData exists, we want to filter out the files already contained within it
 if(file.exists(paste0(root, "/data/historical.RData"))){
   load(paste0(root, '/data/historical.RData'))
-  all <- list(channel_summ = channel_summ,
-              track_summ = track_summ)
 }else{
   all <- list(channel_summ = NULL,
               track_summ = NULL)

@@ -53,7 +53,7 @@ shinyServer(function(input, output, session) {
     sample_select_mod <- callModule(
         module = selectizeGroupServer,
         id = "sampleFilters",
-        data = channel_summ,
+        data = all$channel_summ,
         vars = c('experiment', 'date', 'sample', 'treatment', 'channel')
     )
     
@@ -95,7 +95,7 @@ shinyServer(function(input, output, session) {
     {
         dat <- sample_select_mod()
         
-        if(nrow(dat) == nrow(channel_summ) & nrow(channel_summ) > 6)
+        if(nrow(dat) == nrow(all$channel_summ) & nrow(all$channel_summ) > 6)
         {
             plot_nothing()
         }else{
