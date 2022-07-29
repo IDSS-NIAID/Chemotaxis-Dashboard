@@ -26,7 +26,7 @@ data_files <- paste('ls', data_dir) %>%
 experiments <- tools::file_path_sans_ext(data_files)
 
 # stops executing if there are no files in the data file directory
-if(length(data_files)==0){
+if(length(experiments)==0){
   print("Please make sure there are files in the data directory.")
   stop("No files to process")
 }
@@ -48,10 +48,12 @@ if(file.exists(paste0(root, "/data/historical.RData"))){
 for(i in experiments[!experiments %in% all$channel_summ$experiment]){
   # load in each file in the directory in turn
   load(paste0(data_dir,"/", i, ".RData"))
-  
+  print(i)
   # rbind this file's data.frames to the combined data.frames we are building
   all$track_summ   <- rbind(all$track_summ,    track_summ)
-  all$channel_summ <- rbind(all$channel_summ1, channel_summ)
+  print(length(unique(all$track_summ)))
+  all$channel_summ <- rbind(all$channel_summ, channel_summ)
+  print(length(unique(all$channel_summ)))
 }
 
 
