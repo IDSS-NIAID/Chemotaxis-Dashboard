@@ -98,18 +98,4 @@ find_frames <- function(dat,threshold,toFilter = FALSE,starting_line = NULL){
   }
 }
 
-###########
-# Testing #
-###########
-
-filename <- "trackResults/20171106__CH6_BQ_fMLF/20171106__CH6_BQ_fMLF.csv"
-labelName <- tools::file_path_sans_ext(basename(filename))
-dat <- read.delim(filename, sep = ",")
-threshold <- 35
-find_frames(dat,threshold,TRUE,100)
-
-# TESTING IF FILE READS IN OK
-labelName <- "20171106__CH6_BQ_fMLF"
-filename2 <- paste("good_frames/",labelName,"_goodFrames.csv",sep="")
-dat2 <- readLines(filename2)
 
