@@ -77,14 +77,60 @@ dashboardPage(
                            ))
                 ),
                 fluidRow(
+                  column(1),
+                  column(10,downloadButton("downloadAllFigs", "Download All Figures"))
+                ),
+                fluidRow(
                     column(1),
                     column(10,
                            plotOutput('tracks_time'))
                 ),
                 fluidRow(
+                  column(1),
+                  column(10,downloadButton("downloadTime", "Download"))
+                ),
+                fluidRow(
                     column(1),
                     column(10,
                            plotOutput('tracks_v'))
+                ),
+                fluidRow(
+                  column(1),
+                  column(10,downloadButton("downloadv", "Download"))
+                ),
+                fluidRow(
+                  column(1),
+                  column(10,
+                         plotOutput('angle_migration_plot'))
+                ),
+                fluidRow(
+                  column(1),
+                  column(10,downloadButton("downloadAngle", "Download"))
+                ),
+                fluidRow(
+                  column(1),
+                  column(10,
+                         plotOutput('ce_plot'))
+                ),
+                fluidRow(
+                  column(1),
+                  column(10,downloadButton("downloadCe", "Download"))
+                ),
+                fluidRow(column(10, 
+                        radioButtons('chooseSummStats', 'Select statistics to view', 
+                                     selected = 'None', inline = TRUE,
+                                     choices = c('Proportion Finished', 'Angle of Migration', 'Chemotactic Efficiency', 'Velocity','None')))) ,
+                fluidRow(
+                  column(1),
+                  column(10,tableOutput('stats_table'))
+                ),
+                fluidRow(
+                  column(1),
+                  column(10,downloadButton("downloadFinished","Download 'Finished' Stats"),
+                         downloadButton("downloadAngleTab","Download 'Angle' Stats"),
+                         downloadButton("downloadCeTab","Download 'Chemotactic Effiency' Stats"))
                 )
-        ))
+                ) 
+                
 ))
+)

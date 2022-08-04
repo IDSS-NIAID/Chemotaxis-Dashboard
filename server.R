@@ -19,7 +19,12 @@ theme_cowplot() %>%
 ####################
 
 # load historical data (data.frame has summary data for each channel, called channel_summ)
-load('data/historical.RData')
+if(file.exists('data/historical.RData'))
+{
+  load('data/historical.RData')
+}else{
+  load('testdata/historical.RData')
+}
 
 
 ##########
@@ -42,6 +47,10 @@ shinyServer(function(input, output, session) {
             return()
     }
     
+    empty_table <- function(){
+      data.frame()
+    }
+    
     ################################
     # Cross-Experiment Summary Tab #
     ################################
@@ -49,7 +58,7 @@ shinyServer(function(input, output, session) {
     sample_select_mod <- callModule(
         module = selectizeGroupServer,
         id = "sampleFilters",
-        data = channel_summ,
+        data = all$channel_summ,
         vars = c('experiment', 'date', 'sample', 'treatment', 'channel')
     )
     
@@ -86,12 +95,12 @@ shinyServer(function(input, output, session) {
             mutate(grp = paste(experiment, channel, sep = '_'))
     }
     
-    # generalized realtive velocity plot
+    # generalized relative velocity plot
     relative_velocity_plot <- function(direction = 'y')
     {
         dat <- sample_select_mod()
         
-        if(nrow(dat) == nrow(channel_summ) & nrow(channel_summ) > 6)
+        if(nrow(dat) == nrow(all$channel_summ) & nrow(all$channel_summ) > 6)
         {
             plot_nothing()
         }else{
@@ -102,7 +111,7 @@ shinyServer(function(input, output, session) {
                 
                 geom_hline(yintercept = 0, linetype = 2, size = 0.2, color = rgb(0,0,1)) +
                 
-                ylab(paste0('Realitve Velocity (', direction, ')'))
+                ylab(paste0('Relaitve Velocity (', direction, ')'))
             
             if(input$splitPlotsBy == 'None')
                 return(plt)
@@ -132,7 +141,7 @@ shinyServer(function(input, output, session) {
         relative_velocity_plot('y')
     })
 
-    # plot realative velocity for x (horizontal/undirected velocity)
+    # plot relative velocity for x (horizontal/undirected velocity)
     output$vx <- renderPlot({
         relative_velocity_plot('x')
     })
@@ -156,10 +165,16 @@ shinyServer(function(input, output, session) {
     dat_sub <- reactive({
         f <- exp_select_mod()$experiment
 
-        load(paste0('data/', f, '.RData'))
+        if(file.exists(paste0('data/', f, '.RData')))
+        {
+          load(paste0('data/', f, '.RData'))
+        }else{
+          load(paste0('testdata/', f, '.RData'))
+        }
         
         exp_summ
     })
+    
     
     # plot time-coded track paths
     output$tracks_time <- renderPlot({
@@ -189,4 +204,122 @@ shinyServer(function(input, output, session) {
             dat_sub()$tracks_v # see historical_data.R and one_experiment.R for pre-processing of these figures
         }
     })
+    
+    output$angle_migration_plot <- renderPlot({
+      
+      # pull the experiment to plot
+      tmp <- exp_select_mod()
+      
+      # if the subset of all experiments contains only 1 experiment, proceed
+      if(length(unique(tmp$experiment)) > 1)
+      {
+        plot_nothing()
+      }else{
+        dat_sub()$angle_migration_plot # see historical_data.R and one_experiment.R for pre-processing of these figures
+      }
+    })
+    
+    output$ce_plot <- renderPlot({
+      
+      # pull the experiment to plot
+      tmp <- exp_select_mod()
+      
+      # if the subset of all experiments contains only 1 experiment, proceed
+      if(length(unique(tmp$experiment)) > 1)
+      {
+        plot_nothing()
+      }else{
+        dat_sub()$ce_plot # see historical_data.R and one_experiment.R for pre-processing of these figures
+      }
+    })
+    
+    
+  output$stats_table <- renderTable({
+    tmp <- exp_select_mod()
+    if(input$chooseSummStats == 'Proportion Finished'){
+      dat_sub()$finished_table
+    }
+    else if(input$chooseSummStats == 'Angle of Migration'){
+      dat_sub()$angle_table
+    }
+    else if(input$chooseSummStats == 'Chemotactic Efficiency'){
+      dat_sub()$ce_table
+    } 
+    else{
+      empty_table()
+    }
+  })
+  
+  
+  output$downloadTime <- downloadHandler(
+    # I want the filename to include the experiment automatically, but I'm not sure how to do that
+    filename = function() paste0(exp_select_mod()$experiment,"_timeTracks.png"),
+    content = function(file){
+        png(file)
+        print(dat_sub()$tracks_time)
+        dev.off()
+    }
+  )
+  
+  output$downloadv <- downloadHandler(
+    filename = function() paste0(exp_select_mod()$experiment,"_vPlot.png"),
+    content = function(file){
+      png(file)
+      print(dat_sub()$tracks_v)
+      dev.off()
+    }
+  )
+  
+  output$downloadAngle <- downloadHandler(
+    filename = function() paste0(exp_select_mod()$experiment,"_AngleMigrationViolin.png"),
+    content = function(file){
+      png(file)
+      print(dat_sub()$angle_migration_plot)
+      dev.off()
+    }
+  )
+  
+  output$downloadCe <- downloadHandler(
+    filename = function() paste0(exp_select_mod()$experiment,"_ceViolin.png"),
+    content = function(file){
+      png(file)
+      print(dat_sub()$ce_plot)
+      dev.off()
+    }
+  )
+  
+  output$downloadAllFigs <- downloadHandler(
+    filename = function() paste0(exp_select_mod()$experiment,"_allFigs.pdf"),
+    content = function(file){
+      pdf(file)
+      print(dat_sub()$tracks_time)
+      print(dat_sub()$tracks_v)
+      print(dat_sub()$angle_migration_plot)
+      print(dat_sub()$ce_plot)
+      dev.off()
+    }
+  )
+  
+  output$downloadFinished <- downloadHandler(
+    filename = function() paste0(exp_select_mod()$experiment,"_finished.csv"),
+    content = function(file){
+      write.csv(dat_sub()$finished_table,file)
+    }
+  )
+  
+  #for some reason, even though it is the same code as above, this doesn't work
+  output$downloadAngleTab <- downloadHandler(
+    filename = function() paste0(exp_select_mod()$experiment,"_angle.csv"),
+    content = function(file){
+      write.csv(as.matrix(dat_sub()$angle_table),file)
+    }
+  )
+  
+  output$downloadCeTab <- downloadHandler(
+    filename = function() paste0(exp_select_mod()$experiment,"_ce.csv"),
+    content = function(file){
+      write.csv(as.matrix(dat_sub()$ce_table),file)
+    }
+  )
+  
 })
