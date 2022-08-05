@@ -19,7 +19,10 @@ names(args) <- map_chr(tmp, ~ .x[1])
 root <- system('git rev-parse --show-toplevel', intern = TRUE)
 
 # all updated results can be found here
-results_dir <- paste(root, 'results_csv', sep = '/')
+#results_dir <- paste(root, 'results_csv', sep = '/') #these are adjusted results
+
+# results still in pixels are here (on my Biowulf -- will need to adjust for others)
+results_dir <- paste(root, 'trackResults_2',sep = '/')
 
 # all results files
 results <- paste('ls', results_dir) %>%
@@ -27,7 +30,7 @@ results <- paste('ls', results_dir) %>%
   grep(pattern = args$experiment, value = TRUE)
 
 # Load in functions from track_automated.R
-paste0(root, '/track_automated.R') %>%
+paste0(root, '/utils/track_automated.R') %>%
   source()
 
 # experiment metadata
@@ -64,10 +67,13 @@ results_meta <- tibble(
   dplyr::select(-dat)
 
 ##### read in data #####
+# CHECK DELIM WITH FILES YOU ARE PROCESSING
+# files in results_csv are tab delimited while files in trackResults (and trackResults_2) are comma delimited
+# make sure to adjust delim in the code below accordingly
 dat <- map2_df(results_dir, results, ~ 
                  {
                    paste(.x, .y, sep = '/') %>%
-                     read_delim(delim = '\t', col_types = 'dddd') %>%
+                     read_delim(delim = ',', col_types = 'dddd') %>%
                      mutate(f = .y)
                  }) %>%
   
@@ -81,12 +87,22 @@ dat <- map2_df(results_dir, results, ~
   
   filter(!is.na(X) & !is.na(Y))
 
+# if file already exists, remove it so that a new one with same name can be added
+goodframes_dir <- paste(root, 'good_frames', sep='/')
+existing_files <- paste('ls', goodframes_dir) %>%
+  system(intern = TRUE)
+exp_match <- grep(dat$experiment[1],existing_files)
+exp_remove <- existing_files[exp_match]
+for (f in exp_remove){
+  paste0("rm ", "good_frames/", f) %>% system()
+}
+
 # run find_frames on every channel within the experiment
-# if using pixels, threshold = 35
-threshold <- .06
+# if using pixels, threshold = 35, find adjustment using the conversion?
+threshold <- 35
 # if using pixels, starting_line = 100
-starting_line <- 0
-for(i in 1:length(unique(dat$channel))){
+starting_line <- 100
+for(i in min(dat$channel):max(dat$channel)){
   dat_sub <- filter(dat, channel == i)
   find_frames(dat_sub,threshold,TRUE,starting_line)
 }
