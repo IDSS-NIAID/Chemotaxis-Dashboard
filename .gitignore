@@ -12,3 +12,6 @@
 *.pdf
 *.RData
 tmp/
+data
+results_csv
+

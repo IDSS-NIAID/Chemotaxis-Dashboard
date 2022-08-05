@@ -7,11 +7,14 @@ install.packages("GGally")
 install.packages("viridis")
 install.packages("hrbrthemes")
 install.packages("foreach")
-install.packages()
+install.packages("autoplot")
+install.packages("factoextra")
 
 # Loading package
 library(ClusterR)
 library(cluster)
+library(gridExtra)
+library(factoextra)
 library(gtools)
 library(dplyr)
 library(purrr)
@@ -27,7 +30,9 @@ library(foreach)
 
 
 
-View("~/Chemotaxis-Dashboard/data/19000101.RData")
+load(file.path("~/Chemotaxis-Dashboard/testdata/historical.RData"),
+     dataenv <- new.env() )
+
 
 root <- system('git rev-parse --show-toplevel', intern = TRUE)
 
@@ -35,16 +40,11 @@ paste0(root, '/utils/one_experiment.R') %>%
   source()
 
 
-
 # all updated results can be found here
 results_dir <- paste(root, 'utils', 'results_csv', sep = '/')
 
 paste0(root, '/utils/historical_data.R')
 
-View(X19000101_CH6_c_fMLF8)
-  
-clust_data <- X19000101_CH6_c_fMLF8
-  
 
 results_meta <- tibble(
     f = results,
@@ -96,29 +96,7 @@ dat <- map2_df(results_dir, results, ~
   
   filter(!is.na(X) & !is.na(Y))
 
-View(one_experiment(track_summ_select))
-View(one_experiment(dat, root = '', sig.figs = 4))
-                    
 
-channel_summ <- foreach(current_experiment = track_summ_select$experiment, .combine = rbind) %dopar%
-  {
-    filter(dat, experiment == current_experiment) %>%
-      one_experiment()
-  }
-
-save(channel_summ, track_summ_select, file = paste(root, 'data/historical.RData', sep = '/'))
-
-View(channel_summ)
-
-
-
-
-View(dat)
-
-## removing categorical data for clustering
-dat_1 <- dat[, -5][,-7][,-8]
-dat1 <- dat_1[,-7]
-View(dat1)
 
 
 ## function removes categorical variables and NAs to use for clustering ##
@@ -127,71 +105,66 @@ rem_categor<- function(dat){
   
 }
 
-clust_data<- rem_categor(dat)
-View(clust_data)
+
+## calls function and makes data set without categorical
+clust_data<- rem_categor(dataenv$all$track_summ)
 
 
-#removing NA's in new data set 
-#x <- c(NA, clust_data)
-View(x)
-
-#removing NA and setting x as numeric
-#x<- lapply(x, as.numeric)
-View(x)
-
-# kmeans function using clust_data data set and 3 clusters
-kmeans.re <- kmeans(as.numeric(x[[4]]), 3) 
+#clustering code#
 
 
-###rescale_dat_1 <- dat1 %>%
-  #mutate(track_scal = scale(Track),
-         #frame_scal = scale(Frame),
-         #x_scal = scale(X),
-         #y_scal = scale(Y),
-         #date_scal = scale(date),
-         #chan_scal = scale(channel)
-         # %>% select(-c(Track, Frame, X, Y, date, channel)))
-
-
-#calling clustering function
-kmeans.re
-
-# Cluster identification for 
-# each observation
-kmeans.re$cluster
-
-
-x <- c(NA, clust_data)
-x<- lapply(x, as.numeric)
-
-cluster_visual <- function(clust_dat,x){
-  #kmeans function using clust_data data set and 3 clusters
+  km.res <- kmeans(clust_data, 4, nstart = 25)
+  agg<- aggregate(Track, by=list(cluster=km.res$cluster), mean)
+  km.res$size
+  km.res$centers
+ 
   
-  kmeans.re <- kmeans(as.numeric(x[[2]]), 3) 
+  
+  
+#elbow method function determiing # clusters#
+
+wssplot <- function(data, nc=15, seed=1234){
+    wss <- (nrow(data)-1)*sum(apply(data,2,var))
+    for (i in 2:nc){
+      set.seed(seed)
+      wss[i] <- sum(kmeans(clust_data, centers=i)$withinss)}
+    plot(1:nc, wss, type="b", xlab="Number of Clusters",
+         ylab="Within groups sum of squares")
+    wss
+  }
+  
+
+wssplot(clust_data, nc=3, seed=1000)
+
+
+
+## k means clustering matrices choose variable to form groups#
   #confusion matrix
-  cm <- table(dat$Frame, kmeans.re$cluster)
+  cm <- table(dataenv$exp_summ$tracks_time$data$treatment, km.res$cluster)
   print(cm)
-  #plotting clustering using ggplot
-    clust_graph <- ggplot(clust_dat, mapping= aes(abs(X),Y, col=kmeans.re$cluster))+
-  geom_point(color=factor(kmeans.re$cluster))
-    print(clust_graph)
-
-}
-
-cluster_visual(clust_data,x)
-
-
-## Plotiing cluster centers
-kmeans.re$centers
-kmeans.re$centers[, c("X", "Y")]
-
-
+  
+cluster <- factor(km.res$cluster)
+  
+  
+# cluster graph choosing label variable and row variable for clustering
+ cluster_graph <- clust_data %>%
+   as_tibble() %>%
+    mutate(cluster = km.res$cluster,
+         state = row.names(Track)) %>%
+  ggplot(aes(max_v, angle_migration) )+ 
+   geom_point(alpha= 3, size=2, 
+   color=c("gold","blue","dark green", "orange")[cluster])
+ 
+ cluster_graph
+ 
+ 
 #### parallel plot ggally ####
 
+View(dataenv$exp_summ$tracks_time$data)
 
-ggparcoord(channel_summ,
-           columns = 10:12, groupColumn = 6,
-showPoints = TRUE, 
+ggparcoord(dataenv$exp_summ$tracks_time$data,
+           columns = 12:13, groupColumn = 9,
+showPoints = TRUE,
 title = "Parallel Coordinate Plot for the chemotaxis Data",
 alphaLines = 0.1
 ) + 
@@ -202,11 +175,11 @@ alphaLines = 0.1
   )
 
 
-
+View(dat)
 View(channel_summ)
 
-ggparcoord(channel_summ,
-           columns = 2:3, groupColumn = 1,
+ggparcoord(dat,
+           columns = 3:4, groupColumn = 9,
            showPoints = TRUE, 
            title = "Parallel Coordinate Plot for the chemotaxis Data",
            alphaLines = 0.1

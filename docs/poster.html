@@ -15,6 +15,25 @@ span.underline{text-decoration: underline;}
 div.column{display: inline-block; vertical-align: top; width: 50%;}
 div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
 ul.task-list{list-style: none;}
+div.csl-bib-body { }
+div.csl-entry {
+  clear: both;
+}
+.hanging div.csl-entry {
+  margin-left:2em;
+  text-indent:-2em;
+}
+div.csl-left-margin {
+  min-width:2em;
+  float:left;
+}
+div.csl-right-inline {
+  margin-left:2em;
+  padding-left:1em;
+}
+div.csl-indent {
+  margin-left: 2em;
+}
 </style>
 
 
@@ -31,6 +50,7 @@ ul.task-list{list-style: none;}
 <link href="poster_files/libs/bootstrap/bootstrap.min.css" rel="stylesheet" class="quarto-color-scheme" id="quarto-bootstrap" data-mode="light">
 <link href="poster_files/libs/bootstrap/bootstrap-dark.min.css" rel="prefetch" class="quarto-color-scheme quarto-color-alternate" id="quarto-bootstrap" data-mode="dark">
 
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml-full.js" type="text/javascript"></script>
 
 </head>
 
@@ -63,16 +83,16 @@ ul.task-list{list-style: none;}
 <p><small>1. Integrated Data Science Section, Research Technologies Branch, National Institute of Allergy and Infectious Disease 2. Advanced Biomedical Computational Science, Frederick National Laboratory for Cancer Research 3. Neutrophil Monitoring Lab and Immunological Monitoring Lab, Applied/Developmental Research Directorate, Frederick National Laboratory for Cancer Research</small></p>
 <section id="abstract" class="level2">
 <h2 class="anchored" data-anchor-id="abstract">Abstract</h2>
-<p>Migration of neutrophils to a nidus of infection is a critical component of the host innate immune response; defects in neutrophil chemotaxis can have a severe impact on immune function. Timelapse videos of neutrophil chemotaxis in response to a chemoattractant can be a valuable tool for diagnosing rare defects, but manual collection of quantitative data from these videos can be tedious and time-consuming. We have developed an AI-based workflow to automatically segment and track the paths of individual migrating cells and provide some measures of cell shape.</p>
+<p>Migration of neutrophils to a nidus of infection is a critical component of the host innate immune response; defects in neutrophil chemotaxis can have a severe impact on immune function. Time lapse videos of neutrophil chemotaxis in response to a chemoattractant can be a valuable tool for diagnosing rare defects, but manual collection of quantitative data from these videos can be tedious and time-consuming. We have developed an AI-based workflow to automatically segment and track the paths of individual migrating cells and provide some measures of cell shape.</p>
 <p>The chemotaxis dashboard facilitates exploration of summary statistics for each cell (cell velocity over time and direction of movement) and for each sample (average velocity over time, average direction of movement, and the proportion of cells successfully migrating across the area of observation). Cells from different samples can be clustered, compared and contrasted based on the distribution of these summary statistics (e.g.&nbsp;cells obtained from healthy donors vs patients or cells responding to different chemoattractants).</p>
 <p>Find us on <a href="https://github.com/abcsFrederick/Chemotaxis-Dashboard">GitHub</a>, or <a href="https://mckalliprn.shinyapps.io/demo_app/?_ga=2.247871367.1296701277.1659379204-1106696516.1659379204">shinyapps.io</a>.</p>
 </section>
 <section id="introduction" class="level2">
 <h2 class="anchored" data-anchor-id="introduction">Introduction</h2>
 <ul>
-<li>Neutrophils are a key part of the innate immune response.</li>
-<li>A critical function of neutrophils is their ability to quickly migrate to the nidus of an infection and kill pathogens through phagocytosis and/or the release of radical oxygen species or other antimicrobial enzymes. Defects in neutrophil chemotaxis can cause recurrent skin abscesses that sometimes lead to life-threatening infections.</li>
-<li>Diagnostic imaging of neutrophil chemotaxis can be used to measure cell velocity, distance traveled, and directionality of movement over time, but the process of obtaining these data can be manually intensive and time-consuming. As a result, studies typically only include tracks from a small portion of imaged cells.</li>
+<li>Neutrophils are a key part of the innate immune response. A critical function of neutrophils is their ability to quickly migrate to the nidus of an infection and kill pathogens through phagocytosis and/or the release of radical oxygen species or other antimicrobial enzymes (<span class="citation" data-cites="Priel2019">Priel and Kuhns (<a href="#ref-Priel2019" role="doc-biblioref">2019</a>)</span>).</li>
+<li>Defects in neutrophil chemotaxis can cause recurrent skin abscesses that sometimes lead to life-threatening infections.</li>
+<li>Diagnostic imaging of neutrophil chemotaxis can be used to measure cell velocity, distance traveled, and directionality of movement over time, but the process of obtaining these data can be manually intensive and time-consuming. As a result, studies typically either only include qualitative descriptions or statistics from a small portion of imaged cells (<span class="citation" data-cites="Cook2020">Cook et al. (<a href="#ref-Cook2020" role="doc-biblioref">2020</a>)</span>).</li>
 <li>There is a need for automated processing of image data and generation of summary statistics for all imaged neutrophils.</li>
 </ul>
 </section>
@@ -80,19 +100,59 @@ ul.task-list{list-style: none;}
 <h2 class="anchored" data-anchor-id="methods">Methods</h2>
 <ul>
 <li>Extract position information from Boyden chamber assays using U-net segmentation.</li>
-<li>Calculate cell velocity, angle of migration, chemotactic efficiency for each cell over time.</li>
-<li>Calculate summary statistics for each sample and each experiment/batch.</li>
-<li>Perform clustering of cells using data from these statistics to find common trends within groups (treatment, sample, condition).</li>
+</ul>
+<p><img src="img/u%20net%20segmentation.png" style="background-color:white;"></p>
+<ul>
+<li><p>Calculate cell velocity, angle of migration, chemotactic efficiency for each cell over time.</p>
+<ul>
+<li>Velocity is calculated by taking the first derivative of the function of smoothed position over time at each time point.</li>
+<li>Total distance traveled: <span class="math inline">\(\Delta_{total} = \sum_{j=1}^{n-1} \sqrt{(x_j - x_{j+1})^2 + (y_j - y_{j+1})^2}\)</span></li>
+<li>Vertical displacement: <span class="math inline">\(\Delta_y = |y_n - y_0|\)</span></li>
+<li>Horizontal displacement: <span class="math inline">\(\Delta_x = |x_n - x_0|\)</span></li>
+<li>Angle of migration: <span class="math inline">\(\theta = \tan^{-1}\left(\frac{\Delta_x}{\Delta_y}\right)\)</span></li>
+<li>Chemotactic efficiency: <span class="math inline">\(CE = \frac{\Delta_y}{\Delta_{total}}\)</span></li>
+</ul></li>
+<li><p>Calculate summary statistics for each sample and each experiment/batch.</p></li>
+</ul>
+<div class="quarto-layout-panel">
+<div class="quarto-layout-row quarto-layout-valign-top">
+<div class="quarto-layout-cell" style="flex-basis: 50.0%;justify-content: center;">
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="img/20100426_AngleMigrationViolin.png" class="img-fluid figure-img"></p>
+<p></p><figcaption class="figure-caption">Example violin plot displaying the distribution of angle of migration in each channel. No chemoattractant was used in channels 1 and 4, resulting in larger angle of migration, showing more random movement.</figcaption><p></p>
+</figure>
+</div>
+</div>
+<div class="quarto-layout-cell" style="flex-basis: 50.0%;justify-content: center;">
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="img/20100426_timeTracks.png" class="img-fluid figure-img"></p>
+<p></p><figcaption class="figure-caption">Visualization of each cell’s migration path with directed movement, toward the chemoattractant, on the x-axis, and non-directed movement, perpendicular to the chemoattractant gradient, on the y-axis.</figcaption><p></p>
+</figure>
+</div>
+</div>
+</div>
+</div>
+<ul>
 <li>Display these statistics on an interactive dashboard for easy comparison and diagnosis of samples.</li>
 </ul>
 </section>
 <section id="results-conclusion" class="level2">
 <h2 class="anchored" data-anchor-id="results-conclusion">Results &amp; Conclusion</h2>
 <p>The result of our research is this Shiny App, an interactive R-based web application, which will generate figures and summary statistics based on which samples and experiments the user selects to view. This will aid the researchers by computing and displaying and comparing these statistics for each dataset.</p>
+
 </section>
 </section>
 
-</main>
+<div id="quarto-appendix" class="default"><section class="quarto-appendix-contents" role="doc-bibliography"><h2 class="anchored quarto-appendix-heading">References</h2><div id="refs" class="references csl-bib-body hanging-indent" role="doc-bibliography">
+<div id="ref-Cook2020" class="csl-entry" role="doc-biblioentry">
+Cook, Sarah A, William A Comrie, M Cecilia Poli, Morgan Similuk, Andrew J Oler, Aiman J Faruqi, Douglas B Kuhns, et al. 2020. <span>“Hem1 Deficiency Disrupts mTORC2 and f-Actin Control in Inherited Immunodysregulatory Disease.”</span> <em>Science</em> 369 (6500): 202–7. <a href="https://doi.org/10.1126/science.aay5663">https://doi.org/10.1126/science.aay5663</a>.
+</div>
+<div id="ref-Priel2019" class="csl-entry" role="doc-biblioentry">
+Priel, Debra Long, and Douglas B. Kuhns. 2019. <span>“94 - Assessment of Neutrophil Function.”</span> In <em>"Clinical Immunology"</em>, edited by Robert R. Rich, Thomas A. Fleisher, William T. Shearer, Harry W. Schroeder, Anthony J. Frew, and Cornelia M. Weyand, 5th ed., 1273–82. London: Elsevier. <a href="https://doi.org/10.1016/B978-0-7020-6896-6.00100-9">https://doi.org/10.1016/B978-0-7020-6896-6.00100-9</a>.
+</div>
+</div></section></div></main>
 <!-- /main column -->
 <script id="quarto-html-after-body" type="application/javascript">
 window.document.addEventListener("DOMContentLoaded", function (event) {
