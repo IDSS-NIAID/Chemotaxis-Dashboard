@@ -78,9 +78,7 @@ find_frames <- function(dat,threshold,toFilter = FALSE,starting_line = NULL){
       temp <- intersect(f,t) #finding frames that are outside threshold but before starting line
       t <- t[!(t %in% temp)] #removing the before-start frames
     }
-    labelName <- paste0(dat$experiment[1],"_CH",dat$channel[1])
+    labelName <- tools::file_path_sans_ext(dat$f[1])
     cat(paste(t,collapse=","),"\n",file = paste("good_frames/",labelName,"_goodFrames.csv",sep=""),append = TRUE)
   }
 }
-
-

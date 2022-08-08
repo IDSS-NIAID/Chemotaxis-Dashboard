@@ -28,7 +28,7 @@ from skimage.measure import label, regionprops
 # mamba create -n project1 python=3.8 numpy pandas SimpleITK scikit-image time
 # 4. activate project1 and run your code
 # mamba activate project1
-# python3 shapeAnalysis1.py
+# python3 shapeAnalysis1.py <DATASET (without .csv)>
 #
 ### END OF NOTES ###
 
@@ -45,16 +45,16 @@ DATASET = sys.argv[1]
 print('Processing dataset:', DATASET)
 
 FRAMES = '/data/IDSS_projects/good_frames1'
-DAT_SPL = DATASET.split("_")
-DATE = DAT_SPL[0]
-CH = DAT_SPL[1]
+#DAT_SPL = DATASET.split("_")
+#DATE = DAT_SPL[0]
+#CH = DAT_SPL[1]
 
 #load the csv file and the nii.gz mask file
 df = pd.read_csv(os.path.join(ROOT, TRACK, DATASET, DATASET + '.csv'))
 msk = sitk.ReadImage(os.path.join(ROOT, SEG, DATASET + '.nii.gz'))
 
 #Read in the good frames file -- will only select and compute statistics for frames in this file
-with open(os.path.join(FRAMES,DATE+"_"+CH+"_goodFrames.csv")) as read_obj:
+with open(os.path.join(FRAMES,DATASET+"_goodFrames.csv")) as read_obj:
   csv_reader = reader(read_obj)
   frames_list = list(csv_reader)
   for i in range(len(frames_list)):
@@ -139,5 +139,5 @@ shape_dat = pd.DataFrame(d)
 #print(shape_dat)
 DASH = '~/Desktop/Chemotaxis-Dashboard'
 #save data in csv
-shape_dat.to_csv(os.path.join(DASH,'shape_data',DATE+'_' +CH+'_shape.csv'))
+shape_dat.to_csv(os.path.join(DASH,'shape_data',DATASET+'_shape.csv'))
 print('done')
