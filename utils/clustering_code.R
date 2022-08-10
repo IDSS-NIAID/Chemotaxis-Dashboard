@@ -47,32 +47,32 @@ paste0(root, '/utils/historical_data.R')
 
 
 results_meta <- tibble(
-    f = results,
-    
-    dat = strsplit(f, '_', fixed = TRUE),
-    
-    date = {map_chr(dat, `[`, 1) %>% 
-        substr(1, 8) %>% 
-        as.Date(format = '%Y%m%d')},
-    
-    channel = map_int(dat, ~ 
-                        {grep(.x, pattern = 'CH[1-6]', value = TRUE) %>%
-                            substr(3, 3) %>%
-                            as.integer()}),
-    
-    sample = map_chr(dat, ~
-                       {.x[.x != ''][-1] %>%
-                           gsub(pattern = '.csv', replacement = '', fixed = TRUE) %>%
-                           grep(pattern = '^[0-9]$', invert = TRUE, value = TRUE) %>% # drop any single digit numbers
-                           grep(pattern = 'CH[1-6]', invert = TRUE, value = TRUE) %>% # drop channel
-                           grep(pattern = 'fMLF|Basal|Buffer|C5a|SDF|IL.|LTB4', ignore.case = TRUE, invert = TRUE, value = TRUE) %>% # drop attractant
-                           grep(pattern = 'I8RA', invert = TRUE, value = TRUE)}[1]), # catch a typo
-    
-    treatment = map_chr(dat, ~ 
-                          {.x %>%
-                              gsub(pattern = '.csv', replacement = '', fixed = TRUE) %>%
-                              grep(.x, pattern = 'fMLF|Basal|Buffer|C5a|SDF|IL.|LTB4|I8RA',
-                                   ignore.case = TRUE, value = TRUE)}[1])) %>%
+  f = results,
+  
+  dat = strsplit(f, '_', fixed = TRUE),
+  
+  date = {map_chr(dat, `[`, 1) %>% 
+      substr(1, 8) %>% 
+      as.Date(format = '%Y%m%d')},
+  
+  channel = map_int(dat, ~ 
+                      {grep(.x, pattern = 'CH[1-6]', value = TRUE) %>%
+                          substr(3, 3) %>%
+                          as.integer()}),
+  
+  sample = map_chr(dat, ~
+                     {.x[.x != ''][-1] %>%
+                         gsub(pattern = '.csv', replacement = '', fixed = TRUE) %>%
+                         grep(pattern = '^[0-9]$', invert = TRUE, value = TRUE) %>% # drop any single digit numbers
+                         grep(pattern = 'CH[1-6]', invert = TRUE, value = TRUE) %>% # drop channel
+                         grep(pattern = 'fMLF|Basal|Buffer|C5a|SDF|IL.|LTB4', ignore.case = TRUE, invert = TRUE, value = TRUE) %>% # drop attractant
+                         grep(pattern = 'I8RA', invert = TRUE, value = TRUE)}[1]), # catch a typo
+  
+  treatment = map_chr(dat, ~ 
+                        {.x %>%
+                            gsub(pattern = '.csv', replacement = '', fixed = TRUE) %>%
+                            grep(.x, pattern = 'fMLF|Basal|Buffer|C5a|SDF|IL.|LTB4|I8RA',
+                                 ignore.case = TRUE, value = TRUE)}[1])) %>%
   
   mutate(sample = tolower(sample)) %>% # inconsistent capitalization
   
@@ -111,76 +111,87 @@ clust_data<- rem_categor(dataenv$all$track_summ)
 
 
 #clustering code#
+#km.res <- kmeans(clust_data, 3, nstart = 25)
+agg<- aggregate(Track, by=list(cluster=km.res$cluster), mean)
+km.res$size
+km.res$centers
 
 
-  km.res <- kmeans(clust_data, 4, nstart = 25)
-  agg<- aggregate(Track, by=list(cluster=km.res$cluster), mean)
-  km.res$size
-  km.res$centers
- 
-  
-  
-  
-#elbow method function determiing # clusters#
+
+
+#elbow method function determining # clusters#
+#input data set, number clusters and seed
+#nc= number of clusters
 
 wssplot <- function(data, nc=15, seed=1234){
-    wss <- (nrow(data)-1)*sum(apply(data,2,var))
-    for (i in 2:nc){
-      set.seed(seed)
-      wss[i] <- sum(kmeans(clust_data, centers=i)$withinss)}
-    plot(1:nc, wss, type="b", xlab="Number of Clusters",
-         ylab="Within groups sum of squares")
-    wss
-  }
-  
+  wss <- (nrow(data)-1)*sum(apply(data,2,var))
+  for (i in 2:nc){
+    set.seed(seed)
+    wss[i] <- sum(kmeans(data %>% select_if(is.numeric) %>% na.omit, centers=i)$withinss)}
+  plot(1:nc, wss, type="b", xlab="Number of Clusters",
+       ylab="Within groups sum of squares")
+  wss
+}
 
 wssplot(clust_data, nc=3, seed=1000)
 
 
 
 ## k means clustering matrices choose variable to form groups#
-  #confusion matrix
-  cm <- table(dataenv$exp_summ$tracks_time$data$treatment, km.res$cluster)
-  print(cm)
-  
+#confusion matrix
+cm <- table(dataenv$all$track_summ$treatment, km.res$cluster)
+print(cm)
+
+
+
+# easier naming to be used in cluster function
 cluster <- factor(km.res$cluster)
+use_clust<- dataenv$all$track_summ
+
+function_clust <- function(dataset, x_axis, y_axis, label){
+  km.res <- kmeans(dataset %>% select_if(is.numeric) %>% na.omit,
+                   3, nstart = 25)
   
-  
-# cluster graph choosing label variable and row variable for clustering
- cluster_graph <- clust_data %>%
-   as_tibble() %>%
+  clust_fun<- dataset %>%
+    as_tibble() %>%
+    
     mutate(cluster = km.res$cluster,
-         state = row.names(Track)) %>%
-  ggplot(aes(max_v, angle_migration) )+ 
-   geom_point(alpha= 3, size=2, 
-   color=c("gold","blue","dark green", "orange")[cluster])
- 
- cluster_graph
- 
- 
+    ) %>%
+    ggplot(aes({{x_axis}}, {{y_axis}}) )+ 
+    geom_point(alpha= 3, size=2, 
+               color=c("gold","blue","dark green")[cluster]) +
+    geom_text(aes(label={{label}}), 
+              alpha=3, size= 1.5, color=c("black", "white", "white")[cluster])
+  print(clust_fun)
+  
+}
+
+function_clust(use_clust, angle_migration, 
+               ce, sample) 
+
+
+# cluster table function#
+
+cluster_data_frame<- function(clust_df) { 
+  cm <- table(clust_df$channel, km.res$cluster)  
+  print(cm)
+  cluster_dataset <- as.data.frame(cm)  
+  View(cluster_dataset)
+  
+}
+
+cluster_data_frame(use_clust)
+
+
+
+
 #### parallel plot ggally ####
 
 View(dataenv$exp_summ$tracks_time$data)
 
-ggparcoord(dataenv$exp_summ$tracks_time$data,
-           columns = 12:13, groupColumn = 9,
-showPoints = TRUE,
-title = "Parallel Coordinate Plot for the chemotaxis Data",
-alphaLines = 0.1
-) + 
-  scale_color_viridis(discrete=TRUE) +
-  theme_ipsum()+
-  theme(
-    plot.title = element_text(size=10)
-  )
-
-
-View(dat)
-View(channel_summ)
-
-ggparcoord(dat,
-           columns = 3:4, groupColumn = 9,
-           showPoints = TRUE, 
+ggparcoord(use_clust,
+           columns = 12:15, groupColumn = 3,
+           showPoints = TRUE,
            title = "Parallel Coordinate Plot for the chemotaxis Data",
            alphaLines = 0.1
 ) + 
@@ -189,7 +200,4 @@ ggparcoord(dat,
   theme(
     plot.title = element_text(size=10)
   )
-
-
-
 
