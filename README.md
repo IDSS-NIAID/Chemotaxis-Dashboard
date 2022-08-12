@@ -23,7 +23,7 @@ We have a number of R scripts included in the `utils/` directory, and we are wor
     * Contains functions to generate frame-by-frame plots of cell position, with options to highlight particular tracks of interest. Was used to calibrate the threshold for functions in `track_automated.R`
   * `track_automated.R`
     * Contains the function find_frames(), which identifies all the 'good frames' for each track -- those where the cell is at least a certain (threshold) distance away from the next closest cell.
-   * find_frames() generates a .csv file of the 'good frames' for each track based on the selected threshold and if they user wants to filter all frames where the track position is before a certain y-coordinate
+    * find_frames() generates a .csv file of the 'good frames' for each track based on the selected threshold and if they user wants to filter all frames where the track position is before a certain y-coordinate
   * `findGoodFrames.R`
     * Calls find_frames() from `track_automated.R` for all channels within a certain experiment (date)
   * `shapeAnalysis1.py`
