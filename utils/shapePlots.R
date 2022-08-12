@@ -3,6 +3,7 @@ library(dplyr)
 library(purrr)
 library(readr)
 
+experiment = 20180215
 # Preprocess experiment data
 preprocess <- function(experiment){
   system('cd ~')
@@ -35,7 +36,7 @@ preprocess <- function(experiment){
     return(dat_shape)
 
 }
-
+dat_shape <- preprocess(experiment) 
 # summary statistics for entire experiment - perimeter #
 # still need to make into function
 dat_shape <- preprocess(experiment)
@@ -54,29 +55,70 @@ dat_shape_1 <- filter(dat_shape, outlier_lower_perim < Perimeter & Perimeter < o
 
 # Graphing area and perimeter over time, split by each Track
 # this function takes in data for only one channel and returns track-level plots
-# this doesn't work, and I don't understand why
-graph_area_byTrack <- function(dat_sub, channel_select){
+graph_area_byTrack <- function(dat_sub, joint_channel_select){
   # filter only to the selected channel
-  dat_sub <- dat_sub %>% filter(channel == channel_select)
-  pdf(file = paste0('plots/',tools::file_path_sans_ext(dat_sub$f[1])),'_areaTracks.pdf')
+  dat_sub <- dat_sub %>% filter(joint_channel == joint_channel_select)
+  pdf(file = paste0('plots/',tools::file_path_sans_ext(dat_sub$f[1]),'_areaTracks.pdf'))
   for (t in unique(dat_sub$Track)){
     dat_sub_t <-  filter(dat_sub,Track == t)
-    p <- ggplot(dat_sub_t, mapping = aes(Frame,Area)) + geom_line()
+    p <- ggplot(dat_sub_t, mapping = aes(Frame,Area)) + geom_line() + ggtitle(paste("Track",t))
     print(p)
   }
   dev.off()
   
 }
-graph_perim_byTrack <- function(dat_sub){
-  dat_sub %>% ggplot(mapping = aes(Frame,Perimeter,group=Track)) + geom_line() + facet_wrap(~Track)
-}
-# Testing
-dat_shape_2 <- dat_shape %>% filter(channel == 3)
-print(graph_perim_byTrack(dat_shape_2))
 
+# Graphing area and perimeter over time, split by each Track
+# this function takes in data for only one channel and returns track-level plots
+graph_perim_byTrack <- function(dat_sub, joint_channel_select){
+  # filter only to the selected channel
+  dat_sub <- dat_sub %>% filter(joint_channel == joint_channel_select)
+  pdf(file = paste0('plots/',tools::file_path_sans_ext(dat_sub$f[1]),'_perimTracks.pdf'))
+  for (t in unique(dat_sub$Track)){
+    dat_sub_t <-  filter(dat_sub,Track == t)
+    p <- ggplot(dat_sub_t, mapping = aes(Frame,Perimeter)) + geom_line() + ggtitle(paste("Track",t))
+    print(p)
+  }
+  dev.off()
+  
+}
 
 # channel-level plot creation of shape data
 channel_shape <- function(dat_sub){
+
+  
+  # Group data by track so as to look at trends in each individual track
+  dat_byTrack <- dat_sub %>% group_by(f, channel, sample, treatment, Track) %>%
+    summarize(
+      frames = list(Frame),
+      area = list(Area),
+      perimeter = list(Perimeter)
+    ) %>%
+    ungroup() %>%
+    mutate(
+      joint_channel = paste(channel, sample, treatment, sep = ", "),
+      avg_area = sapply(area, function(x) mean(x)),
+      fq_area = sapply(area, function(x) quantile(x,0.25)),
+      tq_area = sapply(area, function(x) quantile(x,0.75)),
+      up_bound_area = sapply(area, function(x) quantile(x,0.75) + 1.5*(quantile(x,0.75)-quantile(x,0.25))),
+      avg_perim = sapply(perimeter, function(x) mean(x)),
+      fq_perim = sapply(perimeter, function(x) quantile(x,0.25)),
+      tq_perim = sapply(perimeter, function(x) quantile(x,0.75)),
+      up_bound_perim = sapply(perimeter, function(x) quantile(x,0.75) + 1.5*(quantile(x,0.75)-quantile(x,0.25)))
+    )
+  
+  # Filter out outliers for each track
+  # I'm not sure of a more effective way to do this at present
+  outliers <- select(dat_byTrack,joint_channel,Track,up_bound_perim,up_bound_area)
+  new_dat_sub <- data.frame()
+  for (t in unique(dat_sub$Track)){
+    up_bound_perim_t <- outliers %>% filter(Track == t) %>% select(up_bound_perim)
+    up_bound_area_t <- outliers %>% filter(Track == t) %>% select(up_bound_area)
+    dat_sub_t <- filter(dat_sub, Track == t & Perimeter < up_bound_perim_t[[1]][1] & Area < up_bound_area_t[[1]][1])
+    new_dat_sub <- rbind(new_dat_sub, dat_sub_t)
+  }
+  dat_sub <- new_dat_sub
+  
   # Group data by frame so as to look at trends over time
   dat_byFrame <- dat_sub %>% group_by(f, channel, sample, treatment, Frame) %>%
     summarize(
@@ -94,7 +136,6 @@ channel_shape <- function(dat_sub){
     )
   
   exp_summ <- list()
-  
   #trts <- paste(unique(dat_byFrame$treatment))
   #samps <- unique(dat_byFrame$sample)
 
