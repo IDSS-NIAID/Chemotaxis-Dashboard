@@ -1,21 +1,34 @@
 #make sure to call this before using these functions
 library(dplyr)
 library(tidyverse)
+
 #############
 # Functions #
 #############
 
-# FILTER BEFORE STARTING LINE
-# this function finds all frames where the selected track is located before the starting line
-# returns a vector of these frames where the track is 'ineligible'
+#' FILTER BEFORE STARTING LINE
+#' 
+#' This function finds all frames where the selected track is located before the starting line and
+#' returns a vector of these frames where the track is 'ineligible'.
+#' This is useful because before the starting line, there are many untracked cells which overlap the tracked cells,
+#' making gathering accurate shape data difficult.
+#' This function will be called if the user inputs TRUE for the parameter to_filter in find_frames
+#' @param dat the data.frame where the position over time data is stored. Should have Track, Frame, X, and Y columns
+#' @param starting_line the Y position of the starting line on the chemotaxis images. The function will find frames with Y position before this point 
+#' @param track_num the selected track
+#' @return a vector containing the frames for which the Y position of the selected track is before the starting line
+#' @example filter_start(dat_sub,100,12)
 filter_start <- function(dat, starting_line, track_num){
   newdat <- filter(dat, Track == track_num, Y < starting_line)
   return(newdat$Frame)
 }
 
-# CALCULATING MINIMUM DISTANCE
-# This function calculates the minimum distance to another track for each track and each frame in the dataset
-# It returns a two-dimensional list which stores all the minimum distances
+#' CALCULATING MINIMUM DISTANCES
+#' 
+#' This function calculates the minimum distance to another track for each track and each frame in the dataset.
+#' It returns a two-dimensional list which stores all the minimum distances for each track.
+#' @param dat the data.frame where the position over time data is stored. Should have Track, Frame, X, and Y columns
+#' @return A two-dimensional list which has an entry for each track. The entry for each track is a vector of the minimum distance to the nearest neighbor of that cell at each frame
 all_min_dist <- function(dat){
   all_dist_list <- list()
   # run through the loop once for every track
@@ -47,9 +60,14 @@ all_min_dist <- function(dat){
   return(all_dist_list)
 }
 
-# THRESHOLD BY FRAME
-# Returns a list of frames where the selected track's closest neighbor is outside the threshold distance
-# Can be used to have more flexibility when selecting tracks, can eliminate only bad frames instead of whole track
+#' THRESHOLD BY FRAME
+#' 
+#' This function returns a list of frames where the selected track's closest neighbor is outside the threshold distance.
+#' @param listname a two-dimensional list containing a vector of minimum distances for each track- can be generated using all_min_dist()
+#' @param threshold the distance between cells considered acceptable. Current threshold is 35 pixels, though it may need to be adjusted
+#' @param track_num the selected track
+#' @return A list of the 'good frames' for the selected track, at which the nearest neighboring cell is outside the threshold distance
+#' @example thresholding_by_frame(all_min_dist(dat),35,12)
 thresholding_by_frame <- function(listname,threshold,track_num){
   cur_track <- listname[[track_num]]
   good_frames <- c()
@@ -64,11 +82,16 @@ thresholding_by_frame <- function(listname,threshold,track_num){
   return(good_frames)
 }
 
-# FINDING ALL ELIGIBLE FRAMES
-# creates a csv file of all frames where each track does not get too close to another track
-# gives more flexibility in choosing tracks to examine
-# if the user wishes to eliminate frames before the selected 'starting line', they should set toFilter to TRUE and choose a starting line
-# the function will then remove these frames from the list of eligible frames for each track
+#' FINDING ALL ELIGIBLE FRAMES
+#' This function creates a csv file of all frames where each track does not get too close to another track.
+#' If the user wishes to eliminate frames before the selected 'starting line', they should set toFilter to TRUE and choose a starting line.
+#' The function will then remove these frames from the list of eligible frames for each track.
+#' This function calls all_min_dist, thresholding_by_frame, and filter_start.
+#' @param dat the data.frame where the position over time data is stored. Should have Track, Frame, X, and Y columns.
+#' @param threshold the distance between cells considered acceptable. Current threshold is 35 pixels, though it may need to be adjusted
+#' @param toFilter boolean value set based on if the user wants to filter out cells before the starting line
+#' @param starting_line the Y position of the starting line
+#' @return a csv file of the 'good frames' for each track in the data file
 find_frames <- function(dat,threshold,toFilter = FALSE,starting_line = NULL){
   theList <- all_min_dist(dat) #getting all min distances
   for (i in 1:length(theList)){
