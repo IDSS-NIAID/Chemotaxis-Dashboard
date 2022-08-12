@@ -3,7 +3,10 @@ library(dplyr)
 library(purrr)
 library(readr)
 
-experiment = 20180215
+#############
+# Functions #
+#############
+
 # Preprocess experiment data
 preprocess <- function(experiment){
   system('cd ~')
@@ -36,20 +39,7 @@ preprocess <- function(experiment){
     return(dat_shape)
 
 }
-dat_shape <- preprocess(experiment) 
-# summary statistics for entire experiment - perimeter #
-# still need to make into function
-dat_shape <- preprocess(experiment)
-fq_perim <- quantile(dat_shape$Perimeter,0.25)
-median_perim <- median(dat_shape$Perimeter)
-mean_perim <- mean(dat_shape$Perimeter)
-tq_perim <- quantile(dat_shape$Perimeter,0.75)
-IQR_perim <- tq_perim - fq_perim
-outlier_upper_perim <- tq_perim + 3*IQR_perim
-outlier_lower_perim <- fq_perim - 3*IQR_perim
-
-# filter out extreme outliers #
-dat_shape_1 <- filter(dat_shape, outlier_lower_perim < Perimeter & Perimeter < outlier_upper_perim)
+ 
 
 ## some graphs ##
 
@@ -217,6 +207,28 @@ channel_shape <- function(dat_sub){
   return(exp_summ)
   
 }
+
+###########
+# Testing #
+###########
+
+experiment = 20171106
+dat_shape <- preprocess(experiment)
+
+# summary statistics for entire experiment - perimeter #
+# still need to make into function
+dat_shape <- preprocess(experiment)
+fq_perim <- quantile(dat_shape$Perimeter,0.25)
+median_perim <- median(dat_shape$Perimeter)
+mean_perim <- mean(dat_shape$Perimeter)
+tq_perim <- quantile(dat_shape$Perimeter,0.75)
+IQR_perim <- tq_perim - fq_perim
+outlier_upper_perim <- tq_perim + 3*IQR_perim
+outlier_lower_perim <- fq_perim - 3*IQR_perim
+
+# filter out extreme outliers #
+#dat_shape_1 <- filter(dat_shape, outlier_lower_perim < Perimeter & Perimeter < outlier_upper_perim)
+
 exp_summ <- channel_shape(dat_shape)
-exp_summ_1 <- channel_shape(dat_shape_1)
+
 
