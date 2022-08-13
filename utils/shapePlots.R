@@ -7,7 +7,11 @@ library(readr)
 # Functions #
 #############
 
-# Preprocess experiment data
+#' Preprocess experiment data
+#' 
+#' @param experiment experiment date in form YYYYMMDD
+#' @return data frame containing shape data with meta data
+#' @example preprocess(20180215)
 preprocess <- function(experiment){
   system('cd ~')
   shapes_dir <- '/data/IDSS_projects/shape_data'
@@ -41,10 +45,13 @@ preprocess <- function(experiment){
 }
  
 
-## some graphs ##
-
-# Graphing area and perimeter over time, split by each Track
-# this function takes in data for only one channel and returns track-level plots
+#' Graphing area over time, split by each Track.
+#' 
+#' This function takes in data for only one channel and returns track-level plots
+#' @param dat_sub data.frame processed by preprocess()
+#' @param join_channel_select string of the joint_channel label
+#' @return outputs pdf containing line plot of area over time for each track
+#' @example graph_area_byTrack(preprocess(20180215),'CH4, RT, Basal')
 graph_area_byTrack <- function(dat_sub, joint_channel_select){
   # filter only to the selected channel
   dat_sub <- dat_sub %>% filter(joint_channel == joint_channel_select)
@@ -58,8 +65,13 @@ graph_area_byTrack <- function(dat_sub, joint_channel_select){
   
 }
 
-# Graphing area and perimeter over time, split by each Track
-# this function takes in data for only one channel and returns track-level plots
+#' Graphing perimeter over time, split by each Track
+#' 
+#' This function takes in data for only one channel and returns track-level plots.
+#' @param dat_sub data.frame processed by preprocess()
+#' @param join_channel_select string of the joint_channel label
+#' @return outputs pdf containing line plot of perimeter over time for each track
+#' @example graph_perim_byTrack(preprocess(20180215),'CH4, RT, Basal')
 graph_perim_byTrack <- function(dat_sub, joint_channel_select){
   # filter only to the selected channel
   dat_sub <- dat_sub %>% filter(joint_channel == joint_channel_select)
@@ -73,10 +85,15 @@ graph_perim_byTrack <- function(dat_sub, joint_channel_select){
   
 }
 
-# channel-level plot creation of shape data
+#' Channel-level plot creation from shape data
+#' 
+#' Filters out outliers of greater than 3rd quartile + 1.5(IQR) and then makes plots from that data
+#' Still need to work out some issues with the outliers -- see notes at the end of the script
+#' @param dat_sub data.frame of data processed by preprocess()
+#' @return data frame containing graphs of area and perimeter over time and area and perimeter distribution by channel
+#' @example exp_summ <- channel_shape(preprocess(20171106))
 channel_shape <- function(dat_sub){
 
-  
   # Group data by track so as to look at trends in each individual track
   dat_byTrack <- dat_sub %>% group_by(f, channel, sample, treatment, Track) %>%
     summarize(
@@ -126,8 +143,6 @@ channel_shape <- function(dat_sub){
     )
   
   exp_summ <- list()
-  #trts <- paste(unique(dat_byFrame$treatment))
-  #samps <- unique(dat_byFrame$sample)
 
   # Average perimeter per channel
   exp_summ$perim_plot <- ggplot(dat_byFrame, mapping = aes(Frame,avg_perim,group=joint_channel,color=factor(joint_channel)))+
@@ -208,27 +223,11 @@ channel_shape <- function(dat_sub){
   
 }
 
-###########
-# Testing #
-###########
-
-experiment = 20171106
-dat_shape <- preprocess(experiment)
-
-# summary statistics for entire experiment - perimeter #
-# still need to make into function
-dat_shape <- preprocess(experiment)
-fq_perim <- quantile(dat_shape$Perimeter,0.25)
-median_perim <- median(dat_shape$Perimeter)
-mean_perim <- mean(dat_shape$Perimeter)
-tq_perim <- quantile(dat_shape$Perimeter,0.75)
-IQR_perim <- tq_perim - fq_perim
-outlier_upper_perim <- tq_perim + 3*IQR_perim
-outlier_lower_perim <- fq_perim - 3*IQR_perim
-
-# filter out extreme outliers #
-#dat_shape_1 <- filter(dat_shape, outlier_lower_perim < Perimeter & Perimeter < outlier_upper_perim)
-
-exp_summ <- channel_shape(dat_shape)
-
-
+## NOTES ON OUTLIERS ##
+# Rilyn, 8/12/2022 #
+# There are still quite a few outliers that are not caught by the track_automated.R code.
+# I have a few theories for this -- first off, the outliers appear to be two-three cells merged together
+# Some of the cells that merge are untracked -- because of this, adjusting the threshold in track_automated.R may not catch these outliers
+# We can try to weed out outliers after the fact, which is what I've attempted to do here, but some are still coming through with the cutoff of 3rd quartile + 1.5(IQR)
+# I don't want to throw out too many data points, so it might be worth comparing both raising the threshold and taking out high outliers
+# Somewhere around ~130-150 pixels appears to be the cut-off for one cell but I haven't had time to check this extensively against the raw data
