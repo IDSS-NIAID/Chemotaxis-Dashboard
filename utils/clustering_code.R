@@ -148,10 +148,46 @@ print(cm)
 cluster <- factor(km.res$cluster)
 use_clust<- dataenv$all$track_summ
 
+
+
+# started to add shiny commands to cluster function, more of a tryout
+
 function_clust <- function(dataset, x_axis, y_axis, label){
-  km.res <- kmeans(dataset %>% select_if(is.numeric) %>% na.omit,
+    dat <- sample_select_mod()
+    
+    if(nrow(dat) == nrow(all$track_summ) & nrow(all$track_summ) > 6)
+    {
+      plot_nothing()
+      
+    }else { km.res <- kmeans(dataset %>% select_if(is.numeric) %>% na.omit,
                    3, nstart = 25)
   
+  clust_fun<- dataset %>%
+    as_tibble() %>%
+    
+    mutate(cluster = km.res$cluster,
+    ) %>%
+    ggplot(aes({{x_axis}}, {{y_axis}}) )+ 
+    geom_point(alpha= 3, size=2, 
+               color=c("gold","blue","dark green")[cluster]) +
+    geom_text(aes(label={{label}}), 
+              alpha=3, size= 1.5, color=c("black", "white", "white")[cluster])
+  print(clust_fun)
+  
+  
+  
+    }}
+
+
+
+function_clust(use_clust, angle_migration, 
+              av_velocity, sample) 
+
+
+
+#cluster function without the shiny app commands#
+
+function_clust <- function(dataset, x_axis, y_axis, label){
   clust_fun<- dataset %>%
     as_tibble() %>%
     
@@ -167,7 +203,9 @@ function_clust <- function(dataset, x_axis, y_axis, label){
 }
 
 function_clust(use_clust, angle_migration, 
-               ce, sample) 
+               av_velocity, sample) 
+
+
 
 
 # cluster table function#
@@ -200,4 +238,22 @@ ggparcoord(use_clust,
   theme(
     plot.title = element_text(size=10)
   )
+
+
+
+
+sample_select_mod <- callModule(
+  module = selectizeGroupServer,
+  id = "sampleFilters",
+  data = all$track_summ,
+  vars = c('experiment', 'date', 'sample', 'treatment', 'channel')
+)
+
+output$selectedSamples <- renderTable({
+  with(sample_select_mod(),
+       tibble(`#Samples` = length(unique(sample)),
+              `#Experiements` = length(unique(experiment)),
+              `#Treatments` = length(unique(treatment)),
+              `Total # of Obs` = length(v_y)))
+})
 
