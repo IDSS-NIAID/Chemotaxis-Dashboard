@@ -105,3 +105,35 @@ find_frames <- function(dat,threshold,toFilter = FALSE,starting_line = NULL){
     cat(paste(t,collapse=","),"\n",file = paste("good_frames/",labelName,"_goodFrames.csv",sep=""),append = TRUE)
   }
 }
+
+## FIND AND ADJUST THRESHOLD USING THESE FUNCTIONS
+# The following two functions are only really used to find and adjust the pixel threshold, notes on how to use in the README
+
+# THRESHOLD BY TRACK
+# Returns TRUE if all distances to another track are above the threshold
+# Returns false if another track is too close at any point
+# Leads to a more conservative sample of non-overlapping tracks
+thresholding_by_track <- function(listname,threshold,track_num){
+  cur_track <- listname[[track_num]] 
+  #if any distance in the list is below the threshold, it returns FALSE
+  if(min(cur_track) < threshold){ 
+    return(FALSE)
+  }
+  return(TRUE)
+}
+
+# FINDING ALL ELIGIBLE TRACKS
+# should return a vector of all eligible tracks based on a threshold
+# only returns tracks that are never within a certain distance (determined by threshold) of another cell
+# this calls the stricter thresholding_by_track, so if any values are below the threshold, the whole track is thrown out
+find_tracks <- function(dat,threshold){
+  theList <- all_min_dist(dat) #getting all min distances
+  tracks_vec <- c()
+  for (i in 1:length(theList)){
+    t <- thresholding_by_track(theList,threshold,i)
+    if(t){
+      tracks_vec <- append(tracks_vec,i) #only appends eligible tracks
+    }
+  }
+  return(tracks_vec)
+}
