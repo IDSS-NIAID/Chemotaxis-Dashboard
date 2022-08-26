@@ -56,3 +56,7 @@ The other .RData files are important for the app too, so do not delete them.
 2. Repeat step one for all experiments of interest
 3. Run `mergeData.R`
 4. Load 'historical.RData' to make sure files have loaded and merged correctly
+
+### Contact information
+Rilyn McKallip: rilynnmckallip@gmail.com.  
+Feel free to contact me with questions or clarifications.
