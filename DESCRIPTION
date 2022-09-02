@@ -1,0 +1,33 @@
+Package: ChemotaxisDashboard
+Title: Chemotaxis dashboard
+Version: 0.0-1
+Authors@R: c(person('Randy', 'Johnson', email = 'johnsonra@mail.nih.gov',
+                    role = c('cre','aut')),
+             person('Rilyn', 'McKallip', role = 'aut'),
+             person('Jane', 'Smoltz', role = 'aut'))
+Description: Dashboard for exploring chemotaxis data.
+License: MIT + file LICENSE
+Depends: 
+    R (>= 4.0),
+    splines
+Imports: 
+    rlang,
+    shiny, 
+    shinydashboard, 
+    shinyWidgets,
+    magrittr,
+    dplyr,
+    tibble,
+    purrr,
+    grDevices,
+    ggplot2,
+    cowplot
+Suggests:
+    patchwork,
+    usethis,
+    readr
+Encoding: UTF-8
+URL: https://github.com/abcsFrederick/Chemotaxis-Dashboard
+BugReports: https://github.com/abcsFrederick/Chemotaxis-Dashboard/issues
+Language: en-US
+RoxygenNote: 7.2.1

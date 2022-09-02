@@ -9,6 +9,10 @@ root <- system('git rev-parse --show-toplevel', intern = TRUE)
 dt <- '19000101'
 
 
+############################################
+# Simulate six channels for one experiment #
+############################################
+
 # normal buffer - random walk
 ntracks <- 100
 nframes <- 120
@@ -114,3 +118,27 @@ tibble(Track = rep(1:ntracks, each = nframes),
   # yes, this is a 'csv' that is really tab delimited
   write_delim(paste0(root, "/utils/results_csv/", dt, "_CH6_c_fMLF8.csv"),
               delim = '\t')
+
+
+################################
+# Preprocess simulated results #
+################################
+
+system(paste0('Rscript ', root, '/utils/preprocess.R experiment=', dt))
+
+
+#################################
+# Save .RData files for package #
+#################################
+
+# load processed data
+load(paste0(root, '/data/', dt, '.RData'))
+
+# create track_summ_select
+track_summ_select <- tibble(date = '1900-01-01', experiment = dt)
+
+# bundle channel summ information
+all_experiments <- list(track_summ = track_summ,
+                        channel_summ = channel_summ)
+
+usethis::use_data(all_experiments, track_summ_select, exp_summ, internal = TRUE, overwrite = TRUE)

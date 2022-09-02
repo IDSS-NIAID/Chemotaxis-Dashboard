@@ -1,0 +1,12 @@
+^.*\.Rproj$
+^\.Rproj\.user$
+
+^data$
+^docs$
+^Notes$
+^testdata$
+^tmp$
+^utils$
+^shiny$
+
+Dockerfile
