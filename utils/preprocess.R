@@ -2,6 +2,11 @@
 #' This will read in results from the convolutional model and preprocess for the dashboard
 #' 
 #' @param experiment Date of the experiment to run. Argument should be of the form: experiment=%Y%m%d.
+#' @param root Location of the root of this repository (default is inferred from `git rev-parse`)
+#' @param results_dir Location of raw csv tracks files
+#' @param data_dir Location of data to pass to one_experiment()
+#' @param seed Random seed to use
+#' @param sig.figs Number of significant figures to pass to one_experiment
 #' 
 #' @examples 
 #' Here is an example line for the swarm file:
@@ -18,42 +23,49 @@ library(ChemotaxisDashboard)
 options(dplyr.summarise.inform = FALSE)
 
 library(cowplot)
+library(ggplot2)
 
 theme_cowplot() %>%
   theme_set()
 
 
-#########
-# Paths #
-#########
+##################
+# Paths/Defaults #
+##################
 
 # Read in command args
 tmp <- commandArgs(TRUE) %>%
   strsplit('=', fixed = TRUE)
 
 # for debugging: args <- list(experiment='20070308')
-# for debugging: args <- list(experiment='20140904279')
+# for debugging: args <- list(experiment='19000101')
 args <- map(tmp, ~ .x[2])
 names(args) <- map_chr(tmp, ~ .x[1])
 
 # root directory of the git repo
-root <- system('git rev-parse --show-toplevel', intern = TRUE)
+if(is.null(args$root))
+  args$root <- system('git rev-parse --show-toplevel', intern = TRUE)
+
+# directory for the processed data
+if(is.null(args$data_dir))
+  args$dat_dir <- paste0(args$root, '/data/')
+
+# set random seed if supplied
+if(!is.null(args$seed))
+  set.seed(as.numeric(args$seed))
+
+# default sig.figs
+if(is.null(args$sig.figs))
+  args$sig.figs <- 4
 
 # all updated results can be found here
-results_dir <- paste(root, 'utils', 'results_csv', sep = '/')
+if(is.null(args$results_dir))
+  args$results_dir <- paste(args$root, 'utils', 'results_csv', sep = '/')
 
 # all results files
-results <- paste('ls', results_dir) %>%
+results <- paste('ls', args$results_dir) %>%
   system(intern = TRUE) %>%
   grep(pattern = args$experiment, value = TRUE)
-
-
-#########
-# Utils #
-#########
-
-paste0(root, '/utils/one_experiment.R') %>%
-  source()
 
 
 ###################
@@ -95,7 +107,7 @@ results_meta <- tibble(
 
 
 ##### read in data #####
-dat <- map2_df(results_dir, results, ~ 
+dat <- map2_df(args$results_dir, results, ~ 
                  {
                    paste(.x, .y, sep = '/') %>%
                      read_delim(delim = '\t', col_types = 'dddd') %>%
@@ -113,4 +125,4 @@ dat <- map2_df(results_dir, results, ~
   filter(!is.na(X) & !is.na(Y))
 
 # pre-process data for this experiment
-one_experiment(dat, root = root, sig.figs = 2)
+one_experiment(dat, root = args$root, sig.figs = args$sig.figs, data_dir = args$data_dir)

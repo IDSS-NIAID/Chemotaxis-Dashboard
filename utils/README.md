@@ -29,10 +29,27 @@ In this folder you will find R scripts and python scripts which are called and r
 
 `mergeData.R` is then used to combine information from processed experiment summary files. This does not need to be run on all experiments in `data/`. Rather, it will add any new experiments that aren't already in `data/historical.RData`.
 
-* Run :
+* Run from either the terminal or within R.
 * Inputs:
+    * `data/<experiment>.RData`: processed experiment summary files created in `preprocess.R`.
+    * (optional) `data/historical.RData`: If this already exists, new experimental data in `data/` will be added to `all_experiments` and `track_summ_select`.
 * Outputs:
+    * `data/historical.RData`: Summary of all experiments in `data/`, including the data.frame, `all_experiments`, and a list of all experiments in the data set, `track_summ_select`. The latter is used to subset / select experiments for display in the channel summary tab of the shiny app.
 * Depends:
+    * `dplyr`
+
+## Remaining script to incorporate into the R pacakge
+
+* ce_testing.R
+* clustering_code.R
+* findGoodFrames.R
+* findShape.R
+* make_swarm.R
+* shapeAnalysis1.py
+* shapePlots.R
+* track_automated.R
+* track_plot.R
+
 
 #### 1. Process Cell Shape Data
 Since the cells often overlap as they travel across the slide, obtaining accurate cell shape data from the segmented pixel mask requires selecting only the frames in which the cells do not overlap. That is the function of `findGoodFrames.R`, which calls `track_automated.R` and automatically selects the frames for each track where the cell is not within a certain threshold of distance.

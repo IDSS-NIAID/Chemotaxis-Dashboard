@@ -171,6 +171,7 @@ compare_two_functions <- function(data, frames.f, f, g, sig.figs, frames.g = fra
 #' @param dat_sub data frame (tibble) containing the subset of data for a single experiment
 #' @param sig.figs maximum significant digits for p-values obtained by permutation testing
 #' @param root path to the root directory of this repository (or wherever else you want to be saving data - will save to `root/data/.`)
+#' @param data_dir path to directory for saving data (default is `root/data/`)
 #' 
 #' @return A data frame containing channel-level summaries of the data in dat_sub. A list containing experiment-level statistics is also saved to an RData file.
 #' @export
@@ -213,7 +214,7 @@ compare_two_functions <- function(data, frames.f, f, g, sig.figs, frames.g = fra
 #' @importFrom ggplot2 geom_jitter
 #' @importFrom ggplot2 geom_boxplot
 #' @importFrom ggplot2 stat_smooth
-one_experiment <- function(dat_sub, root = '', sig.figs = 4)
+one_experiment <- function(dat_sub, root = '', sig.figs = 4, data_dir = paste0(root, '/data/'))
 {
     ##################################
     # Prep dat_sub for summarization #
@@ -645,5 +646,5 @@ one_experiment <- function(dat_sub, root = '', sig.figs = 4)
     
     ##### Save and Return Results #####
     
-    save(track_summ, channel_summ, exp_summ, file = paste0(root, '/data/', unique(dat_sub$experiment), '.RData'))
+    save(track_summ, channel_summ, exp_summ, file = paste0(data_dir, unique(dat_sub$experiment), '.RData'))
 }

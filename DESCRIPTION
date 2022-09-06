@@ -29,9 +29,11 @@ Imports:
 Suggests:
     patchwork,
     usethis,
-    readr
+    readr,
+    testthat (>= 3.0.0)
 Encoding: UTF-8
 URL: https://github.com/abcsFrederick/Chemotaxis-Dashboard
 BugReports: https://github.com/abcsFrederick/Chemotaxis-Dashboard/issues
 Language: en-US
 RoxygenNote: 7.2.1
+Config/testthat/edition: 3
