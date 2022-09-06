@@ -11,13 +11,12 @@
 library(dplyr)
 library(purrr)
 library(readr)
-library(tidyr)
 
-library(fdakma)
+library(ChemotaxisDashboard)
+# library(tidyr)
 
 options(dplyr.summarise.inform = FALSE)
 
-library(ggplot2)
 library(cowplot)
 
 theme_cowplot() %>%

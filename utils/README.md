@@ -2,7 +2,38 @@
 
 In this folder you will find R scripts and python scripts which are called and run to process different parts of the data in various ways. This README file is designed to make the functions and usage of these files clear.
 
-### How to use these scripts
+## Simulated Data
+
+`simulated_data.R` is used to generate the test data that is automatically loaded into the app if no other data sources are required.
+
+* Run from within R: `source(simulated_data.R)`
+* Inputs: none
+* Outputs: 
+    * `utils/results_csv/19000101_*_.csv`: six simulated raw tracks files.
+    * `data/19000101.RData`: A processed experiment summary file (this is ignored by other scripts in the utils directory, unless explicitly included as input).
+    * `R/sysdata.rda`: Package data to be loaded if no other data are available in the app. This includes three R objects: `all_experiments`, `track_summ_select`, and `exp_summ`.
+
+## Pre-Processing of Data
+
+`preprocess.R` is used to read raw cell tracks from the convolutional model and prepare them to be used in the dashboard.
+
+* Run from the terminal: `Rscript preprocess.R experiment=20070308`
+* Inputs:
+    * experiment: Date of the experiment to run. Argument should be of the form: `experiment=%Y%m%d`.
+    * `utils/results_csv/<experiment><meta_data>.csv`: Expects csv files (one for each channel in the experiment - typically six of them) with the experiment date and some meta data to be located in the `utils/results_csv` directory.
+* Output:
+    * `data/<experiment>.RData`: A processed experiment summary file.
+* Depends:
+    * `dplyr`, `purrr`
+    * `ChemotaxisDashboard::one_experiment()`
+
+`mergeData.R` is then used to combine information from processed experiment summary files. This does not need to be run on all experiments in `data/`. Rather, it will add any new experiments that aren't already in `data/historical.RData`.
+
+* Run :
+* Inputs:
+* Outputs:
+* Depends:
+
 #### 1. Process Cell Shape Data
 Since the cells often overlap as they travel across the slide, obtaining accurate cell shape data from the segmented pixel mask requires selecting only the frames in which the cells do not overlap. That is the function of `findGoodFrames.R`, which calls `track_automated.R` and automatically selects the frames for each track where the cell is not within a certain threshold of distance.
 At present, this threshold is set to 35 pixels. That threshold was decided through testing various thresholds and seeing which tracks were eliminated in the cell migration videos. The details of this process will be included later in the README.

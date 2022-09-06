@@ -1,6 +1,6 @@
 Package: ChemotaxisDashboard
 Title: Chemotaxis dashboard
-Version: 0.0-1
+Version: 0.0-2
 Authors@R: c(person('Randy', 'Johnson', email = 'johnsonra@mail.nih.gov',
                     role = c('cre','aut')),
              person('Rilyn', 'McKallip', role = 'aut'),
@@ -19,9 +19,13 @@ Imports:
     dplyr,
     tibble,
     purrr,
+    tidyr,
     grDevices,
     ggplot2,
-    cowplot
+    cowplot,
+    stats,
+    fdakma,
+    utils
 Suggests:
     patchwork,
     usethis,
