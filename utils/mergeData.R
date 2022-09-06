@@ -36,8 +36,8 @@ if(length(experiments)==0){
 if(file.exists(paste0(root, "/data/historical.RData"))){
   load(paste0(root, '/data/historical.RData'))
 }else{
-  all <- list(channel_summ = NULL,
-              track_summ = NULL)
+  all_experiments <- list(channel_summ = NULL,
+                          track_summ = NULL)
 }
 
 
@@ -45,21 +45,21 @@ if(file.exists(paste0(root, "/data/historical.RData"))){
 
 # throughout the loop, we continue to append each file's data.frames to those of the first files (using rbind)
 # the only files in data_files are those that are not included in historical.RData already
-for(i in experiments[!experiments %in% all$channel_summ$experiment]){
+for(i in experiments[!experiments %in% all_experiments$channel_summ$experiment]){
   # load in each file in the directory in turn
   load(paste0(data_dir,"/", i, ".RData"))
   # rbind this file's data.frames to the combined data.frames we are building
-  all$track_summ   <- rbind(all$track_summ,    track_summ)
-  all$channel_summ <- rbind(all$channel_summ, channel_summ)
+  all_experiments$track_summ   <- rbind(all_experiments$track_summ,    track_summ)
+  all_experiments$channel_summ <- rbind(all_experiments$channel_summ, channel_summ)
 }
 
 
 ##### track_summ_select #####
 # this significantly speeds up the selection module for track_summ
-track_summ_select <- dplyr::select(all$channel_summ, date, experiment) %>%
+track_summ_select <- dplyr::select(all_experiments$channel_summ, date, experiment) %>%
   unique() %>%
   mutate(date = as.character(date)) # need date as character for subset widget in Shiny
 
 
 # Save out file as "historical.RData" in the data directory
-save(all, track_summ_select, file = paste(data_dir, '/historical.RData', sep = '/'))
+save(all_experiments, track_summ_select, file = paste(data_dir, '/historical.RData', sep = '/'))

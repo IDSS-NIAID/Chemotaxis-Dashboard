@@ -133,19 +133,19 @@ compare_two_functions <- function(data, frames.f, f, g, sig.figs, frames.g = fra
                            lab = ifelse(.data$perm_lab %in% grp1, names(grps)[1], names(grps)[2]))
                              
         # smooth f and g
-        shuffled <- dplyr::filter(shuffled, .data$lab == names(grps)[1])  # filter by shuffled group
-        f_shuff <- list(smooth.spline(shuffled$Frame, shuffled$X),        # smooth undirected function
-                        smooth.spline(shuffled$Frame, shuffled$Y))        # smooth directed function
+        tmp <- dplyr::filter(shuffled, .data$lab == names(grps)[1])  # filter by shuffled group
+        f_shuff <- list(smooth.spline(tmp$Frame, tmp$X),             # smooth undirected function
+                        smooth.spline(tmp$Frame, tmp$Y))             # smooth directed function
       
         f_shuff <- list(x = sapply(f_shuff, function(.x) .x$x),
-                        y = sapply(f_shuff, function(.x) .x$y))           # return two columns (un/directed) of smoothed functions
+                        y = sapply(f_shuff, function(.x) .x$y))      # return two columns (un/directed) of smoothed functions
         
-        shuffled <- dplyr::filter(shuffled, .data$lab == names(grps)[2])  # filter by shuffled group
-        g_shuff <- list(smooth.spline(shuffled$Frame, shuffled$X),        # smooth undirected function
-                        smooth.spline(shuffled$Frame, shuffled$Y))        # smooth directed function
+        tmp <- dplyr::filter(shuffled, .data$lab == names(grps)[2])  # filter by shuffled group
+        g_shuff <- list(smooth.spline(tmp$Frame, tmp$X),             # smooth undirected function
+                        smooth.spline(tmp$Frame, tmp$Y))             # smooth directed function
       
         g_shuff <- list(x = sapply(g_shuff, function(.x) .x$x),
-                        y = sapply(g_shuff, function(.x) .x$y))           # return two columns (un/directed) of smoothed functions
+                        y = sapply(g_shuff, function(.x) .x$y))      # return two columns (un/directed) of smoothed functions
       }
         
       # calculate similarity
@@ -351,36 +351,32 @@ one_experiment <- function(dat_sub, root = '', sig.figs = 4)
                                              rename(f = .data$X, g = .data$Y) %>%
                                              compare_two_functions(frames, f, g, sig.figs)
                                          )
-    
-    # Proportion of cells in the channel that make it from top to bottom
-    # Takes the sum of track_summ$finished for each channel and divides it by the corresponding length of track_sum$finished
-    # Also adding channel averages for chemotactic efficiency and angle of migration
-  
-    # initializing empty vector which will be filled with proportions of cells completing path
-    finished_by_channel <- c()
-    ce_summ <- list()
-    angle_summ <- list()
-    max_v_summ <- list()
-    
-    # the for loop will iterate once through for each channel and filter by the data for that channel
-    for (i in 1:length(channel_summ$channel)){
-      temp <- filter(track_summ, channel == i) #filtering by the data for each channel in turn
-      prop_finished <- sum(temp$finished) / length(temp$finished) #the proportion finished is equal to the sum of the 'finished' column in track_summ divided by the total entries in track_summ for that channel
-      finished_by_channel <- append(finished_by_channel, prop_finished) #appending our calculated proportion to a vector. in the end this vector will contain all of the proportions finished for each channel
+            ) %>%
       
-      #summary statistics for the chemotactic efficiency of the cells in each channel
-      stats_ce <- list(min = min(temp$ce),first_q = quantile(temp$ce,0.25),median = median(temp$ce),third_q=quantile(temp$ce,0.75),max=max(temp$ce),mean=mean(temp$ce),range=range(temp$ce)[2]-range(temp$ce)[1])
-      ce_summ[[i]] <- stats_ce
-      
-      #summary statistics for the angle of migration of the cells in each channel
-      stats_angle <- list(min = min(temp$angle_migration),first_q = quantile(temp$angle_migration,0.25),median = median(temp$angle_migration),third_q=quantile(temp$angle_migration,0.75),max=max(temp$angle_migration),mean=mean(temp$angle_migration),range=(range(temp$angle_migration)[2]-range(temp$angle_migration)[1]))
-      angle_summ[[i]] <- stats_angle
-      
-      stats_max_v <- list(min = min(temp$max_v),first_q = quantile(temp$max_v,0.25),median = median(temp$max_v),third_q=quantile(temp$max_v,0.75),max=max(temp$max_v),mean=mean(temp$max_v),range=range(temp$max_v)[2]-range(temp$max_v)[1])
-      max_v_summ[[i]] <- stats_max_v
-    }
-    channel_summ <- channel_summ %>% mutate(ce_summ = ce_summ, angle_summ = angle_summ, finished = finished_by_channel, max_v_summ = max_v_summ)
-  
+      # add summary of track statistics (proportion finished, chemotactic efficiency, angle of migration)
+      left_join({
+        group_by(track_summ, .data$experiment, .data$channel) %>%
+          summarize(prop_finished = sum(.data$finished) / length(.data$finished),
+                    
+                    ce_min    =    min(.data$ce, na.rm = TRUE),
+                    ce_median = median(.data$ce, na.rm = TRUE),
+                    ce_mean   =   mean(.data$ce, na.rm = TRUE),
+                    ce_sd     =     sd(.data$ce, na.rm = TRUE),
+                    ce_max    =    max(.data$ce, na.rm = TRUE),
+                    
+                    angle_min    =    min(.data$angle_migration, na.rm = TRUE),
+                    angle_median = median(.data$angle_migration, na.rm = TRUE),
+                    angle_mean   =   mean(.data$angle_migration, na.rm = TRUE),
+                    angle_sd     =     sd(.data$angle_migration, na.rm = TRUE),
+                    angle_max    =    max(.data$angle_migration, na.rm = TRUE),
+                    
+                    max_v_min    =    min(.data$max_v, na.rm = TRUE),
+                    max_v_median = median(.data$max_v, na.rm = TRUE),
+                    max_v_mean   =   mean(.data$max_v, na.rm = TRUE),
+                    max_v_sd     =     sd(.data$max_v, na.rm = TRUE),
+                    max_v_max    =    max(.data$max_v, na.rm = TRUE)
+          )}, by = c("experiment", "channel"))
+
     ##############################
     # Experiment-level summaries #
     ##############################
@@ -625,83 +621,29 @@ one_experiment <- function(dat_sub, root = '', sig.figs = 4)
     }else{
       exp_summ$tracks_v <- exp_summ$tracks_v + facet_grid(~.data$channel)
     }
+    
+    ### angle of migration
+    exp_summ$angle_migration_plot <- track_summ %>% 
+      group_by(.data$channel, .data$sample, .data$treatment) %>% 
+      ggplot(aes(x=as.character(.data$channel),y=.data$angle_migration,group=.data$channel)) +
+      geom_violin(scale = "width", width = 0.5, trim=FALSE) + 
+      ylab("Migration angle (degrees from vertical)") + 
+      geom_jitter(width = 0.1,size = 0.75,alpha=0.3) + 
+      geom_boxplot(width = 0.05) +
+      xlab("Channel")
+    
+    ### chemotactic efficiency
+    exp_summ$ce_plot <- track_summ %>% 
+      group_by(.data$channel, .data$sample, .data$treatment) %>% 
+      ggplot(aes(x=as.character(.data$channel), y=.data$ce, group=.data$channel)) +
+      geom_violin(scale = "width", width = 0.5, trim=FALSE) + 
+      ylab("Chemotactic efficiency (% vertical movement)") + 
+      geom_jitter(width = 0.1, size = 0.75, alpha=0.3) + 
+      geom_boxplot(width = 0.05) +
+      xlab("Channel")
+
+    
     ##### Save and Return Results #####
     
     save(track_summ, channel_summ, exp_summ, file = paste0(root, '/data/', unique(dat_sub$experiment), '.RData'))
 }
-
-    
-    # Proportion of cells in the channel that make it from top to bottom
-    # Takes the sum of track_summ$finished for each channel and divides it by the corresponding length of track_sum$finished
-    # Also adding channel averages for chemotactic efficiency and angle of migration
-  
-    # initializing empty vector which will be filled with proportions of cells completing path
-    finished_by_channel <- c()
-    ce_summ <- list()
-    angle_summ <- list()
-    max_v_summ <- list()
-    
-    # the for loop will iterate once through for each channel and filter by the data for that channel
-    for (i in 1:length(channel_summ$channel)){
-      temp <- filter(track_summ, channel == i) #filtering by the data for each channel in turn
-      prop_finished <- sum(temp$finished) / length(temp$finished) #the proportion finished is equal to the sum of the 'finished' column in track_summ divided by the total entries in track_summ for that channel
-      finished_by_channel <- append(finished_by_channel, prop_finished) #appending our calculated proportion to a vector. in the end this vector will contain all of the proportions finished for each channel
-      
-      #summary statistics for the chemotactic efficiency of the cells in each channel
-      stats_ce <- list(min = min(temp$ce),first_q = quantile(temp$ce,0.25),median = median(temp$ce),third_q=quantile(temp$ce,0.75),max=max(temp$ce),mean=mean(temp$ce),range=range(temp$ce)[2]-range(temp$ce)[1])
-      ce_summ[[i]] <- stats_ce
-      
-      #summary statistics for the angle of migration of the cells in each channel
-      stats_angle <- list(min = min(temp$angle_migration),first_q = quantile(temp$angle_migration,0.25),median = median(temp$angle_migration),third_q=quantile(temp$angle_migration,0.75),max=max(temp$angle_migration),mean=mean(temp$angle_migration),range=(range(temp$angle_migration)[2]-range(temp$angle_migration)[1]))
-      angle_summ[[i]] <- stats_angle
-      
-      stats_max_v <- list(min = min(temp$max_v),first_q = quantile(temp$max_v,0.25),median = median(temp$max_v),third_q=quantile(temp$max_v,0.75),max=max(temp$max_v),mean=mean(temp$max_v),range=range(temp$max_v)[2]-range(temp$max_v)[1])
-      max_v_summ[[i]] <- stats_max_v
-    }
-    channel_summ <- channel_summ %>% mutate(ce_summ = ce_summ, angle_summ = angle_summ, finished = finished_by_channel, max_v_summ = max_v_summ)
-  
-    
-    ### angle of migration
-    #track_summ <- mutate(track_summ,labs=paste0(channel, ": ", sample, ", ", treatment))
-    exp_summ$angle_migration_plot <- track_summ %>% group_by(channel,sample,treatment) %>% ggplot(aes(x=as.character(channel),y=angle_migration,group=channel)) + geom_violin(scale = "width",width = 0.5,trim=FALSE) + ylab("Migration angle (degrees from vertical)") + geom_jitter(width = 0.1,size = 0.75,alpha=0.3) + geom_boxplot(width = 0.05) +
-       xlab("Channel")
-    
-    ### chemotactic efficiency
-    exp_summ$ce_plot <- track_summ %>% group_by(channel,sample,treatment) %>% ggplot(aes(x=as.character(channel),y=ce,group=channel)) + geom_violin(scale = "width",width = 0.5,trim=FALSE) + ylab("Chemotactic efficiency (% vertical movement)") + geom_jitter(width = 0.1,size = 0.75,alpha=0.3) + geom_boxplot(width = 0.05) +
-       xlab("Channel")
-    
-    
-    # table for percent finishing path
-    exp_summ$finished_table <- channel_summ %>% select(channel,finished)
-    names(exp_summ$finished_table) <- c("Channel","Proportion cells finishing path")
-    
-    # table for angle of migration summary statistics
-    exp_summ$angle_table <- data.frame(data.frame(t(sapply(channel_summ$angle_summ,c))))
-    exp_summ$angle_table <- cbind(channel_summ$channel,exp_summ$angle_table)
-    names(exp_summ$angle_table) <- c("Channel","Min","First Quartile","Median","Third Quartile","Maximum","Mean","Range")
-    
-    # table for chemotactic efficiency
-    exp_summ$ce_table <- data.frame(data.frame(t(sapply(channel_summ$ce_summ,c))))
-    exp_summ$ce_table <- cbind(channel_summ$channel,exp_summ$ce_table)
-    names(exp_summ$ce_table) <- c("Channel","Min","First Quartile","Median","Third Quartile","Maximum","Mean","Range")
-
-    
-    # ### tracks_v_stats: velocity statistics
-    # nl_buffer_vs_nl_trt_x <- filter(dat_sub, sample == 'nl') %>%
-    #     mutate(trt = ifelse(channel == 1, 'buffer', as.character(treatment))) %>%
-    #     
-         
-
-    # ### Chemotactic efficiency
-    # # (net vertical distance) / (total distance)
-    # chemotactic_efficiency = (y_max - y_min) / sum(sqrt((X[-1] - X[-length(X)])^2 + 
-    #                                                         (Y[-1] - Y[-length(Y)])^2)),
-    # 
-    # ### Angle and Magnitude of migration
-    # tmp = abs(atan((X[1] - X[length(X)]) / (Y[1] - Y[length(Y)]))),
-    # angle_of_migration = ifelse(Y[length(Y)] > Y[1],
-    #                             tmp,
-    #                             180 - tmp),
-    # total_velocity = sqrt((X[1] - X[length(X)])^2 + (Y[1] - Y[length(Y)])^2) / len) %>%
-    
-            )
