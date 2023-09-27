@@ -15,6 +15,8 @@ In this folder you will find R scripts and python scripts which are called and r
 
 ## Pre-Processing of Data
 
+### Preprocess individual experiments
+
 `preprocess.R` is used to read raw cell tracks from the convolutional model and prepare them to be used in the dashboard.
 
 * Run from the terminal: `Rscript preprocess.R experiment=20070308`
@@ -27,6 +29,22 @@ In this folder you will find R scripts and python scripts which are called and r
     * `dplyr`, `purrr`
     * `ChemotaxisDashboard::one_experiment()`
 
+`make_swarm.R` will create a swarm file to be run on biowulf that will call `preprocess.R` for each experiment that needs to be processed. (Run this on biowulf)
+* Run from the terminal:
+    * `Rscript make_swarm.R`
+    * `Rscript make_swarm.R --args csvPath=/data/IDSS_projects/chemotaxis_results/results_csv datPath=/data/IDSS_projects/chemotaxis_results/data`
+    * `Rscript make_swarm.R --args root=~/Chemotaxis-Dashboard`
+* Inputs:
+    * csvPath: Path to csv files from cell tracking model (default is `root/utils/results_csv`).
+    * datPath: Path to preprocessed data (default is `root/data`).
+    * root: Path to git repository (default assumes this script is run from within the repo and that `git rev-parse` will return the proper path).
+* Output:
+    * A file, `swarmfile`, to be run on biowulf.
+* Depends:
+    * `dplyr`, `purrr`, `tools`
+
+### Merge preprocessed data and create a summary of all experiments
+
 `mergeData.R` is then used to combine information from processed experiment summary files. This does not need to be run on all experiments in `data/`. Rather, it will add any new experiments that aren't already in `data/historical.RData`.
 
 * Run from either the terminal or within R.
@@ -38,9 +56,8 @@ In this folder you will find R scripts and python scripts which are called and r
 * Depends:
     * `dplyr`
 
-## Remaining script to incorporate into the R pacakge
+## Remaining scripts to incorporate into the R pacakge
 
-* ce_testing.R
 * clustering_code.R
 * findGoodFrames.R
 * findShape.R
@@ -98,13 +115,3 @@ and the proportion of cells in each channel completing migration. To calculate t
 `preprocess.R` calls `one_experiment.R`, which does all the work of calculating the statistics and generating plots and saves these stats and plots in an .RData file named after the experiment. These files live in the 'data' folder in the Chemotaxis Dashboard directory
 Once you have called `preprocess.R` on all of your experiments of interest, you can run `mergeData.R`, which will merge all the .RData files into one .RData file, called 'historical.RData'. This will be the data file primarily used in the ShinyApp.
 The other .RData files are important for the app too, so do not delete them.
-
-##### Workflow for one experiment
-1. In the terminal, run `Rscript <filepath>/preprocess.R <experiment>` for your experiment of interest. 
-2. Repeat step one for all experiments of interest
-3. Run `mergeData.R`
-4. Load 'historical.RData' to make sure files have loaded and merged correctly
-
-### Contact information
-Rilyn McKallip: rilynnmckallip@gmail.com.  
-Feel free to contact me with questions or clarifications.

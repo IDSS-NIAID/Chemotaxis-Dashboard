@@ -1,10 +1,12 @@
 Package: ChemotaxisDashboard
 Title: Chemotaxis dashboard
 Version: 0.0-2
-Authors@R: c(person('Randy', 'Johnson', email = 'johnsonra@mail.nih.gov',
+Authors@R: c(person('Randy', 'Johnson', email = 'Randall.Johnson@nih.gov',
                     role = c('cre','aut')),
-             person('Rilyn', 'McKallip', role = 'aut'),
-             person('Jane', 'Smoltz', role = 'aut'))
+             person('Rilyn', 'McKallip', email = 'rilynnmckallip@gmail.com',
+                    role = 'aut'),
+             person('Jane', 'Smoltz', email = 'janesmoltz16@gmail.com',
+                    role = 'aut'))
 Description: Dashboard for exploring chemotaxis data.
 License: MIT + file LICENSE
 Depends: 
