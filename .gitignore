@@ -1,8 +1,11 @@
+.DS_Store
+
 .RData
 .Rhistory
 .Rproj.user
 *.RProj
-.DS_Store
+*.RData
+
 *.mov
 *.csv
 *.tif
@@ -10,8 +13,15 @@
 *.mp4
 *.zip
 *.pdf
-*.RData
-tmp/
-data
-results_csv
+*.jpg
+*.key
+*.xls
+*.png
+*.gif
+*.tiff
+*.gz
 
+tmp/
+data/
+results_csv/
+20180215/
