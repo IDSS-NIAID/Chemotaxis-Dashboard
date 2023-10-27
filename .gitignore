@@ -1,0 +1,15 @@
+.DS_Store
+
+.RData
+.Rhistory
+.Rproj.user
+*.RProj
+*.RData
+
+*.mov
+*.csv
+*.tif
+*.txt
+*.mp4
+*.zip
+*.pdf
