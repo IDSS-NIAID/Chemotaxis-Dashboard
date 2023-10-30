@@ -7,6 +7,17 @@ Description: Dashboard for exploring chemotaxis data.
 License: MIT + file LICENSE
 Depends: 
   R (>= 4.0)
+Imports:
+  briKmeans,
+  cowplot,
+  dplyr,
+  ggplot2,
+  grDevices,
+  magrittr,
+  purrr,
+  readr,
+  rlang,
+  tidyr
 Suggests:
   usethis
 Encoding: UTF-8
