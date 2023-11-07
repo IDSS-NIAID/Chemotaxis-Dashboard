@@ -4,10 +4,18 @@
 \alias{one_experiment}
 \title{Analysis of data for each experiment}
 \usage{
-one_experiment(dat_sub, results_dir, sig.figs = 4, ledge_dist = 260)
+one_experiment(
+  dat_sub,
+  experiment,
+  results_dir,
+  sig.figs = 4,
+  ledge_dist = 260
+)
 }
 \arguments{
 \item{dat_sub}{data frame (tibble) containing the subset of data for a single experiment}
+
+\item{experiment}{Date of the experiment to run. Argument should be of the form: `experiment="\%Y\%m\%d"`.}
 
 \item{results_dir}{path to directory for saving data}
 

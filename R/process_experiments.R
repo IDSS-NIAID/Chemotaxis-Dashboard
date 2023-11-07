@@ -15,6 +15,18 @@
 #' @param sig.figs Number of significant figures to pass to one_experiment`
 #' @param ledge_dist Numeric, distance between top and bottom ledge of the microscope image in micrometers (default is 260)
 #' 
+#' @details Work performed in `compare_two_functions`, called by this function, uses the `doParallel` package.
+#' Using multiple cores will speed this step up significantly. To do so, you will need to make a cluster and 
+#' register it with `doParallel` as follows: 
+#' 
+#' `my.cluster <- parallel::makeCluster(n.cores, type = "PSOCK")`
+#' `doParallel::registerDoParallel(cl = my.cluster)`
+#' 
+#' where `n.cores` is the number of cores you with to allocate to the task.
+#' A good starting point is `parallel::detectCores() - 1`.
+#' 
+#' If this is not done, the code will execute serially.
+#' 
 #' @return A list of data.frames...
 #' 
 #' @examples 
@@ -773,6 +785,9 @@ one_experiment <- function(dat_sub, experiment, results_dir, sig.figs = 4, ledge
 #' @importFrom dplyr select
 #' @importFrom dplyr mutate
 #' 
+#' @importFrom foreach foreach
+#' @importFrom foreach %dopar%
+#' 
 #' @importFrom stats rbinom
 #' @importFrom stats smooth.spline
 #' 
@@ -811,58 +826,62 @@ compare_two_functions <- function(data, frames.f, f, g, sig.figs, frames.g = fra
   # shuffles labels on data then generates distribution of test statistic for each shuffle
   # then calculates p-value for actual data's statistic as compared to the simulated test statistic
   # will shuffle ~10^i times (min i = 2 = 100 shuffles)
+  perms <- numeric(0)
   for(i in 2:max(2, sig.figs))
   {
     
-    perms <- replicate(1*10^i, 
-                       {
-                         # shuffle f and g
-                         if(is.null(lab))
-                         {
-                           # pick tracks to shuffle
-                           pick_track <- as.logical(rbinom(length(tracks), 1, 0.5))
-                           
-                           shuffled <- mutate(data, 
-                                              f.tmp = ifelse(Track %in% tracks[pick_track], g, f),
-                                              g     = ifelse(Track %in% tracks[pick_track], f, g),
-                                              f     = f.tmp)
-                           
-                           # smooth f and g
-                           f_shuff <- smooth.spline(shuffled$Frame, shuffled$f)
-                           g_shuff <- smooth.spline(shuffled$Frame, shuffled$g)
-                         }else{
-                           # pick tracks to be in group 1, the others fall into group 2 (should exactly two groups)
-                           grp1 <- sample(tracks, grps[1])
-                           
-                           # shuffle
-                           shuffled <- mutate(data,
-                                              lab = ifelse(perm_lab %in% grp1, names(grps)[1], names(grps)[2]))
-                           
-                           # smooth f and g
-                           tmp <- dplyr::filter(shuffled, lab == names(grps)[1])  # filter by shuffled group
-                           f_shuff <- list(smooth.spline(tmp$Frame, tmp$X),             # smooth undirected function
-                                           smooth.spline(tmp$Frame, tmp$Y))             # smooth directed function
-                           
-                           f_shuff <- list(x = sapply(f_shuff, function(.x) .x$x),
-                                           y = sapply(f_shuff, function(.x) .x$y))      # return two columns (un/directed) of smoothed functions
-                           
-                           tmp <- dplyr::filter(shuffled, lab == names(grps)[2])  # filter by shuffled group
-                           g_shuff <- list(smooth.spline(tmp$Frame, tmp$X),             # smooth undirected function
-                                           smooth.spline(tmp$Frame, tmp$Y))             # smooth directed function
-                           
-                           g_shuff <- list(x = sapply(g_shuff, function(.x) .x$x),
-                                           y = sapply(g_shuff, function(.x) .x$y))      # return two columns (un/directed) of smoothed functions
-                         }
-                         
-                         # calculate similarity
-                         suppressWarnings(kma.similarity(x.f = f_shuff$x, y0.f = f_shuff$y, 
-                                                         x.g = g_shuff$x, y0.g = g_shuff$y,
-                                                         similarity.method = 'd0.L2'))
-                       })
+    perms <- foreach(i = 1:1*10^i,
+                     .combine = 'c') %dopar%
+      {
+        # shuffle f and g
+        if(is.null(lab))
+        {
+          # pick tracks to shuffle
+          pick_track <- as.logical(rbinom(length(tracks), 1, 0.5))
+          
+          shuffled <- mutate(data, 
+                             f.tmp = ifelse(Track %in% tracks[pick_track], g, f),
+                             g     = ifelse(Track %in% tracks[pick_track], f, g),
+                             f     = f.tmp)
+          
+          # smooth f and g
+          f_shuff <- smooth.spline(shuffled$Frame, shuffled$f)
+          g_shuff <- smooth.spline(shuffled$Frame, shuffled$g)
+        }else{
+          # pick tracks to be in group 1, the others fall into group 2 (should exactly two groups)
+          grp1 <- sample(tracks, grps[1])
+          
+          # shuffle
+          shuffled <- mutate(data,
+                             lab = ifelse(perm_lab %in% grp1, names(grps)[1], names(grps)[2]))
+          
+          # smooth f and g
+          tmp <- dplyr::filter(shuffled, lab == names(grps)[1])  # filter by shuffled group
+          f_shuff <- list(smooth.spline(tmp$Frame, tmp$X),             # smooth undirected function
+                          smooth.spline(tmp$Frame, tmp$Y))             # smooth directed function
+          
+          f_shuff <- list(x = sapply(f_shuff, function(.x) .x$x),
+                          y = sapply(f_shuff, function(.x) .x$y))      # return two columns (un/directed) of smoothed functions
+          
+          tmp <- dplyr::filter(shuffled, lab == names(grps)[2])  # filter by shuffled group
+          g_shuff <- list(smooth.spline(tmp$Frame, tmp$X),             # smooth undirected function
+                          smooth.spline(tmp$Frame, tmp$Y))             # smooth directed function
+          
+          g_shuff <- list(x = sapply(g_shuff, function(.x) .x$x),
+                          y = sapply(g_shuff, function(.x) .x$y))      # return two columns (un/directed) of smoothed functions
+        }
+        
+        # calculate similarity
+        suppressWarnings(kma.similarity(x.f = f_shuff$x, y0.f = f_shuff$y, 
+                                        x.g = g_shuff$x, y0.g = g_shuff$y,
+                                        similarity.method = 'd0.L2'))
+      } %>%
+      
+      c(perms)
     
     # return permutation test p-value, null hypothesis is that f and g are the same
     retval <- c(dissim = dissim,
-                p = sum(dissim < perms) / (1*10^i))
+                p = sum(dissim < perms) / length(perms))
     
     # don't do extra simulations if it looks like the p-value is too large
     if(retval['p'] > 1*10^-(i - 1))

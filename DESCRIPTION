@@ -11,6 +11,7 @@ Imports:
   briKmeans,
   cowplot,
   dplyr,
+  foreach,
   ggplot2,
   grDevices,
   magrittr,
@@ -19,6 +20,7 @@ Imports:
   rlang,
   tidyr
 Suggests:
+  doParallel,
   usethis
 Encoding: UTF-8
 URL: https://github.com/abcsFrederick/Chemotaxis-Dashboard

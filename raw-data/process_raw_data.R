@@ -1,6 +1,13 @@
 # process_raw_data.R
 
 library(ChemotaxisDashboard)
+library(magrittr)
+
+# start up parallel back end
+parallel::makeCluster(parallel::detectCores() - 1, 
+                      type = "PSOCK"
+                      ) %>%
+  doParallel::registerDoParallel()
 
 # process test data
 processed_data <- process_experiments('19000101',
