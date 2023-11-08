@@ -2,5 +2,5 @@
 ^\.Rproj\.user$
 
 ^shiny$
-^raw-data$
+^data-raw$
 ^.data$

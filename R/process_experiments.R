@@ -53,24 +53,6 @@
 #' @importFrom readr read_delim
 process_experiments <- function(experiment, source_dir, results_dir, seed = NULL, sig.figs = 4, ledge_dist = 260)
 {
-  # for testing
-  if(FALSE)
-  {
-    # library(ChemotaxisDashboard)
-    # library(dplyr)
-    # library(purrr)
-    # library(readr)
-    # library(ggplot2)
-    # library(cowplot)
- 
-    experiment <- '19000101'
-    source_dir <- system.file("extdata", package = "ChemotaxisDashboard")
-    results_dir <- file.path(system('git rev-parse --show-toplevel', intern = TRUE), '.data')
-    seed <- 239847
-    sig.figs <- 4
-    ledge_dist <- 260
-  }
-  
   options(dplyr.summarise.inform = FALSE)
 
   # source files for processing

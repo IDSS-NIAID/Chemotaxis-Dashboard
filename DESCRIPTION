@@ -10,6 +10,7 @@ Depends:
 Imports:
   briKmeans,
   cowplot,
+  DBI,
   dplyr,
   foreach,
   ggplot2,
@@ -18,6 +19,7 @@ Imports:
   purrr,
   readr,
   rlang,
+  RSQLite,
   tidyr
 Suggests:
   doParallel,
