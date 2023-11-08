@@ -1,0 +1,28 @@
+# queries.R
+# SQL queries to fetch data from the database
+
+#' get_dat
+#' Get data from the database, recpecting permissions
+#' 
+#' @param con DBI connection specifying the database to pull from
+#' @param user Character value specifying the username
+#' @param select Character value specifying the columns to pull
+#' @param from Character value defining which table to pull from
+#' @param where Character value that will get put into the WHERE part of the SQL statement
+#' 
+#' @return A data.frame with the requested data
+#' @export
+#' @importFrom DBI dbGetQuery
+#' 
+#' @importFrom dplyr %>%
+#' @importFrom dplyr left_join
+get_dat <- function(con, user, select = '*', from, where = NULL)
+{
+  query <- paste("SELECT", select, "FROM", from)
+  
+  if(!is.null(where))
+    query <- paste(query, 'WHERE', where)
+  
+  dbGetQuery(con, paste0("SELECT expID FROM access WHERE user='", user, "'")) %>%
+    left_join(dbGetQuery(con, query), by = join_by(expID))
+}
