@@ -132,7 +132,7 @@ trackSummary <- processed_data$trackSummary
 #' @param trackID Integer, maps to `trackSummary$trackID`
 #' @param x Double, x-position for the track
 #' @param y Double, y-position for the track
-#' @param frame Integer, frame (sampled every 30 seconds)
+#' @param frames Integer, frame (sampled every 30 seconds)
 #' @param v_x Double, velocity in the x direction (undirected)
 #' @param v_y Double, velocity in the y direction (directed)
 #' @param v Double, total velocity
