@@ -15,9 +15,13 @@
 #' @importFrom DBI dbGetQuery
 #' 
 #' @importFrom dplyr %>%
+#' @importFrom dplyr join_by
 #' @importFrom dplyr left_join
 get_dat <- function(con, user, select = '*', from, where = NULL)
 {
+  # pesky binding warning
+  expID <- NULL
+  
   query <- paste("SELECT", select, "FROM", from)
   
   if(!is.null(where))

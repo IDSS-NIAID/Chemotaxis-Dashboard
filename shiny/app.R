@@ -7,6 +7,7 @@
 #    http://shiny.rstudio.com/
 #
 
+library(ChemotaxisDashboard)
 library(shiny)
 library(shinymanager)
 library(RSQLite)
@@ -45,12 +46,10 @@ credentials <- dbGetQuery(con, 'SELECT * FROM users')
 ui <- page_sidebar(
   title = 'Chemotaxis Dashboard',
   sidebar = sidebar(
-    title = 'QC parameters',
-    sliderInput('qc_min_track_len', 'Minimum Track Length', 3, 60, value = 6), # minimum track length in minutes
-    numericInput('qc_n_cells', 'Number of cells', value = 100)
+    title = 'QC parameters', qc_sidebarUI('qc')
   ),
-  card(plotOutput("qc_track_len")),
-  card(plotOutput("qc_n_cells"))
+  
+  qc_cardsUI('qc')
 ) %>%
   secure_app()
 
@@ -61,44 +60,12 @@ ui <- page_sidebar(
 
 server <- function(input, output, session) {
 
-    # check_credentials returns a function to authenticate users
-    res_auth <- secure_server(
-        check_credentials = check_credentials(credentials)
-    )
+  # check_credentials returns a function to authenticate users
+  res_auth <- secure_server(
+    check_credentials = check_credentials(credentials)
+  )
 
-    trackRaw <- reactive({
-      get_dat(con,
-              user = reactiveValuesToList(res_auth)$user,
-              select = 'expID, trackID, frames',
-              from = 'trackRaw',
-              where = 'chanID=2')
-    })
-    
-    output$qc_track_len <- renderPlot({
-      group_by(trackRaw(), trackID) %>%
-        summarize(min_time = min(frames) / 2,
-                  max_time = max(frames) / 2) %>%
-        ungroup() %>%
-        
-        arrange(min_time) %>%
-        mutate(track_ordered = 1:length(min_time)) %>%
-        
-        ggplot(aes(x = min_time, xend = max_time, y = track_ordered, yend = track_ordered)) +
-        geom_segment() +
-        labs(x = 'Time (min)', y = 'Track number')
-    })
-    
-    output$qc_n_cells <- renderPlot({
-      group_by(trackRaw(), frames) %>%
-        summarize(n_tracks = length(unique(trackID))) %>%
-        ungroup() %>%
-        
-        mutate(time = frames / 2) %>%
-        
-        ggplot(aes(time, n_tracks)) +
-        geom_line() +
-        labs(x = 'Time (min)', y = '# Tracks')
-    })
+  qc_server("qc", con, reactiveValuesToList(res_auth)$user)
 }
 
 

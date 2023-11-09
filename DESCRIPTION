@@ -9,6 +9,7 @@ Depends:
   R (>= 4.0)
 Imports:
   briKmeans,
+  bslib,
   cowplot,
   DBI,
   dplyr,
@@ -20,6 +21,7 @@ Imports:
   readr,
   rlang,
   RSQLite,
+  shiny,
   tidyr
 Suggests:
   doParallel,
