@@ -80,13 +80,12 @@ process_experiments <- function(experiment, source_dir, results_dir, seed = NULL
                            gsub(pattern = '.csv', replacement = '', fixed = TRUE) %>%
                            grep(pattern = '^[0-9]$', invert = TRUE, value = TRUE) %>% # drop any single digit numbers
                            grep(pattern = 'CH[1-6]', invert = TRUE, value = TRUE) %>% # drop channel
-                           grep(pattern = 'fMLF|Basal|Buffer|C5a|SDF|IL.|LTB4', ignore.case = TRUE, invert = TRUE, value = TRUE) %>% # drop attractant
-                           grep(pattern = 'I8RA', invert = TRUE, value = TRUE)}[1]), # catch a typo
-
+                           grep(pattern = 'fMLF|Basal|Buffer|C5a|SDF|IL.|LTB4', ignore.case = TRUE, invert = TRUE, value = TRUE)}[1]), # drop attractant
+                           
     treatment = map_chr(dat, ~
                           {.x %>%
                               gsub(pattern = '.csv', replacement = '', fixed = TRUE) %>%
-                              grep(.x, pattern = 'fMLF|Basal|Buffer|C5a|SDF|IL.|LTB4|I8RA',
+                              grep(.x, pattern = 'fMLF|Basal|Buffer|C5a|SDF|IL.|LTB4',
                                    ignore.case = TRUE, value = TRUE)}[1])) %>%
 
     mutate(sample = tolower(sample)) %>% # inconsistent capitalization
@@ -107,8 +106,7 @@ process_experiments <- function(experiment, source_dir, results_dir, seed = NULL
     left_join(results_meta, by = 'f') %>%
 
     # pull experiment name
-    mutate(experiment = map_chr(f, ~ (strsplit(.x, '_CH', fixed = TRUE)[[1]][1]) %>%
-                                  gsub(pattern = '_', replacement = '', fixed = TRUE))) %>%
+    mutate(experiment = map_chr(f, ~ str_sub(.x, start = 1, end = 8))) %>%
 
     filter(!is.na(X) & !is.na(Y))
 
@@ -117,17 +115,17 @@ process_experiments <- function(experiment, source_dir, results_dir, seed = NULL
   set.seed(seed)
   
   retval <- map(experiment, ~ one_experiment(dat_sub = filter(dat, experiment == .x),
-                                             experiment = experiment,
+                                             experiment = .x,
                                              results_dir = results_dir, 
                                              sig.figs = sig.figs,
                                              ledge_dist = ledge_dist))
 
-  list(expSummary   = map_df(retval[[1]]$expSummary, ~ .x),
-       expStats     = map_df(retval[[1]]$expStats, ~ .x),
-       chanSummary  = map_df(retval[[1]]$chanSummary, ~ .x),
-       chanRaw      = map_df(retval[[1]]$chanRaw, ~ .x),
-       trackSummary = map_df(retval[[1]]$trackSummary, ~ .x),
-       trackRaw     = map_df(retval[[1]]$trackRaw, ~ .x))
+  list(expSummary   = map_df(retval, ~ .x$expSummary),
+       expStats     = map_df(retval, ~ .x$expStats),
+       chanSummary  = map_df(retval, ~ .x$chanSummary),
+       chanRaw      = map_df(retval, ~ .x$chanRaw),
+       trackSummary = map_df(retval, ~ .x$trackSummary),
+       trackRaw     = map_df(retval, ~ .x$trackRaw))
 }
 
 
@@ -443,7 +441,8 @@ one_experiment <- function(dat_sub, experiment, results_dir, sig.figs = 4, ledge
     mutate(ntrts = length(unique(treatment))) %>%
     
     # drop any groups that only have one channel (nothing to compare)
-    dplyr::filter(ntrts > 1)
+    dplyr::filter(ntrts > 1,
+                  !is.na(sample))
   
   # if we have different between-treatment statistics to calculate...
   if(nrow(btw_trt) > 0)
@@ -539,6 +538,8 @@ one_experiment <- function(dat_sub, experiment, results_dir, sig.figs = 4, ledge
                        treatment = '',
                        trt_a = '',
                        trt_b = '',
+                       a = '',
+                       b = '',
                        a_vs_b = list('')) %>%
       filter(!is.na(date))
   }
