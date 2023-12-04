@@ -7,6 +7,8 @@
 #' @name qc_tab
 #' 
 #' @param id Shiny namespace ID
+#' @param con Active DBI database connection
+#' @param user Username of the user
 #' 
 #' @return A modularized tagList
 #' @export
@@ -14,11 +16,18 @@
 #' @importFrom shiny numericInput
 #' @importFrom shiny sliderInput
 #' @importFrom shiny tagList
-qc_sidebarUI <- function(id)
+#' 
+#' @importFrom datamods select_group_ui
+qc_sidebarUI <- function(id, con, user)
 {
   ns <- NS(id)
   
   tagList(
+    select_group_ui(id = ns("qc_channels"),
+                    params = list(list(inputId = "expID",  label = "Experiment"),
+                                  list(inputId = "sID",    label = "Sample"),
+                                  list(inputId = "chanID", label = "Channel")),
+                    inline = FALSE),
     sliderInput(ns('qc_min_track_len'), 'Minimum Track Length', 3, 60, value = 6), # minimum track length in minutes
     numericInput(ns('qc_n_cells'), 'Number of cells', value = 100)
   )
@@ -35,6 +44,8 @@ qc_sidebarUI <- function(id)
 #' 
 #' @importFrom bslib card
 #' @importFrom bslib card_header
+#' 
+#' @importFrom datamods select_group_ui
 #' 
 #' @importFrom shiny NS
 #' @importFrom shiny plotOutput
@@ -55,10 +66,9 @@ qc_cardsUI <- function(id)
 #' 
 #' @rdname qc_tab
 #' 
-#' @param con Active DBI database connection
-#' @param user Username of the user
-#' 
 #' @export
+#' @importFrom datamods select_group_server
+#'
 #' @importFrom dplyr arrange
 #' @importFrom dplyr group_by
 #' @importFrom dplyr mutate
@@ -78,12 +88,25 @@ qc_cardsUI <- function(id)
 qc_server <- function(id, con, user)
 {
   # for all of those pesky "no visible binding" notes
-  expID <- max_time <- min_time <- n_tracks <- time <- trackID <- track_ordered <- NULL
+  chanID <- expID <- max_time <- min_time <- n_tracks <- sID <- time <- trackID <- track_ordered <- NULL
   
   moduleServer(
     id,
     function(input, output, session)
     {
+      ns <- NS(id)
+      
+      # pull available channels
+      chanSum <- reactive({
+        get_dat(con,
+                user = user,
+                select = 'expID, chanID, sID, treatment',
+                from = 'chanSummary') %>%
+          mutate(expID = factor(expID),
+                 chanID = factor(chanID),
+                 sID = factor(sID))
+      })
+      
       # pull raw track information
       trackRaw <- reactive({
         get_dat(con,
@@ -92,6 +115,12 @@ qc_server <- function(id, con, user)
                 from = 'trackRaw',
                 where = 'chanID=2')
       })
+      
+      # for channel/sample selection
+      selection <- select_group_server(id = "qc_channels",
+                                       data_r = chanSum,
+                                       vars_r = reactive(c('expID', 'sID', 'chanID'))
+      )
 
       output$qc_track_len <- renderPlot({
         group_by(trackRaw(), trackID) %>%
@@ -114,8 +143,6 @@ qc_server <- function(id, con, user)
           
           mutate(time = frames / 2)
         
-        print(tmp)
-          
         ggplot(tmp, aes(time, n_tracks)) +
           geom_line() +
           labs(x = 'Time (min)', y = '# Tracks')

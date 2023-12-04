@@ -12,7 +12,6 @@ library(shiny)
 library(shinymanager)
 library(RSQLite)
 library(DBI)
-library(config)
 library(bslib)
 
 library(ggplot2)
@@ -74,5 +73,3 @@ server <- function(input, output, session) {
 #######
 
 shinyApp(ui = ui, server = server)
-
-dbDisconnect(con)
