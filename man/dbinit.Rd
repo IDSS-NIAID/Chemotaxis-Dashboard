@@ -3,7 +3,7 @@
 \name{dbinit}
 \alias{dbinit}
 \title{dbinit
-Set up database and infrastructure needed to run the Chemotaxis-Dashboard}
+Set up database and infrastructure needed to run the Chemotaxis-Dashboard. If the database already exists and data is not empty, this will append the information in data to the database.}
 \usage{
 dbinit(db_path, data = NULL)
 }
@@ -17,7 +17,7 @@ Something - use this to sniff for existing DB information?
 }
 \description{
 dbinit
-Set up database and infrastructure needed to run the Chemotaxis-Dashboard
+Set up database and infrastructure needed to run the Chemotaxis-Dashboard. If the database already exists and data is not empty, this will append the information in data to the database.
 }
 \details{
 The data.frames expected in data are `users`, `access`, `expSummary`, `expStats`, `chanSummary`, `chanRaw`,

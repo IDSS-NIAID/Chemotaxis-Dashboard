@@ -1,7 +1,7 @@
 # initialize.R
 
 #' dbinit
-#' Set up database and infrastructure needed to run the Chemotaxis-Dashboard 
+#' Set up database and infrastructure needed to run the Chemotaxis-Dashboard. If the database already exists and data is not empty, this will append the information in data to the database. 
 #' 
 #' @param db_path Character value specifying the path to the file where the database should be initialized.
 #' @param data List of data.frames to initialize or add to the database. Internal test data will be used if `data` is NULL.
@@ -36,35 +36,67 @@ dbinit <- function(db_path, data = NULL)
   # add data.frames
   if(!'users' %in% tabs & 
      !is.null(data$users))
+  {
     dbWriteTable(con, "users", data$users)
+  }else if(!is.null(data$users)){
+    dbAppendTable(con, "users", data$users)
+  }
   
   if(!'access' %in% tabs & 
      !is.null(data$access))
+  {
     dbWriteTable(con, "access", data$access)
+  }else if(!is.null(data$access)){
+    dbAppendTable(con, "access", data$access)
+  }
   
   if(!'expSummary' %in% tabs & 
      !is.null(data$expSummary))
+  {
     dbWriteTable(con, "expSummary", data$expSummary)
+  }else if(!is.null(data$expSummary)){
+    dbAppendTable(con, "expSummary", data$expSummary)
+  }
   
   if(!'expStats' %in% tabs & 
      !is.null(data$expStats))
+  {
     dbWriteTable(con, "expStats", data$expStats)
+  }else if(!is.null(data$expStats)){
+    dbAppendTable(con, "expStats", data$expStats)
+  }
   
   if(!'chanSummary' %in% tabs & 
      !is.null(data$chanSummary))
+  {
     dbWriteTable(con, "chanSummary", data$chanSummary)
-
+  }else if(!is.null(data$chanSummary)){
+    dbAppendTable(con, "chanSummary", data$chanSummary)
+  }
+  
   if(!'chanRaw' %in% tabs & 
      !is.null(data$chanRaw))
+  {
     dbWriteTable(con, "chanRaw", data$chanRaw)
+  }else if(!is.null(data$chanRaw)){
+    dbAppendTable(con, "chanRaw", data$chanRaw)
+  }
 
   if(!'trackSummary' %in% tabs & 
      !is.null(data$trackSummary))
+  {
     dbWriteTable(con, "trackSummary", data$trackSummary)
+  }else if(!is.null(data$trackSummary)){
+    dbAppendTable(con, "trackSummary", data$trackSummary)
+  }
   
   if(!'trackRaw' %in% tabs & 
      !is.null(data$trackRaw))
+  {
     dbWriteTable(con, "trackRaw", data$trackRaw)
+  }else{
+    dbAppendTable(con, "trackRaw", data$trackRaw)
+  }
   
   dbDisconnect(con)
 }

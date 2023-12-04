@@ -42,9 +42,14 @@ all_experiments <- all_experiments[!all_experiments %in% done]
 
 
 # process experiments that haven't been processed yet
-processed_data <- process_experiments(all_experiments,
-                                      source_dir = file.path(root, 'data-raw', 'results_csv'),
-                                      results_dir = file.path(root, '.data'),
-                                      seed = 923847)
+if(length(all_experiments) > 0)
+{
+  processed_data <- process_experiments(all_experiments,
+                                        source_dir = file.path(root, 'data-raw', 'results_csv'),
+                                        results_dir = file.path(root, '.data'),
+                                        seed = 923847)
+
+  dbinit(db_path, processed_data)
+}
 
 parallel::stopCluster(parallel::getDefaultCluster())
