@@ -12,6 +12,7 @@
 #' @return Something - use this to sniff for existing DB information?
 #' @export
 #' 
+#' @importFrom DBI dbAppendTable
 #' @importFrom DBI dbConnect
 #' @importFrom DBI dbDisconnect
 #' @importFrom DBI dbListTables
@@ -94,7 +95,7 @@ dbinit <- function(db_path, data = NULL)
      !is.null(data$trackRaw))
   {
     dbWriteTable(con, "trackRaw", data$trackRaw)
-  }else{
+  }else if(!is.null(data$trackRaw)){
     dbAppendTable(con, "trackRaw", data$trackRaw)
   }
   

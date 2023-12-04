@@ -48,6 +48,9 @@ if(length(all_experiments) > 0)
                                         source_dir = file.path(root, 'data-raw', 'results_csv'),
                                         results_dir = file.path(root, '.data'),
                                         seed = 923847)
+  
+  processed_data$access <- data.frame(user = 'kuhnslab',
+                                      expID = processed_data$expSummary$expID)
 
   dbinit(db_path, processed_data)
 }
