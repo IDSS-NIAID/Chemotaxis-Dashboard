@@ -30,3 +30,27 @@ get_dat <- function(con, user, select = '*', from, where = NULL)
   dbGetQuery(con, paste0("SELECT expID FROM access WHERE user='", user, "'")) %>%
     left_join(dbGetQuery(con, query), by = join_by(expID))
 }
+
+
+#' remove_dups
+#' Remove duplicate rows from the database
+#' 
+#' @param con A DBI database connection object
+#' @param tabs A character vector of table names to remove duplicates from. If NULL, all tables will be checked.
+#' 
+#' @export
+#' @importFrom DBI dbGetQuery
+#' @importFrom DBI dbListTables
+#' @importFrom DBI dbWriteTable
+remove_dups <- function(con, tabs = NULL)
+{
+  if(is.null(tabs))
+    tabs <- dbListTables(con)
+  
+  for(t in tabs)
+  {
+    dbGetQuery(con, paste("SELECT * FROM", t)) %>% 
+      unique() %>% 
+      dbWriteTable(conn = con, name = t, overwrite = TRUE)
+  }
+}
