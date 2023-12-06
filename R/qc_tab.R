@@ -46,8 +46,8 @@ qc_cardsUI <- function(id)
   ns <- NS(id)
   
   tagList(
-    card(full_screen = TRUE, card_header("Hello"), plotOutput(ns("qc_track_len"))),
-    card(full_screen = TRUE, card_header("World"), plotOutput(ns("qc_n_cells")))
+    card(full_screen = TRUE, card_header("Track length distribution"), plotOutput(ns("qc_track_len"))),
+    card(full_screen = TRUE, card_header("# Tracks (cells) over time"), plotOutput(ns("qc_n_cells")))
   )
 }
 
@@ -67,7 +67,7 @@ qc_server <- function(id, con, user)
 {
   # for all of those pesky "no visible binding" notes
   if(FALSE)
-    chanID <- expID <- frames <- max_time <- min_time <- n_tracks <- sID <- time <- trackID <- track_ordered <- NULL
+    chanID <- expID <- sID <- NULL
   
   moduleServer(
     id,
@@ -75,57 +75,38 @@ qc_server <- function(id, con, user)
     {
       ns <- NS(id)
       
-      # pull available channels
-      chanSum <- reactive({
-        get_dat(con,
-                user = user,
-                select = 'expID, chanID, sID, treatment',
-                from = 'chanSummary') %>%
-          mutate(expID = factor(expID),
-                 chanID = factor(chanID),
-                 sID = factor(sID))
-      })
-      
       # pull raw track information
       trackRaw <- reactive({
+        if(length(chan_select()$expID) != 1)
+          return(data.frame(expID = character(0),
+                            trackID = integer(0),
+                            frames = integer(0)))
+                            
         get_dat(con,
                 user = user,
                 select = 'expID, trackID, frames',
                 from = 'trackRaw',
-                where = 'chanID=2')
-      })
+                where = paste0( "expID=", chan_select()$expID,  " AND ",
+                               "chanID=", chan_select()$chanID))
+        })
       
       # for channel/sample selection
-      selection <- select_group_server(id = "qc_channels",
-                                       data_r = chanSum,
-                                       vars_r = reactive(c('expID', 'sID', 'chanID'))
+      chan_select <- select_group_server(id = "qc_channels",
+                                         data_r = reactive({
+                                           get_dat(con,
+                                                   user = user,
+                                                   select = 'expID, chanID, sID, treatment',
+                                                   from = 'chanSummary') %>%
+                                             mutate(expID = factor(expID),
+                                                    chanID = factor(chanID),
+                                                    sID = factor(sID))
+                                         }),
+                                         vars_r = reactive(c('expID', 'sID', 'chanID'))
       )
 
-      output$qc_track_len <- renderPlot({
-        group_by(trackRaw(), trackID) %>%
-          summarize(min_time = min(frames) / 2,
-                    max_time = max(frames) / 2) %>%
-          ungroup() %>%
-
-          arrange(min_time) %>%
-          mutate(track_ordered = 1:length(min_time)) %>%
-
-          ggplot(aes(x = min_time, xend = max_time, y = track_ordered, yend = track_ordered)) +
-          geom_segment() +
-          labs(x = 'Time (min)', y = 'Track number')
-      })
+      output$qc_track_len <- renderPlot(qc_track_len(trackRaw()))
       
-      output$qc_n_cells <- renderPlot({
-        tmp <- group_by(trackRaw(), frames) %>%
-          summarize(n_tracks = length(unique(trackID))) %>%
-          ungroup() %>%
-          
-          mutate(time = frames / 2)
-        
-        ggplot(tmp, aes(time, n_tracks)) +
-          geom_line() +
-          labs(x = 'Time (min)', y = '# Tracks')
-      })
+      output$qc_n_cells <- renderPlot(qc_n_cells(trackRaw()))
     }
   )
 }
