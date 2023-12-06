@@ -37,22 +37,15 @@
 #' #                                             '~/chemodash_out')"`
 #' @export
 #' 
-#' @importFrom dplyr %>%
-#' @importFrom dplyr bind_rows
-#' @importFrom dplyr left_join
-#' @importFrom dplyr mutate
-#' @importFrom dplyr select
-#' @importFrom dplyr tibble
-#'
-#' @importFrom purrr map
-#' @importFrom purrr map_chr
-#' @importFrom purrr map_int
-#' @importFrom purrr map_df
-#' @importFrom purrr map2_df
-#' 
+#' @importFrom dplyr %>% bind_rows left_join mutate select tibble
+#' @importFrom purrr map map_chr map_int map_df map2_df
 #' @importFrom readr read_delim
 process_experiments <- function(experiment, source_dir, results_dir, seed = NULL, sig.figs = 4, ledge_dist = 260)
 {
+  # for all those pesky "no visible binding" notes
+  if(FALSE)
+    X <- Y <- NULL
+  
   options(dplyr.summarise.inform = FALSE)
 
   # source files for processing
@@ -142,63 +135,27 @@ process_experiments <- function(experiment, source_dir, results_dir, seed = NULL
 #' @import rlang
 #' @importFrom magrittr %>%
 #' 
-#' @importFrom dplyr arrange
-#' @importFrom dplyr case_when
-#' @importFrom dplyr filter
-#' @importFrom dplyr group_by
-#' @importFrom dplyr left_join
-#' @importFrom dplyr mutate
-#' @importFrom dplyr reframe
-#' @importFrom dplyr rename
-#' @importFrom dplyr select
-#' @importFrom dplyr starts_with
-#' @importFrom dplyr summarize
-#' @importFrom dplyr ungroup
-#' 
+#' @importFrom dplyr arrange case_when filter group_by left_join mutate reframe rename select starts_with summarize ungroup
 #' @importFrom tidyr pivot_longer
-#' 
-#' @importFrom purrr map
-#' @importFrom purrr map2
-#' @importFrom purrr map_dbl
-#' @importFrom purrr map2_dbl
-#' @importFrom purrr map_lgl
-#' @importFrom purrr pmap
-#' 
-#' @importFrom stats lm
-#' @importFrom stats median
-#' @importFrom stats quantile
-#' @importFrom stats sd
-#' @importFrom stats smooth.spline
-#' @importFrom stats splinefun
-#' 
+#' @importFrom purrr map map2 map_dbl map2_dbl map_lgl pmap
+#' @importFrom stats lm median quantile sd smooth.spline splinefun
 #' @importFrom splines bs
-#' 
 #' @importFrom utils combn
-#'
-#' @importFrom ggplot2 aes
-#' @importFrom ggplot2 ggplot
-#' @importFrom ggplot2 element_blank
-#' @importFrom ggplot2 facet_wrap
-#' @importFrom ggplot2 geom_boxplot
-#' @importFrom ggplot2 geom_jitter
-#' @importFrom ggplot2 geom_hline
-#' @importFrom ggplot2 geom_path
-#' @importFrom ggplot2 geom_violin
-#' @importFrom ggplot2 ggsave
-#' @importFrom ggplot2 scale_y_reverse
-#' @importFrom ggplot2 scale_color_gradient2
-#' @importFrom ggplot2 scale_color_manual
-#' @importFrom ggplot2 stat_smooth
-#' @importFrom ggplot2 theme
-#' @importFrom ggplot2 theme_set
-#' @importFrom ggplot2 xlab
-#' @importFrom ggplot2 ylab
-#' 
+#' @importFrom ggplot2 aes ggplot element_blank facet_wrap geom_boxplot geom_jitter geom_hline geom_path geom_violin ggsave scale_y_reverse scale_color_gradient2 scale_color_manual stat_smooth theme theme_set xlab ylab
 #' @importFrom cowplot theme_cowplot
-#'
 #' @importFrom grDevices rgb
 one_experiment <- function(dat_sub, experiment, results_dir, sig.figs = 4, ledge_dist = 260)
 {
+  # for all those pesky "no visible binding" notes
+  if(FALSE)
+  {
+    angle_mean <- angle_median <- angle_migration <- angle_sd <- ce <- ce_mean <- ce_median <- ce_sd <- NULL
+    channel <- channel_a <- cross_at <- d <- delta_x <- delta_y <- directed_v_undirected <- distance_traveled <- NULL
+    dvud <- dvud_p <- experiment <- finished <- Frame <- frames <- grp <- l <- max_y <- max_v <- max_v_mean <- NULL
+    max_v_median <- max_v_sd <- minutes <- nchannels <- nsamps <- ntrts <- prop_finished <- tot_finished <- NULL
+    Track <- treatment <- v <- v_x <- v_y <- X <- x <- Y <- y <- y_max <- y_min <- NULL
+  }
+  
   # make sure file structure inside of `results_dir` is correct
   if(!file.exists(file.path(results_dir, 'images', experiment)))
     dir.create(file.path(results_dir, 'images', experiment), recursive = TRUE)
@@ -763,20 +720,15 @@ one_experiment <- function(dat_sub, experiment, results_dir, sig.figs = 4, ledge
 #' @export
 #' @import rlang
 #' @importFrom magrittr %>%
-#'
-#' @importFrom dplyr matches
-#' @importFrom dplyr select
-#' @importFrom dplyr mutate
-#' 
-#' @importFrom foreach foreach
-#' @importFrom foreach %dopar%
-#' 
-#' @importFrom stats rbinom
-#' @importFrom stats smooth.spline
-#' 
+#' @importFrom dplyr matches select mutate
+#' @importFrom foreach foreach %dopar%
+#' @importFrom stats rbinom smooth.spline
 #' @importFrom briKmeans kma.similarity
 compare_two_functions <- function(data, frames.f, f, g, sig.figs, frames.g = frames.f, lab = NULL)
 {
+  # for all those pesky "no visible binding" notes
+  if(FALSE)
+    f.tmp <- perm_lab <- Track <- NULL
   
   if(is.null(lab))
   {

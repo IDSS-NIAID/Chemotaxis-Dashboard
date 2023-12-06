@@ -12,11 +12,7 @@
 #' 
 #' @return A modularized tagList
 #' @export
-#' @importFrom shiny NS
-#' @importFrom shiny numericInput
-#' @importFrom shiny sliderInput
-#' @importFrom shiny tagList
-#' 
+#' @importFrom shiny NS numericInput sliderInput tagList
 #' @importFrom datamods select_group_ui
 qc_sidebarUI <- function(id, con, user)
 {
@@ -42,14 +38,9 @@ qc_sidebarUI <- function(id, con, user)
 #' @return A modularized tagList of cards
 #' @export
 #' 
-#' @importFrom bslib card
-#' @importFrom bslib card_header
-#' 
+#' @importFrom bslib card card_header
 #' @importFrom datamods select_group_ui
-#' 
-#' @importFrom shiny NS
-#' @importFrom shiny plotOutput
-#' @importFrom shiny tagList
+#' @importFrom shiny NS plotOutput tagList
 qc_cardsUI <- function(id)
 {
   ns <- NS(id)
@@ -69,26 +60,14 @@ qc_cardsUI <- function(id)
 #' @export
 #' @importFrom datamods select_group_server
 #'
-#' @importFrom dplyr arrange
-#' @importFrom dplyr group_by
-#' @importFrom dplyr mutate
-#' @importFrom dplyr summarize
-#' @importFrom dplyr ungroup
-#' 
-#' @importFrom ggplot2 aes
-#' @importFrom ggplot2 geom_line
-#' @importFrom ggplot2 geom_segment
-#' @importFrom ggplot2 ggplot
-#' @importFrom ggplot2 labs
-#' 
-#' @importFrom shiny moduleServer
-#' @importFrom shiny reactive
-#' @importFrom shiny reactiveValuesToList
-#' @importFrom shiny renderPlot
+#' @importFrom dplyr arrange group_by mutate summarize ungroup
+#' @importFrom ggplot2 aes geom_line geom_segment ggplot labs
+#' @importFrom shiny moduleServer reactive reactiveValuesToList renderPlot
 qc_server <- function(id, con, user)
 {
   # for all of those pesky "no visible binding" notes
-  chanID <- expID <- max_time <- min_time <- n_tracks <- sID <- time <- trackID <- track_ordered <- NULL
+  if(FALSE)
+    chanID <- expID <- frames <- max_time <- min_time <- n_tracks <- sID <- time <- trackID <- track_ordered <- NULL
   
   moduleServer(
     id,

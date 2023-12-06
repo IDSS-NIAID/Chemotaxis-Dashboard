@@ -20,7 +20,8 @@
 get_dat <- function(con, user, select = '*', from, where = NULL)
 {
   # pesky binding warning
-  expID <- NULL
+  if(FALSE)
+    expID <- NULL
   
   query <- paste("SELECT", select, "FROM", from)
   
