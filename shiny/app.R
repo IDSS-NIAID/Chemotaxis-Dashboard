@@ -50,7 +50,9 @@ ui <- page_sidebar(
   
   qc_cardsUI('qc')
 ) %>%
-  secure_app()
+  secure_app(tags_top = tags$p(actionButton(inputId = "login_guest", 
+                                            label = "Continue as guest", 
+                                            icon = icon("user"))))
 
 
 ##########
@@ -58,6 +60,14 @@ ui <- page_sidebar(
 ##########
 
 server <- function(input, output, session) {
+
+  # login as guest (see https://github.com/datastorm-open/shinymanager/issues/169)
+  observeEvent(input$login_guest, {
+    token <- shinymanager:::.tok$generate("shinyuser")
+    shinymanager:::.tok$add(token, list(user = "shinyuser", role = "guest"))
+    shinymanager:::addAuthToQuery(session, token, "en")
+    session$reload()
+  })
 
   # check_credentials returns a function to authenticate users
   res_auth <- secure_server(
