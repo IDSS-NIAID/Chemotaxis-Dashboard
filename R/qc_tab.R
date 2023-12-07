@@ -38,16 +38,22 @@ qc_sidebarUI <- function(id, con, user)
 #' @return A modularized tagList of cards
 #' @export
 #' 
-#' @importFrom bslib card card_header
+#' @importFrom bslib card card_header card_body card_footer
 #' @importFrom datamods select_group_ui
-#' @importFrom shiny NS plotOutput tagList
+#' @importFrom shiny downloadButton NS plotOutput tagList
 qc_cardsUI <- function(id)
 {
   ns <- NS(id)
   
   tagList(
-    card(full_screen = TRUE, card_header("Track length distribution"), plotOutput(ns("qc_track_len"))),
-    card(full_screen = TRUE, card_header("# Tracks (cells) over time"), plotOutput(ns("qc_n_cells")))
+    card(full_screen = TRUE, 
+         card_header("Track length distribution"), 
+         card_body(plotOutput(ns("qc_track_len"))),
+         card_footer(downloadButton(ns('qc_track_len_download'), 'Download figure'))),
+    card(full_screen = TRUE, 
+         card_header("# Tracks (cells) over time"), 
+         card_body(plotOutput(ns("qc_n_cells"))),
+         card_footer(downloadButton(ns('qc_n_cells_download'), 'Download figure')))
   )
 }
 
@@ -62,7 +68,7 @@ qc_cardsUI <- function(id)
 #'
 #' @importFrom dplyr arrange group_by mutate summarize ungroup
 #' @importFrom ggplot2 aes geom_line geom_segment ggplot labs
-#' @importFrom shiny moduleServer reactive reactiveValuesToList renderPlot
+#' @importFrom shiny downloadHandler moduleServer reactive reactiveValues reactiveValuesToList renderPlot
 qc_server <- function(id, con, user)
 {
   # for all of those pesky "no visible binding" notes
@@ -73,7 +79,7 @@ qc_server <- function(id, con, user)
     id,
     function(input, output, session)
     {
-      ns <- NS(id)
+      vals <- reactiveValues()
       
       # pull raw track information
       trackRaw <- reactive({
@@ -104,9 +110,31 @@ qc_server <- function(id, con, user)
                                          vars_r = reactive(c('expID', 'sID', 'chanID'))
       )
 
-      output$qc_track_len <- renderPlot(qc_track_len(trackRaw()))
+      output$qc_track_len <- renderPlot((vals$track_len <- qc_track_len(trackRaw())))
+      output$qc_track_len_download <- downloadHandler(
+        filename = function() {
+          if(length(chan_select()$expID) != 1)
+            return('null.png')
+          
+          paste0("track_len_", chan_select()$expID, "_", chan_select()$sID, "_", chan_select()$chanID, ".png")
+        },
+        content = function(file) {
+          ggsave(file, vals$track_len)
+        }
+      )
       
-      output$qc_n_cells <- renderPlot(qc_n_cells(trackRaw()))
+      output$qc_n_cells <- renderPlot((vals$n_cells <- qc_n_cells(trackRaw())))
+      output$qc_n_cells_download <- downloadHandler(
+        filename = function() {
+          if(length(chan_select()$expID) != 1)
+            return('null.png')
+          
+          paste0("n_cells_", chan_select()$expID, "_", chan_select()$sID, "_", chan_select()$chanID, ".png")
+        },
+        content = function(file) {
+          ggsave(file, vals$n_cells)
+        }
+      )
     }
   )
 }
