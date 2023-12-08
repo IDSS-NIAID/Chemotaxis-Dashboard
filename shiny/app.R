@@ -38,48 +38,9 @@ con <- dbConnect(SQLite(), config$db_path)
 credentials <- dbGetQuery(con, 'SELECT * FROM users')
 
 
-######
-# UI #
-######
-
-ui <- page_sidebar(
-  title = 'Chemotaxis Dashboard',
-  sidebar = sidebar(
-    title = 'QC parameters', qc_sidebarUI('qc')
-  ),
-  
-  qc_cardsUI('qc')
-) %>%
-  secure_app(tags_top = tags$p(actionButton(inputId = "login_guest", 
-                                            label = "Continue as guest", 
-                                            icon = icon("user"))))
-
-
-##########
-# Server #
-##########
-
-server <- function(input, output, session) {
-
-  # login as guest (see https://github.com/datastorm-open/shinymanager/issues/169)
-  observeEvent(input$login_guest, {
-    token <- shinymanager:::.tok$generate("shinyuser")
-    shinymanager:::.tok$add(token, list(user = "shinyuser", role = "guest"))
-    shinymanager:::addAuthToQuery(session, token, "en")
-    session$reload()
-  })
-
-  # check_credentials returns a function to authenticate users
-  res_auth <- secure_server(
-    check_credentials = check_credentials(credentials)
-  )
-
-  qc_server("qc", con, reactiveValuesToList(res_auth)$user)
-}
-
-
 #######
 # App #
 #######
 
-shinyApp(ui = ui, server = server)
+shinyApp(ui     = ChemotaxisDashboard::app_ui(),
+         server = ChemotaxisDashboard::app_server(credentials, con))

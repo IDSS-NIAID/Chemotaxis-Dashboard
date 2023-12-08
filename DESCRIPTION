@@ -23,12 +23,15 @@ Imports:
   rlang,
   RSQLite,
   shiny,
+  shinymanager,
   tidyr
 Suggests:
-  doParallel,
-  usethis
+    doParallel,
+    testthat (>= 3.0.0),
+    usethis
 Encoding: UTF-8
 URL: https://github.com/abcsFrederick/Chemotaxis-Dashboard
 BugReports: https://github.com/abcsFrederick/Chemotaxis-Dashboard/issues
 Language: en-US
 RoxygenNote: 7.2.3
+Config/testthat/edition: 3
