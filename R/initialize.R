@@ -12,12 +12,7 @@
 #' @return Something - use this to sniff for existing DB information?
 #' @export
 #' 
-#' @importFrom DBI dbAppendTable
-#' @importFrom DBI dbConnect
-#' @importFrom DBI dbDisconnect
-#' @importFrom DBI dbListTables
-#' @importFrom DBI dbWriteTable
-#'
+#' @importFrom DBI dbConnect dbDisconnect
 #' @importFrom RSQLite SQLite
 dbinit <- function(db_path, data = NULL)
 {
@@ -31,75 +26,200 @@ dbinit <- function(db_path, data = NULL)
   # connect
   con <- dbConnect(SQLite(), db_path)
   
-  # get list of existing tables
-  tabs <- dbListTables(con)
   
-  # add data.frames
-  if(!'users' %in% tabs & 
-     !is.null(data$users))
-  {
-    dbWriteTable(con, "users", data$users)
-  }else if(!is.null(data$users)){
-    dbAppendTable(con, "users", data$users)
-  }
+  # users
+  # User table for authentication
+  # 
+  # @param user (key) Character, username - used in: 
+  #   `access`
+  # @param password Character, password
+  dbupdate(con, 'users', data$users, 'user')
   
-  if(!'access' %in% tabs & 
-     !is.null(data$access))
-  {
-    dbWriteTable(con, "access", data$access)
-  }else if(!is.null(data$access)){
-    dbAppendTable(con, "access", data$access)
-  }
   
-  if(!'expSummary' %in% tabs & 
-     !is.null(data$expSummary))
-  {
-    dbWriteTable(con, "expSummary", data$expSummary)
-  }else if(!is.null(data$expSummary)){
-    dbAppendTable(con, "expSummary", data$expSummary)
-  }
-  
-  if(!'expStats' %in% tabs & 
-     !is.null(data$expStats))
-  {
-    dbWriteTable(con, "expStats", data$expStats)
-  }else if(!is.null(data$expStats)){
-    dbAppendTable(con, "expStats", data$expStats)
-  }
-  
-  if(!'chanSummary' %in% tabs & 
-     !is.null(data$chanSummary))
-  {
-    dbWriteTable(con, "chanSummary", data$chanSummary)
-  }else if(!is.null(data$chanSummary)){
-    dbAppendTable(con, "chanSummary", data$chanSummary)
-  }
-  
-  if(!'chanRaw' %in% tabs & 
-     !is.null(data$chanRaw))
-  {
-    dbWriteTable(con, "chanRaw", data$chanRaw)
-  }else if(!is.null(data$chanRaw)){
-    dbAppendTable(con, "chanRaw", data$chanRaw)
-  }
+  # access
+  # User access table defining which experiments the user can access
+  # 
+  # @param user (key) Character, maps to `users$user`
+  # @param expID (key) Character, maps to `expSummary$expID`
+  dbupdate(con, 'access', data$access, c('user', 'expID'))
 
-  if(!'trackSummary' %in% tabs & 
-     !is.null(data$trackSummary))
-  {
-    dbWriteTable(con, "trackSummary", data$trackSummary)
-  }else if(!is.null(data$trackSummary)){
-    dbAppendTable(con, "trackSummary", data$trackSummary)
-  }
   
-  if(!'trackRaw' %in% tabs & 
-     !is.null(data$trackRaw))
-  {
-    dbWriteTable(con, "trackRaw", data$trackRaw)
-  }else if(!is.null(data$trackRaw)){
-    dbAppendTable(con, "trackRaw", data$trackRaw)
-  }
+  # expSummary
+  # Experiment summary table
+  # 
+  # @param expID (key) Character, experiment ID - used in: 
+  #   `access`
+  #   `expStats`
+  #   `chanSummary`
+  #   `chanRaw`
+  #   `trackSummary`
+  #   `trackRaw`
+  # @param tracks_time Character, path to figure of tracks over time for each channel
+  # @param tracks_v Character, path to figure of velocity over time for each grouping
+  # @param angle_migration Character, path to figure of angle of migration viloin plots for each channel
+  # @param ce Character, path to figure of chemotactic efficiency violin plots for each channel
+  dbupdate(con, 'expSummary', data$expSummary, 'expID')
+
   
+  # expStats
+  # Table of summary statistics for each experiment
+  # 
+  # @param expID (key) Character, maps to `expSummary$expID`
+  # @param within (key) Character, group for the comparison (i.e. within normals treated with fMLF8)
+  # @param between (key) Character, contrast for the comparison (i.e. between channels 3 and 4)
+  # @param test (key) Character, test used to compare the `between` groups
+  # @param stat Double, test statistics comparing the `between` groups
+  # @param p Double, p-value for `stat`
+  dbupdate(con, 'expStats', data$expStats, c('expID', 'within', 'between', 'test'))
+
+  
+  # chanSummary
+  # Channel summary table
+  # 
+  # @param expID (key) Character, maps to `expSummary$expID`
+  # @param chanID (key) Integer, channel ID - used in:
+  #   `chanRaw`
+  #   `trackRaw`
+  #   `trackSummary`
+  # @param sID Character, sample ID - used in:
+  # @param treatment Character, treatment applied to this channel
+  # @param tot_finished Integer, Total number of cells that reached the bottom ledge
+  # @param prop_finished Double, proportion of cells that reached the bottom ledge
+  # @param ce_median Double, median chemotactic efficiency
+  # @param ce_mean Double, mean chemotactic efficiency
+  # @param ce_sd Double, standard deviation of chemotactic efficiency
+  # @param angle_median Double, median angle of migration
+  # @param angle_mean Double, mean angle of migration
+  # @param angle_sd Double, standard deviation of angle of migration
+  # @param max_v_median Double, median maximum velocity
+  # @param max_v_mean Double, mean maximum velocity
+  # @param max_v_sd Double, standard deviation of maximum velocity
+  # @param dvud Double, dissimilarity score comparing directed and undirected trajectories
+  # @param dvud_p Double, p-value for `dvud`
+  dbupdate(con, 'chanSummary', data$chanSummary, c('expID', 'chanID'))
+  
+  
+  # chanRaw
+  # Table of smoothed trajectories over all tracks in a channel
+  # 
+  # @param expID (key) Character, maps to `expSummary$expID`
+  # @param chanID (key) Integer, maps to `chanSummary$chanID`
+  # @param x Double, smoothed x-position for the channel
+  # @param y Double, smoothed y-position for the channel
+  # @param frames (key) Integer, frame (sampled every 30 seconds)
+  # @param v_x Double, velocity in the x direction (undirected)
+  # @param v_y Double, velocity in the y direction (directed)
+  # @param v Double, total velocity
+  dbupdate(con, 'chanRaw', data$chanRaw, c('expID', 'chanID', 'frames'))
+
+  
+  # trackSummary
+  # Track summary table
+  # 
+  # @param expID (key) Character, maps to `expSummary$expID`
+  # @param chanID (key) Integer, maps to `chanSummary$chanID`
+  # @param trackID (key) Integer, track ID - used in:
+  #   `trackRaw`
+  # @param ce Double, chemotactic efficiency
+  # @param angle_migration Double, angle of migration
+  # @param max_v Double, maximum velocity in μm per minute
+  # @param av_velocity Double, mean velocity in μm per minute
+  # @param finished  Logical, TRUE when the cell passed the bottom ledge
+  dbupdate(con, 'trackSummary', data$trackSummary, c('expID', 'chanID', 'trackID'))
+
+  
+  # trackRaw
+  # Raw track information
+  # 
+  # @param expID (key) Character, maps to `expSummary$expID`
+  # @param chanID (key) Integer, maps to `chanSummary$chanID`
+  # @param trackID (key) Integer, maps to `trackSummary$trackID`
+  # @param x Double, x-position for the track
+  # @param y Double, y-position for the track
+  # @param frames (key) Integer, frame (sampled every 30 seconds)
+  # @param v_x Double, velocity in the x direction (undirected)
+  # @param v_y Double, velocity in the y direction (directed)
+  # @param v Double, total velocity
+  dbupdate(con, 'trackRaw', data$trackRaw, c('expID', 'chanID', 'trackID', 'frames'))
+
+  
+  # clean up
   dbDisconnect(con)
+}
+
+
+#' dbupdate
+#' Update the database with new data. This will append new information or update non key fields.
+#' 
+#' @param con DBIConnection object
+#' @param table Character value specifying the table to update.
+#' @param dat A data.frame to update or add to the database.
+#' @param key_fields Character vector specifying the key fields in the table.
+#' 
+#' @importFrom DBI dbAppendTable dbExecute dbGetQuery dbListTables dbWriteTable
+#' @importFrom dplyr %>% ends_with right_join select
+dbupdate <- function(con, table, dat, key_fields)
+{
+  # if the table doesn't exist, create it using dat and return
+  if(!table %in% dbListTables(con))
+    dbWriteTable(con, table, dat) %>%
+      invisible()
+
+  
+  # if the table exists, check for new data and rows that need updating
+  tmp <- dbGetQuery(con, paste("SELECT * FROM", table)) %>%
+    right_join(dat, by = key_fields)
+  
+  
+  # get non-key fields
+  non_key_fields <- names(dat)[!names(dat) %in% key_fields]
+
+  
+  # check if we want to append this row (if non-key fields are NA - assume no missing data in database)
+  apnd <- is.na(tmp[[paste0(non_key_fields[1], '.x')]])
+  
+  
+  # check for rows that need updating
+  updt <- rep(FALSE, nrow(tmp)) # this will be determined below
+  
+  for(i in non_key_fields)
+  {
+    # check if we want to update this row (if non-key fields are not equal)
+    updt <- updt | tmp[[paste0(i, '.x')]] != tmp[[paste0(i, '.y')]]
+    
+    # we'll pretty much always want the .y varialbe (new data) if it exists
+    tmp[[i]] <- tmp[[paste0(i, '.y')]]
+  }  
+
+  
+  # append new rows
+  if(any(apnd))
+  {
+    tmp[apnd,] %>%
+      select(-ends_with('.x'),
+             -ends_with('.y')) %>%
+      dbAppendTable(conn = con, name = "users")
+  }
+  
+  
+  # update existing rows
+  if(any(updt))
+  {
+    # add quotes around character values
+    for(i in names(tmp))
+    {
+      if(is.character(tmp[[i]]))
+        tmp[[i]] <- paste0("'", tmp[[i]], "'")
+    }
+    
+    # update rows
+    for(i in (1:nrow(tmp))[updt])
+    {
+      dbExecute(con, paste("UPDATE", table,
+                           "SET", paste(paste0(non_key_fields, '=', tmp[i, non_key_fields]), collapse = ', '),
+                           "WHERE", paste(paste0(key_fields, '=', tmp[i, key_fields]))))
+    }
+  }
 }
 
 
