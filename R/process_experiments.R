@@ -347,10 +347,9 @@ one_experiment <- function(dat_sub, experiment, results_dir, sig.figs = 4, ledge
     within_grp <- within_grp %>%
       
       # create one row per two-way comparison
-      summarize(channel_a = combn(unique(channel), 2)[1,],
-                channel_b = combn(unique(channel), 2)[2,],
-                a_vs_b = list('')) %>%
-      ungroup()
+      reframe(channel_a = combn(unique(channel), 2)[1,],
+              channel_b = combn(unique(channel), 2)[2,],
+              a_vs_b = list(''))
     
     # make comparisons for all pairs
     for(i in 1:nrow(within_grp))

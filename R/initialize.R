@@ -160,6 +160,10 @@ dbinit <- function(db_path, data = NULL)
 #' @importFrom dplyr %>% ends_with right_join select
 dbupdate <- function(con, table, dat, key_fields)
 {
+  # if dat is null, there is no data to deal with
+  if(is.null(dat))
+    return(invisible())
+  
   # if the table doesn't exist, create it using dat and return
   if(!table %in% dbListTables(con))
     dbWriteTable(con, table, dat) %>%
@@ -185,9 +189,10 @@ dbupdate <- function(con, table, dat, key_fields)
   for(i in non_key_fields)
   {
     # check if we want to update this row (if non-key fields are not equal)
-    updt <- updt | tmp[[paste0(i, '.x')]] != tmp[[paste0(i, '.y')]]
-    
-    # we'll pretty much always want the .y varialbe (new data) if it exists
+    comparison <- tmp[[paste0(i, '.x')]] != tmp[[paste0(i, '.y')]]
+    updt <- updt | ifelse(is.na(comparison), FALSE, comparison)
+
+    # we'll pretty much always want the .y variable (new data) if it exists
     tmp[[i]] <- tmp[[paste0(i, '.y')]]
   }  
 
@@ -198,7 +203,7 @@ dbupdate <- function(con, table, dat, key_fields)
     tmp[apnd,] %>%
       select(-ends_with('.x'),
              -ends_with('.y')) %>%
-      dbAppendTable(conn = con, name = "users")
+      dbAppendTable(conn = con, name = table)
   }
   
   
