@@ -407,22 +407,21 @@ one_experiment <- function(dat_sub, experiment, results_dir, sig.figs = 4, ledge
     btw_trt <- btw_trt %>%
       
       # create one row per two-way comparison
-      summarize(trt_a = paste(combn(unique(treatment), 2)[1,]),
+      reframe(trt_a = paste(combn(unique(treatment), 2)[1,]),
                 trt_b = paste(combn(unique(treatment), 2)[2,]),
-                a_vs_b = list('')) %>%
-      ungroup()
+                a_vs_b = list(''))
     
     # make comparisons for all pairs
     for(i in 1:nrow(btw_trt))
     {
       # get functions to compare
       f <- filter(dat_sub, paste(treatment) == paste(btw_trt$trt_a[i]) &
-                    sample     ==       btw_trt$sample[i])
+                                 sample     ==       btw_trt$sample[i])
       f <- list(smooth.spline(f$Frame, f$X),
                 smooth.spline(f$Frame, f$Y))
       
       g <- filter(dat_sub, paste(treatment) == paste(btw_trt$trt_b[i]) &
-                    sample     ==       btw_trt$sample[i])
+                                 sample     ==       btw_trt$sample[i])
       g <- list(smooth.spline(g$Frame, g$X),
                 smooth.spline(g$Frame, g$Y))
       
@@ -462,10 +461,9 @@ one_experiment <- function(dat_sub, experiment, results_dir, sig.figs = 4, ledge
     btw_samp <- btw_samp %>%
       
       # create one row per two-way comparison
-      summarize(a = paste(combn(unique(sample), 2)[1,]),
-                b = paste(combn(unique(sample), 2)[2,]),
-                a_vs_b = list('')) %>%
-      ungroup()
+      reframe(a = paste(combn(unique(sample), 2)[1,]),
+              b = paste(combn(unique(sample), 2)[2,]),
+              a_vs_b = list(''))
     
     # make comparisons for all pairs
     for(i in 1:nrow(btw_samp))
@@ -577,7 +575,7 @@ one_experiment <- function(dat_sub, experiment, results_dir, sig.figs = 4, ledge
     theme(legend.title = element_blank(),
           legend.position = 'top') +
     ylab(expression(paste('Relative Velocity (', mu, 'm / min)'))) +
-    geom_hline(yintercept = 0, linetype = 3, size = .5)
+    geom_hline(yintercept = 0, linetype = 3, linewidth = .5)
   
   #if sample and treatment are available, split by these labels; if not, use channels
   if(!(any(is.na(track_summ$sample)))){
