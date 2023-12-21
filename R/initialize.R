@@ -160,6 +160,10 @@ dbinit <- function(db_path, data = NULL)
 #' @importFrom dplyr %>% ends_with right_join select
 dbupdate <- function(con, table, dat, key_fields)
 {
+  # for all those pesky "no visible binding" notes
+  if(FALSE)
+    indb <- NULL
+  
   # if dat is null, there is no data to deal with
   if(is.null(dat))
     return(invisible())
@@ -169,61 +173,90 @@ dbupdate <- function(con, table, dat, key_fields)
     dbWriteTable(con, table, dat) %>%
       invisible()
 
-  
-  # if the table exists, check for new data and rows that need updating
-  tmp <- dbGetQuery(con, paste("SELECT * FROM", table)) %>%
-    right_join(dat, by = key_fields)
-  
-  
+
   # get non-key fields
   non_key_fields <- names(dat)[!names(dat) %in% key_fields]
+  
 
-  
-  # check if we want to append this row (if non-key fields are NA - assume no missing data in database)
-  apnd <- is.na(tmp[[paste0(non_key_fields[1], '.x')]])
-  
-  
-  # check for rows that need updating
-  updt <- rep(FALSE, nrow(tmp)) # this will be determined below
-  
-  for(i in non_key_fields)
+  # if there are no non-key fields, we need to do things differently
+  if(length(non_key_fields) == 0)
   {
-    # check if we want to update this row (if non-key fields are not equal)
-    comparison <- tmp[[paste0(i, '.x')]] != tmp[[paste0(i, '.y')]]
-    updt <- updt | ifelse(is.na(comparison), FALSE, comparison)
-
-    # we'll pretty much always want the .y variable (new data) if it exists
-    tmp[[i]] <- tmp[[paste0(i, '.y')]]
-  }  
-
-  
-  # append new rows
-  if(any(apnd))
-  {
-    tmp[apnd,] %>%
-      select(-ends_with('.x'),
-             -ends_with('.y')) %>%
-      dbAppendTable(conn = con, name = table)
-  }
-  
-  
-  # update existing rows
-  if(any(updt))
-  {
-    # add quotes around character values
-    for(i in names(tmp))
+    # get the key fields from the database
+    tmp <- dbGetQuery(con, paste("SELECT * FROM", table)) %>%
+      mutate(indb = TRUE) %>%                               # flag these as already in the database
+      
+      right_join(dat, by = key_fields) %>%                  # join the new data to the database
+      
+      mutate(indb = ifelse(is.na(indb), FALSE, indb)) %>%   # flag these as not in the database
+      filter(!indb) %>%                                     # only keep the rows that are not in the database
+      select(-indb)
+    
+    # if there are new rows, append to the database
+    if(nrow(tmp) > 0)
     {
-      if(is.character(tmp[[i]]))
-        tmp[[i]] <- paste0("'", tmp[[i]], "'")
+      # append the new rows to the database
+      dbAppendTable(con, table, tmp)
     }
     
-    # update rows
-    for(i in (1:nrow(tmp))[updt])
+    # no more work to be done, return
+    invisible()
+    
+  # if we do have non-key fields, look to see what can be updated vs what needs to be appended
+  }else{
+    # if the table exists, check for new data and rows that need updating
+    tmp <- dbGetQuery(con, paste("SELECT * FROM", table)) %>%
+      right_join(dat, by = key_fields)
+    
+    
+    
+    # check if we want to append this row (if non-key fields are NA - assume no missing data in database)
+    apnd <- is.na(tmp[[paste0(non_key_fields[1], '.x')]])
+    
+    
+    # check for rows that need updating
+    updt <- rep(FALSE, nrow(tmp)) # this will be determined below
+    
+    for(i in non_key_fields)
     {
-      dbExecute(con, paste("UPDATE", table,
-                           "SET", paste(paste0(non_key_fields, '=', tmp[i, non_key_fields]), collapse = ', '),
-                           "WHERE", paste(paste0(key_fields, '=', tmp[i, key_fields]))))
+      # check if we want to update this row (if non-key fields are not equal)
+      comparison <- tmp[[paste0(i, '.x')]] != tmp[[paste0(i, '.y')]]
+      updt <- updt | ifelse(is.na(comparison), FALSE, comparison)
+      
+      # we'll pretty much always want the .y variable (new data) if it exists
+      tmp[[i]] <- tmp[[paste0(i, '.y')]]
+    }  
+    
+    
+    # append new rows
+    if(any(apnd))
+    {
+      tmp[apnd,] %>%
+        select(-ends_with('.x'),
+               -ends_with('.y')) %>%
+        dbAppendTable(conn = con, name = table)
     }
+    
+    
+    # update existing rows
+    if(any(updt))
+    {
+      # add quotes around character values
+      for(i in names(tmp))
+      {
+        if(is.character(tmp[[i]]))
+          tmp[[i]] <- paste0("'", tmp[[i]], "'")
+      }
+      
+      # update rows
+      for(i in (1:nrow(tmp))[updt])
+      {
+        dbExecute(con, paste("UPDATE", table,
+                             "SET", paste(paste0(non_key_fields, '=', tmp[i, non_key_fields]), collapse = ', '),
+                             "WHERE", paste(paste0(key_fields, '=', tmp[i, key_fields]))))
+      }
+    }
+    
+    invisible()
   }
 }
 

@@ -38,13 +38,13 @@
 #' @export
 #' 
 #' @importFrom dplyr %>% bind_rows left_join mutate select tibble
-#' @importFrom purrr map map_chr map_int map_df map2_df
+#' @importFrom purrr map map_chr map_int map_df map2_chr map2_df
 #' @importFrom readr read_delim
 process_experiments <- function(experiment, source_dir, results_dir, seed = NULL, sig.figs = 4, ledge_dist = 260)
 {
   # for all those pesky "no visible binding" notes
   if(FALSE)
-    X <- Y <- NULL
+    bad <- X <- Y <- NULL
   
   options(dplyr.summarise.inform = FALSE)
 
@@ -52,6 +52,7 @@ process_experiments <- function(experiment, source_dir, results_dir, seed = NULL
   f <- list.files(source_dir)
   f <- map(experiment, ~ grep(.x, f, value = TRUE)) %>%
     unlist()
+  
 
   ##### experiment metadata #####
   results_meta <- tibble(
@@ -62,6 +63,8 @@ process_experiments <- function(experiment, source_dir, results_dir, seed = NULL
     date = {map_chr(dat, `[`, 1) %>%
         substr(1, 8) %>%
         as.Date(format = '%Y%m%d')},
+    
+    bad = map_lgl(dat, ~ grepl(.x, pattern = '^[0-9]$') %>% any()), # some dates have two experiments - this will catch those
 
     channel = map_int(dat, ~
                         {grep(.x, pattern = 'CH[1-6]', value = TRUE) %>%
@@ -99,19 +102,22 @@ process_experiments <- function(experiment, source_dir, results_dir, seed = NULL
     left_join(results_meta, by = 'f') %>%
 
     # pull experiment name
-    mutate(experiment = map_chr(f, ~ str_sub(.x, start = 1, end = 8))) %>%
+    mutate(experiment = map2_chr(f, ifelse(bad, 10, 8), ~ str_sub(.x, start = 1, end = .y))) %>%
 
-    filter(!is.na(X) & !is.na(Y))
+    filter(!is.na(X) & !is.na(Y)) %>%
+    
+    select(-bad)
 
   
   ##### pre-process data for these experiments #####
   set.seed(seed)
   
-  retval <- map(experiment, ~ one_experiment(dat_sub = filter(dat, experiment == .x),
-                                             experiment = .x,
-                                             results_dir = results_dir, 
-                                             sig.figs = sig.figs,
-                                             ledge_dist = ledge_dist))
+  retval <- unique(dat$experiment) %>%
+    map(~ one_experiment(dat_sub = filter(dat, experiment == .x),
+                         experiment = .x,
+                         results_dir = results_dir, 
+                         sig.figs = sig.figs,
+                         ledge_dist = ledge_dist))
 
   list(expSummary   = map_df(retval, ~ .x$expSummary),
        expStats     = map_df(retval, ~ .x$expStats),
@@ -137,7 +143,7 @@ process_experiments <- function(experiment, source_dir, results_dir, seed = NULL
 #' 
 #' @importFrom dplyr arrange case_when filter group_by left_join mutate reframe rename select starts_with summarize ungroup
 #' @importFrom tidyr pivot_longer
-#' @importFrom purrr map map2 map_dbl map2_dbl map_lgl pmap
+#' @importFrom purrr map map_dbl map_lgl map2 map2_dbl pmap
 #' @importFrom stats lm median quantile sd smooth.spline splinefun
 #' @importFrom splines bs
 #' @importFrom utils combn
@@ -336,7 +342,7 @@ one_experiment <- function(dat_sub, experiment, results_dir, sig.figs = 4, ledge
   within_grp <- group_by(dat_sub, date, experiment, sample, treatment) %>%
     
     # check to see how many channels we have in each group  
-    mutate(nchannels = length(unique(channel))) %>%
+    mutate(nchannels = length(unique(na.omit(channel)))) %>%
     
     # drop any groups that only have one channel (nothing to compare)
     dplyr::filter(nchannels > 1)
@@ -347,8 +353,8 @@ one_experiment <- function(dat_sub, experiment, results_dir, sig.figs = 4, ledge
     within_grp <- within_grp %>%
       
       # create one row per two-way comparison
-      reframe(channel_a = combn(unique(channel), 2)[1,],
-              channel_b = combn(unique(channel), 2)[2,],
+      reframe(channel_a = combn(unique(na.omit(channel)), 2)[1,],
+              channel_b = combn(unique(na.omit(channel)), 2)[2,],
               a_vs_b = list(''))
     
     # make comparisons for all pairs
@@ -394,7 +400,7 @@ one_experiment <- function(dat_sub, experiment, results_dir, sig.figs = 4, ledge
   btw_trt <- group_by(dat_sub, date, experiment, sample) %>%
     
     # check to see how many channels we have in each group  
-    mutate(ntrts = length(unique(treatment))) %>%
+    mutate(ntrts = length(unique(na.omit(treatment)))) %>%
     
     # drop any groups that only have one channel (nothing to compare)
     dplyr::filter(ntrts > 1,
@@ -406,9 +412,9 @@ one_experiment <- function(dat_sub, experiment, results_dir, sig.figs = 4, ledge
     btw_trt <- btw_trt %>%
       
       # create one row per two-way comparison
-      reframe(trt_a = paste(combn(unique(treatment), 2)[1,]),
-                trt_b = paste(combn(unique(treatment), 2)[2,]),
-                a_vs_b = list(''))
+      reframe(trt_a = paste(combn(unique(na.omit(treatment)), 2)[1,]),
+              trt_b = paste(combn(unique(na.omit(treatment)), 2)[2,]),
+              a_vs_b = list(''))
     
     # make comparisons for all pairs
     for(i in 1:nrow(btw_trt))
@@ -449,7 +455,7 @@ one_experiment <- function(dat_sub, experiment, results_dir, sig.figs = 4, ledge
   btw_samp <- group_by(dat_sub, date, experiment, treatment) %>%
     
     # check to see how many channels we have in each group  
-    mutate(nsamps = length(unique(sample))) %>%
+    mutate(nsamps = length(unique(na.omit(sample)))) %>%
     
     # drop any groups that only have one channel (nothing to compare)
     dplyr::filter(nsamps > 1)
@@ -460,8 +466,8 @@ one_experiment <- function(dat_sub, experiment, results_dir, sig.figs = 4, ledge
     btw_samp <- btw_samp %>%
       
       # create one row per two-way comparison
-      reframe(a = paste(combn(unique(sample), 2)[1,]),
-              b = paste(combn(unique(sample), 2)[2,]),
+      reframe(a = paste(combn(unique(na.omit(sample)), 2)[1,]),
+              b = paste(combn(unique(na.omit(sample)), 2)[2,]),
               a_vs_b = list(''))
     
     # make comparisons for all pairs
@@ -719,7 +725,7 @@ one_experiment <- function(dat_sub, experiment, results_dir, sig.figs = 4, ledge
 #' @importFrom magrittr %>%
 #' @importFrom dplyr matches select mutate
 #' @importFrom foreach foreach %dopar%
-#' @importFrom stats rbinom smooth.spline
+#' @importFrom stats na.omit rbinom smooth.spline
 #' @importFrom briKmeans kma.similarity
 compare_two_functions <- function(data, frames.f, f, g, sig.figs, frames.g = frames.f, lab = NULL)
 {
