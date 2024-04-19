@@ -171,7 +171,11 @@ one_experiment <- function(dat_sub, experiment, results_dir, sig.figs = 4, ledge
   # Prep dat_sub for summarization #
   ##################################
   
-  dat_sub <- group_by(dat_sub, f, date, experiment, channel, sample, treatment, Track) %>%
+  dat_sub <- dat_sub %>%
+    
+    # split tracks that have large gaps in them (see if we still need this after upgrades to the tracking software)
+    # split_tracks() %>%
+    
     mutate(
       # this is the frame where the cell first crosses the upper ledge
       cross_at = case_when(    Y[1] >= 0  ~ Frame[1],
