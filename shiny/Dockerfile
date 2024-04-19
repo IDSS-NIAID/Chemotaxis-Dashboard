@@ -43,16 +43,16 @@ RUN rm -rf libsodium-stable
 # install R #
 #############
 
-RUN wget https://cran.r-project.org/src/base/R-4/R-4.3.1.tar.gz
-RUN tar -zxf R-4.3.1.tar.gz
-RUN rm -f R-4.3.1.tar.gz
-WORKDIR "/R-4.3.1"
+RUN wget https://cran.r-project.org/src/base/R-4/R-4.3.2.tar.gz
+RUN tar -zxf R-4.3.2.tar.gz
+RUN rm -f R-4.3.2.tar.gz
+WORKDIR "/R-4.3.2"
 
 RUN ./configure --with-readline=no --with-x=no --with-pcre1
 RUN make
 RUN make install
 WORKDIR "/"
-RUN rm -rf R-4.3.1
+RUN rm -rf R-4.3.2
 
 
 #################
@@ -60,6 +60,7 @@ RUN rm -rf R-4.3.1
 #################
 
 # see https://github.com/rstudio/shiny-server/wiki/Building-Shiny-Server-from-Source
+# See also https://posit.co/download/shiny-server/ (the Centos 7 binaries should work)
 
 RUN R -e "install.packages(c('devtools', 'shiny'), repos='https://cran.rstudio.com', dependencies=TRUE)"
 RUN # Clone the repository from GitHub
