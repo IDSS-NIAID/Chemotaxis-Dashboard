@@ -179,19 +179,19 @@ one_experiment <- function(dat_sub, experiment, results_dir, sig.figs = 4, ledge
     mutate(
       # this is the frame where the cell first crosses the upper ledge
       cross_at = case_when(    Y[1] >= 0  ~ Frame[1],
-                               all(Y    <  0) ~ Frame[1], # if it never crosses the top ledge, use time 0 as the starting point
+                               all(Y    <  0) ~ Frame[n()], # if it never crosses the top ledge, use the last frame as the starting point
                                TRUE           ~ suppressWarnings(min(Frame[c(FALSE, Y[-length(Y)] < 0 & Y[-1] >= 0)], na.rm = TRUE))),
       
       # translate X st each cell starts at (0,~0) when first crossing top ledge
-      X = X - X[Frame == cross_at],
+      # x = X - X[Frame == cross_at],
       
       # X and Y are scaled s.t. the distance from the top to the bottom ledge is 1
       # convert to micrometers
-      X = X * ledge_dist,
-      Y = Y * ledge_dist,
+      x = X * ledge_dist,
+      y = Y * ledge_dist,
       
-      y_min = min(Y),
-      y_max = max(Y),
+      y_min = min(y),
+      y_max = max(y),
       
       # remove '.csv' from file names
       f = gsub('.csv', '', f, fixed = TRUE)) %>%
@@ -210,17 +210,17 @@ one_experiment <- function(dat_sub, experiment, results_dir, sig.figs = 4, ledge
   track_summ <- group_by(dat_sub, channel, sample, treatment, Track, experiment) %>%
     
     # make sure we have enough observations to use the track
-    mutate(l = sum(!is.na(X))) %>%
+    mutate(l = sum(!is.na(x))) %>%
     filter(l > 3) %>%
     
-    # calculate smooth functions of X and Y over time
+    # calculate smooth functions of x and y over time
     summarize(
-      x = map2(list(Frame), list(X), ~ 
+      x = map2(list(Frame), list(x), ~ 
                  {
                    tmp <- smooth.spline(.x, .y)
                    splinefun(tmp$x, tmp$y)
                  }),
-      y = map2(list(Frame), list(Y), ~ 
+      y = map2(list(Frame), list(y), ~ 
                  {
                    tmp <- smooth.spline(.x, .y)
                    splinefun(tmp$x, tmp$y)
@@ -245,7 +245,7 @@ one_experiment <- function(dat_sub, experiment, results_dir, sig.figs = 4, ledge
       # calculate the total distance traveled using the distance formula
       distance_traveled = map2_dbl(x, y, ~ sum( sqrt( (.x[-1]-.x[-length(.x)])^2+(.y[-1]-.y[-length(.y)])^2 ) )),
       
-      # chemotactic efficiency for each track is the change in Y (delta_y) divided by the total distance (distance_traveled) 
+      # chemotactic efficiency for each track is the change in y (delta_y) divided by the total distance (distance_traveled) 
       ce = delta_y / distance_traveled,
       
       # Angle of migration
@@ -279,13 +279,13 @@ one_experiment <- function(dat_sub, experiment, results_dir, sig.figs = 4, ledge
   channel_summ <- group_by(dat_sub, f, date, experiment, channel, sample, treatment) %>%
     
     summarize(
-      # calculate smooth functions of X and Y over time
-      x = map2(list(Frame), list(X), ~ 
+      # calculate smooth functions of x and y over time
+      x = map2(list(Frame), list(x), ~ 
                  {
                    tmp <- smooth.spline(.x, .y)
                    splinefun(tmp$x, tmp$y)
                  }),
-      y = map2(list(Frame), list(Y), ~ 
+      y = map2(list(Frame), list(y), ~ 
                  {
                    tmp <- smooth.spline(.x, .y)
                    splinefun(tmp$x, tmp$y)
@@ -307,8 +307,8 @@ one_experiment <- function(dat_sub, experiment, results_dir, sig.figs = 4, ledge
       directed_v_undirected = pmap(list(chan = channel, frames = frames, f = x, g = y),
                                    function(chan, frames, f, g)
                                      filter(dat_sub, channel == chan) %>%
-                                     dplyr::select(Track, Frame, X, Y) %>% 
-                                     rename(f = X, g = Y) %>%
+                                     dplyr::select(Track, Frame, x, y) %>% 
+                                     rename(f = x, g = y) %>%
                                      compare_two_functions(frames, f, g, sig.figs)),
       dvud   = map_dbl(directed_v_undirected, ~ .x['dissim']),
       dvud_p = map_dbl(directed_v_undirected, ~ .x['p']),
@@ -368,20 +368,20 @@ one_experiment <- function(dat_sub, experiment, results_dir, sig.figs = 4, ledge
       f <- filter(dat_sub, paste(treatment) == paste(within_grp$treatment[i]) &
                     paste(sample   ) == paste(within_grp$sample[i]) &
                     channel    == within_grp$channel_a[i])
-      f <- list(smooth.spline(f$Frame, f$X),
-                smooth.spline(f$Frame, f$Y))
+      f <- list(smooth.spline(f$Frame, f$x),
+                smooth.spline(f$Frame, f$y))
       
       g <- filter(dat_sub, paste(treatment) == paste(within_grp$treatment[i]) &
                     paste(sample   ) == paste(within_grp$sample[i]) &
                     channel    ==       within_grp$channel_b[i])
-      g <- list(smooth.spline(g$Frame, g$X),
-                smooth.spline(g$Frame, g$Y))
+      g <- list(smooth.spline(g$Frame, g$x),
+                smooth.spline(g$Frame, g$y))
       
       # calculate similarity and p-value
       within_grp$a_vs_b[[i]] <- filter(dat_sub, paste(treatment) == paste(within_grp$treatment[i]) &
                                          paste(sample   ) == paste(within_grp$sample[i]) &
                                          channel   %in%    c(within_grp$channel_a[i], within_grp$channel_b[i])) %>%
-        mutate(f = X) %>%
+        mutate(f = x) %>%
         compare_two_functions(f = sapply(f, function(.x) .x$y), frames.f = f[[1]]$x, 
                               g = sapply(g, function(.x) .x$y), frames.g = g[[1]]$x,
                               sig.figs = sig.figs, lab = 'channel')
@@ -426,18 +426,18 @@ one_experiment <- function(dat_sub, experiment, results_dir, sig.figs = 4, ledge
       # get functions to compare
       f <- filter(dat_sub, paste(treatment) == paste(btw_trt$trt_a[i]) &
                                  sample     ==       btw_trt$sample[i])
-      f <- list(smooth.spline(f$Frame, f$X),
-                smooth.spline(f$Frame, f$Y))
+      f <- list(smooth.spline(f$Frame, f$x),
+                smooth.spline(f$Frame, f$y))
       
       g <- filter(dat_sub, paste(treatment) == paste(btw_trt$trt_b[i]) &
                                  sample     ==       btw_trt$sample[i])
-      g <- list(smooth.spline(g$Frame, g$X),
-                smooth.spline(g$Frame, g$Y))
+      g <- list(smooth.spline(g$Frame, g$x),
+                smooth.spline(g$Frame, g$y))
       
       # calculate similarity and p-value
       btw_trt$a_vs_b[[i]] <- filter(dat_sub, paste(treatment) %in% c(paste(btw_trt$trt_a[i]), paste(btw_trt$trt_b[i])) &
                                       sample == btw_trt$sample[i]) %>%
-        mutate(f = X) %>%
+        mutate(f = x) %>%
         compare_two_functions(f = sapply(f, function(.x) .x$y), frames.f = f[[1]]$x, 
                               g = sapply(g, function(.x) .x$y), frames.g = g[[1]]$x,
                               sig.figs = sig.figs, lab = 'treatment')
@@ -480,18 +480,18 @@ one_experiment <- function(dat_sub, experiment, results_dir, sig.figs = 4, ledge
       # get functions to compare
       f <- filter(dat_sub, paste(sample   ) == paste(btw_samp$a[i]) &
                     paste(treatment) == paste(btw_samp$treatment[i]))
-      f <- list(smooth.spline(f$Frame, f$X),
-                smooth.spline(f$Frame, f$Y))
+      f <- list(smooth.spline(f$Frame, f$x),
+                smooth.spline(f$Frame, f$y))
       
       g <- filter(dat_sub, paste(sample   ) == paste(btw_samp$b[i]) &
                     paste(treatment) == paste(btw_samp$treatment[i]))
-      g <- list(smooth.spline(g$Frame, g$X),
-                smooth.spline(g$Frame, g$Y))
+      g <- list(smooth.spline(g$Frame, g$x),
+                smooth.spline(g$Frame, g$y))
       
       # calculate similarity and p-value
       btw_samp$a_vs_b[[i]] <- filter(dat_sub, paste(sample  ) %in% c(paste(btw_samp$a[i]), paste(btw_samp$b[i])) &
                                        paste(treatment) ==    paste(btw_samp$treatment[i])) %>%
-        mutate(f = X) %>%
+        mutate(f = x) %>%
         compare_two_functions(f = sapply(f, function(.x) .x$y), frames.f = f[[1]]$x, 
                               g = sapply(g, function(.x) .x$y), frames.g = g[[1]]$x,
                               sig.figs = sig.figs, lab = 'sample')
@@ -528,7 +528,7 @@ one_experiment <- function(dat_sub, experiment, results_dir, sig.figs = 4, ledge
     mutate(lab = paste0(channel, ": ", sample, ", ", treatment),
            minutes = Frame / 2) %>%
     
-    ggplot(aes(x = X, y = Y, group = Track, color = minutes)) +
+    ggplot(aes(x = x, y = y, group = Track, color = minutes)) +
     geom_path() + #connects observations in the order in which they appear in the dataset
     
     ylab('Directed Movement') +
@@ -719,7 +719,7 @@ one_experiment <- function(dat_sub, experiment, results_dir, sig.figs = 4, ledge
 #' set.
 #' 
 #' @return A named vector containing the similarity measure and permutation p-value
-#' .data <- filter(dat_sub, channel == 1) %>% dplyr::select(Track, Frame, X, Y) %>% rename(f = X, g = Y)
+#' .data <- filter(dat_sub, channel == 1) %>% dplyr::select(Track, Frame, x, y) %>% rename(f = x, g = y)
 #' frames <- channel_summ$frames[[1]]
 #' f <- channel_summ$x[[1]]
 #' g <- channel_summ$y[[1]]
@@ -799,15 +799,15 @@ compare_two_functions <- function(data, frames.f, f, g, sig.figs, frames.g = fra
           
           # smooth f and g
           tmp <- dplyr::filter(shuffled, lab == names(grps)[1])  # filter by shuffled group
-          f_shuff <- list(smooth.spline(tmp$Frame, tmp$X),             # smooth undirected function
-                          smooth.spline(tmp$Frame, tmp$Y))             # smooth directed function
+          f_shuff <- list(smooth.spline(tmp$Frame, tmp$x),             # smooth undirected function
+                          smooth.spline(tmp$Frame, tmp$y))             # smooth directed function
           
           f_shuff <- list(x = sapply(f_shuff, function(.x) .x$x),
                           y = sapply(f_shuff, function(.x) .x$y))      # return two columns (un/directed) of smoothed functions
           
           tmp <- dplyr::filter(shuffled, lab == names(grps)[2])  # filter by shuffled group
-          g_shuff <- list(smooth.spline(tmp$Frame, tmp$X),             # smooth undirected function
-                          smooth.spline(tmp$Frame, tmp$Y))             # smooth directed function
+          g_shuff <- list(smooth.spline(tmp$Frame, tmp$x),             # smooth undirected function
+                          smooth.spline(tmp$Frame, tmp$y))             # smooth directed function
           
           g_shuff <- list(x = sapply(g_shuff, function(.x) .x$x),
                           y = sapply(g_shuff, function(.x) .x$y))      # return two columns (un/directed) of smoothed functions

@@ -31,7 +31,7 @@ compare_two_functions(
 }
 \value{
 A named vector containing the similarity measure and permutation p-value
-.data <- filter(dat_sub, channel == 1) %>% dplyr::select(Track, Frame, X, Y) %>% rename(f = X, g = Y)
+.data <- filter(dat_sub, channel == 1) %>% dplyr::select(Track, Frame, x, y) %>% rename(f = x, g = y)
 frames <- channel_summ$frames[[1]]
 f <- channel_summ$x[[1]]
 g <- channel_summ$y[[1]]

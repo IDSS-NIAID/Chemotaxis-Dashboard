@@ -134,11 +134,14 @@ dbinit <- function(db_path, data = NULL)
   # @param expID (key) Character, maps to `expSummary$expID`
   # @param chanID (key) Integer, maps to `chanSummary$chanID`
   # @param trackID (key) Integer, maps to `trackSummary$trackID`
-  # @param x Double, x-position for the track
-  # @param y Double, y-position for the track
+  # @param X Double, x-position for the track in proportion of the channel width
+  # @param Y Double, y-position for the track in proportion of the channel width
+  # @param x Double, x-position for the track in micrometers
+  # @param y Double, y-position for the track in micrometers
   # @param frames (key) Integer, frame (sampled every 30 seconds)
-  # @param v_x Double, velocity in the x direction (undirected)
-  # @param v_y Double, velocity in the y direction (directed)
+  # @param time Double, time in minutes
+  # @param v_x Double, velocity in the x direction (undirected) in micrometers per minute
+  # @param v_y Double, velocity in the y direction (directed) in micrometers per minute
   # @param v Double, total velocity
   dbupdate(con, 'trackRaw', data$trackRaw, c('expID', 'chanID', 'trackID', 'frames'))
 
