@@ -110,12 +110,11 @@ process_experiments <- function(experiment, source_dir, results_dir, seed = NULL
 
   
   ##### pre-process data for these experiments #####
-  set.seed(seed)
-  
   retval <- unique(dat$experiment) %>%
     map(~ one_experiment(dat_sub = filter(dat, experiment == .x),
                          experiment = .x,
                          results_dir = results_dir, 
+                         seed = seed,
                          sig.figs = sig.figs,
                          ledge_dist = ledge_dist))
 
@@ -133,6 +132,7 @@ process_experiments <- function(experiment, source_dir, results_dir, seed = NULL
 #' @param dat_sub data frame (tibble) containing the subset of data for a single experiment
 #' @param experiment Date of the experiment to run. Argument should be of the form: `experiment="\%Y\%m\%d"`.
 #' @param results_dir path to directory for saving data
+#' @param seed seed for random number generation
 #' @param sig.figs maximum significant digits for p-values obtained by permutation testing
 #' @param ledge_dist Numeric, distance between top and bottom ledge of the microscope image in micrometers (default is 260)
 #' 
@@ -150,7 +150,7 @@ process_experiments <- function(experiment, source_dir, results_dir, seed = NULL
 #' @importFrom ggplot2 aes ggplot element_blank facet_wrap geom_boxplot geom_jitter geom_hline geom_path geom_violin ggsave scale_y_reverse scale_color_gradient2 scale_color_manual stat_smooth theme theme_set xlab ylab
 #' @importFrom cowplot theme_cowplot
 #' @importFrom grDevices rgb
-one_experiment <- function(dat_sub, experiment, results_dir, sig.figs = 4, ledge_dist = 260)
+one_experiment <- function(dat_sub, experiment, results_dir, seed = NULL, sig.figs = 4, ledge_dist = 260)
 {
   # for all those pesky "no visible binding" notes
   if(FALSE)
@@ -161,6 +161,9 @@ one_experiment <- function(dat_sub, experiment, results_dir, sig.figs = 4, ledge
     max_v_median <- max_v_sd <- minutes <- nchannels <- nsamps <- ntrts <- prop_finished <- tot_finished <- NULL
     Track <- treatment <- v <- v_x <- v_y <- X <- x <- Y <- y <- y_max <- y_min <- NULL
   }
+  
+  if(!is.null(seed))
+    set.seed(seed)
   
   # make sure file structure inside of `results_dir` is correct
   if(!file.exists(file.path(results_dir, 'images', experiment)))

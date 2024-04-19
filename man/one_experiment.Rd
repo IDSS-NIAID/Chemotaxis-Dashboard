@@ -8,6 +8,7 @@ one_experiment(
   dat_sub,
   experiment,
   results_dir,
+  seed = NULL,
   sig.figs = 4,
   ledge_dist = 260
 )
@@ -18,6 +19,8 @@ one_experiment(
 \item{experiment}{Date of the experiment to run. Argument should be of the form: `experiment="\%Y\%m\%d"`.}
 
 \item{results_dir}{path to directory for saving data}
+
+\item{seed}{seed for random number generation}
 
 \item{sig.figs}{maximum significant digits for p-values obtained by permutation testing}
 
