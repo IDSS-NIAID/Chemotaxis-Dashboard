@@ -10,7 +10,9 @@ one_experiment(
   results_dir,
   seed = NULL,
   sig.figs = 4,
-  ledge_dist = 260
+  ledge_dist = 260,
+  ledge_upper = 100,
+  ledge_lower = 500
 )
 }
 \arguments{
@@ -25,6 +27,10 @@ one_experiment(
 \item{sig.figs}{maximum significant digits for p-values obtained by permutation testing}
 
 \item{ledge_dist}{Numeric, distance between top and bottom ledge of the microscope image in micrometers (default is 260)}
+
+\item{ledge_upper}{Numeric, location of the upper ledge in the raw Y coordinate system (default is 100). This should be the first ledge crossed.}
+
+\item{ledge_lower}{Numeric, location of the lower ledge in the raw Y coordinate system (default is 500). This should be the second ledge crossed.}
 }
 \value{
 A list of data.frames containing summaries and raw data from the data in dat_sub.

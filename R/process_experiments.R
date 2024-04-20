@@ -13,7 +13,9 @@
 #' @param results_dir Path to processed data directory
 #' @param seed Random seed to use
 #' @param sig.figs Number of significant figures to pass to one_experiment`
-#' @param ledge_dist Numeric, distance between top and bottom ledge of the microscope image in micrometers (default is 260)
+#' @param ledge_dist Numeric, distance between top and bottom ledges of the microscope image in micrometers (default is 260)
+#' @param ledge_upper Numeric, location of the upper ledge in the raw Y coordinate system (default is 100)
+#' @param ledge_lower Numeric, location of the lower ledge in the raw Y coordinate system (default is 500)
 #' 
 #' @details Work performed in `compare_two_functions`, called by this function, uses the `doParallel` package.
 #' Using multiple cores will speed this step up significantly. To do so, you will need to make a cluster and 
@@ -39,8 +41,8 @@
 #' 
 #' @importFrom dplyr %>% bind_rows left_join mutate select tibble
 #' @importFrom purrr map map_chr map_int map_df map2_chr map2_df
-#' @importFrom readr read_delim
-process_experiments <- function(experiment, source_dir, results_dir, seed = NULL, sig.figs = 4, ledge_dist = 260)
+#' @importFrom readr read_csv
+process_experiments <- function(experiment, source_dir, results_dir, seed = NULL, sig.figs = 4, ledge_dist = 260, ledge_upper = 100, ledge_lower = 500)
 {
   # for all those pesky "no visible binding" notes
   if(FALSE)
@@ -93,7 +95,7 @@ process_experiments <- function(experiment, source_dir, results_dir, seed = NULL
   dat <- map2_df(source_dir, f, ~
                    {
                      paste(.x, .y, sep = '/') %>%
-                       read_delim(delim = '\t', col_types = 'dddd') %>%
+                       read_csv(col_types = 'dddd') %>%
                        mutate(f = .y)
                    }) %>%
 
@@ -135,6 +137,8 @@ process_experiments <- function(experiment, source_dir, results_dir, seed = NULL
 #' @param seed seed for random number generation
 #' @param sig.figs maximum significant digits for p-values obtained by permutation testing
 #' @param ledge_dist Numeric, distance between top and bottom ledge of the microscope image in micrometers (default is 260)
+#' @param ledge_upper Numeric, location of the upper ledge in the raw Y coordinate system (default is 100). This should be the first ledge crossed.
+#' @param ledge_lower Numeric, location of the lower ledge in the raw Y coordinate system (default is 500). This should be the second ledge crossed.
 #' 
 #' @return A list of data.frames containing summaries and raw data from the data in dat_sub.
 #' @export
@@ -150,7 +154,7 @@ process_experiments <- function(experiment, source_dir, results_dir, seed = NULL
 #' @importFrom ggplot2 aes ggplot element_blank facet_wrap geom_boxplot geom_jitter geom_hline geom_path geom_violin ggsave scale_y_reverse scale_color_gradient2 scale_color_manual stat_smooth theme theme_set xlab ylab
 #' @importFrom cowplot theme_cowplot
 #' @importFrom grDevices rgb
-one_experiment <- function(dat_sub, experiment, results_dir, seed = NULL, sig.figs = 4, ledge_dist = 260)
+one_experiment <- function(dat_sub, experiment, results_dir, seed = NULL, sig.figs = 4, ledge_dist = 260, ledge_upper = 100, ledge_lower = 500)
 {
   # for all those pesky "no visible binding" notes
   if(FALSE)
@@ -181,29 +185,70 @@ one_experiment <- function(dat_sub, experiment, results_dir, seed = NULL, sig.fi
     
     mutate(
       # this is the frame where the cell first crosses the upper ledge
-      cross_at = case_when(    Y[1] >= 0  ~ Frame[1],
-                               all(Y    <  0) ~ Frame[n()], # if it never crosses the top ledge, use the last frame as the starting point
-                               TRUE           ~ suppressWarnings(min(Frame[c(FALSE, Y[-length(Y)] < 0 & Y[-1] >= 0)], na.rm = TRUE))),
+      cross_at = case_when(    Y[1] >= ledge_upper  ~ Frame[1],
+                           
+                           # if it never crosses the top ledge, use the last frame as the starting point
+                           all(Y    <  ledge_upper) ~ Frame[n()], 
+                           
+                           # if it crosses the top ledge, find the first frame where it crosses
+                           TRUE           ~ suppressWarnings(min(Frame[c(FALSE, Y[-length(Y)] <  ledge_upper &
+                                                                                Y[-1]         >= ledge_upper)], na.rm = TRUE))),
+    
+      # this is the frame where the cell first crosses the bottom ledge
+      finish_at = case_when(# if it never crosses the bottom ledge, use the last frame as the ending point
+                            all(Y < ledge_lower) ~ Frame[length(Y)],
+                            
+                            # if it isn't tracked until after it crosses the lower ledge, use the first frame as the ending point
+                            all(Y > ledge_lower) | Y[length(Y)] > ledge_lower ~ Frame[1],
+                            
+                            # if it crosses the bottom ledge, find the first frame where it crosses
+                            TRUE           ~ suppressWarnings(min(Frame[c(FALSE, Y[-length(Y)] >  ledge_lower &
+                                                                                 Y[-1]         <= ledge_lower)], na.rm = TRUE))),
       
       # translate X st each cell starts at (0,~0) when first crossing top ledge
-      # x = X - X[Frame == cross_at],
-      
-      # X and Y are scaled s.t. the distance from the top to the bottom ledge is 1
+      x = X - X[Frame == cross_at],
+
       # convert to micrometers
-      x = X * ledge_dist,
-      y = Y * ledge_dist,
+      x =  X                * ledge_dist / (ledge_lower - ledge_upper),
+      y = (Y - ledge_upper) * ledge_dist / (ledge_lower - ledge_upper), # center at upper ledge before converting to micrometers
       
       y_min = min(y),
       y_max = max(y),
-      
+
       # remove '.csv' from file names
       f = gsub('.csv', '', f, fixed = TRUE)) %>%
+
     ungroup() %>%
     
-    # drop any "cells" that don't move at all (+/- a few pixels)
-    filter(y_max - y_min > 0.01 &
+    # drop any "cells" that don't move at all (+/- a few pixels / at least one micrometer)
+    filter(y_max - y_min > 1 &
              # drop this one that didn't work
-             (is.na(treatment) | treatment != 'fMLF (did not work)'))
+             (is.na(treatment) | treatment != 'fMLF (did not work)'),
+    
+           Frame >= cross_at,  # drop any frames prior to crossing the upper ledge
+           y_max > 0,          # as well as any tracks that never cross the upper ledge
+           Frame <= finish_at, # and any frames after crossing the lower ledge
+           
+           y >= 0,             # drop any points below the upper ledge
+           y <= ledge_dist)    # and above the lower ledge
+    
+    
+  # ###################
+  # # Collapse tracks #
+  # ###################
+  # 
+  # # start with tracks that we know crossed the top ledge
+  # tracks <- filter(dat_sub, y_min < 0) %>%
+  #   
+  #   arrange(min_frame, y_min, Track, Frame)
+  # 
+  # for(i in unique(dat_sub$channel))
+  # {
+  #   for(j in 0:120)
+  #   {
+  #     
+  #   }
+  # }
   
   
   #############################
@@ -262,8 +307,9 @@ one_experiment <- function(dat_sub, experiment, results_dir, seed = NULL, sig.fi
       #peak velocity
       max_v = map_dbl(v, ~ max(.x)),
       
-      #average velocity
+      #average velocity and standard deviation
       av_velocity = map_dbl(v, ~ mean(.x)),
+      sd_velocity = map_dbl(v, ~ sd(.x)),
       
       # Proportion of cells making it past the threshold
       # at the track level, we want to know if the cell ever passes the bottom ledge

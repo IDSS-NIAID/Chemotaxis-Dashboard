@@ -1,6 +1,6 @@
 Package: ChemotaxisDashboard
 Title: Chemotaxis dashboard
-Version: 0.1.3
+Version: 0.1.4
 Authors@R: c(person('Randy', 'Johnson', email = 'Randall.Johnson@nih.gov',
                     role = c('cre','aut')))
 Description: Dashboard for exploring chemotaxis data.
@@ -33,5 +33,5 @@ Encoding: UTF-8
 URL: https://github.com/abcsFrederick/Chemotaxis-Dashboard
 BugReports: https://github.com/abcsFrederick/Chemotaxis-Dashboard/issues
 Language: en-US
-RoxygenNote: 7.2.3
+RoxygenNote: 7.3.1
 Config/testthat/edition: 3

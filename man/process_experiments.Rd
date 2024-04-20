@@ -11,7 +11,9 @@ process_experiments(
   results_dir,
   seed = NULL,
   sig.figs = 4,
-  ledge_dist = 260
+  ledge_dist = 260,
+  ledge_upper = 100,
+  ledge_lower = 500
 )
 }
 \arguments{
@@ -25,7 +27,11 @@ process_experiments(
 
 \item{sig.figs}{Number of significant figures to pass to one_experiment`}
 
-\item{ledge_dist}{Numeric, distance between top and bottom ledge of the microscope image in micrometers (default is 260)}
+\item{ledge_dist}{Numeric, distance between top and bottom ledges of the microscope image in micrometers (default is 260)}
+
+\item{ledge_upper}{Numeric, location of the upper ledge in the raw Y coordinate system (default is 100)}
+
+\item{ledge_lower}{Numeric, location of the lower ledge in the raw Y coordinate system (default is 500)}
 }
 \value{
 A list of data.frames...
