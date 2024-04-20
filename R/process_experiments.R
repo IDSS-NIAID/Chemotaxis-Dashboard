@@ -161,9 +161,9 @@ one_experiment <- function(dat_sub, experiment, results_dir, seed = NULL, sig.fi
   {
     angle_mean <- angle_median <- angle_migration <- angle_sd <- ce <- ce_mean <- ce_median <- ce_sd <- NULL
     channel <- channel_a <- cross_at <- d <- delta_x <- delta_y <- directed_v_undirected <- distance_traveled <- NULL
-    dvud <- dvud_p <- experiment <- finished <- Frame <- frames <- grp <- l <- max_y <- max_v <- max_v_mean <- NULL
-    max_v_median <- max_v_sd <- minutes <- nchannels <- nsamps <- ntrts <- prop_finished <- tot_finished <- NULL
-    Track <- treatment <- v <- v_x <- v_y <- X <- x <- Y <- y <- y_max <- y_min <- NULL
+    dvud <- dvud_p <- experiment <- finish_at <- finished <- Frame <- frames <- grp <- key_violation <- l <- max_y <- NULL
+    max_v <- max_v_mean <- max_v_median <- max_v_sd <- minutes <- nchannels <- nsamps <- ntrts <- prop_finished <- NULL
+    tot_finished <- Track <- treatment <- v <- v_x <- v_y <- X <- x <- Y <- y <- y_max <- y_min <- NULL
   }
   
   if(!is.null(seed))
@@ -180,9 +180,20 @@ one_experiment <- function(dat_sub, experiment, results_dir, seed = NULL, sig.fi
   
   dat_sub <- dat_sub %>%
     
+    # should already be sorted, but just to be sure...
+    arrange(experiment, channel, Track, Frame) %>%
+    
+    # look for cells that are in two places at once (this compares row i with row i+1)
+    mutate(key_violation = c(Frame[-n()] == Frame[-1], FALSE) &
+             c(Track[-n()] == Track[-1], FALSE)) %>%
+  
+    filter(!key_violation &                                      # matches the row after this
+           !c(FALSE, key_violation[-length(key_violation)])) %>% # matches the row previous to this
+  
     # split tracks that have large gaps in them (see if we still need this after upgrades to the tracking software)
     # split_tracks() %>%
     
+    group_by(f, date, experiment, channel, sample, treatment, Track) %>%
     mutate(
       # this is the frame where the cell first crosses the upper ledge
       cross_at = case_when(    Y[1] >= ledge_upper  ~ Frame[1],
