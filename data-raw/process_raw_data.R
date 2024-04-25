@@ -36,7 +36,9 @@ if(file.exists(db_path) & file.size(db_path) > 0)
 # get all experiments
 all_experiments <- list.files(file.path(root, 'data-raw', 'results_csv')) %>%
   grep(pattern = '19000101', value = TRUE, invert = TRUE, fixed = TRUE) %>%
-  str_sub(start = 1, end = 8) %>%
+  str_split(pattern = '_') %>%
+  sapply(`[`, 1) |>
+  str_replace('-$', '') |>
   unique()
 all_experiments <- all_experiments[!all_experiments %in% done]
 
@@ -49,9 +51,14 @@ if(length(all_experiments) > 0)
                                         results_dir = file.path(root, '.data'),
                                         seed = 923847)
   
+  # add access to processed data
   processed_data$access <- data.frame(user = 'kuhnslab',
                                       expID = processed_data$expSummary$expID)
+  
+  # need to do this once (pick a better password)
+  # dbExecute(con, 'INSERT INTO users VALUES ("kuhnslab", "12345")')
 
+  # add new records to the database
   dbinit(db_path, processed_data)
 }
 

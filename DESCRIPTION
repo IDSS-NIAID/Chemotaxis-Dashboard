@@ -1,6 +1,6 @@
 Package: ChemotaxisDashboard
 Title: Chemotaxis dashboard
-Version: 0.1.4
+Version: 0.1.5
 Authors@R: c(person('Randy', 'Johnson', email = 'Randall.Johnson@nih.gov',
                     role = c('cre','aut')))
 Description: Dashboard for exploring chemotaxis data.
@@ -24,6 +24,7 @@ Imports:
   RSQLite,
   shiny,
   shinymanager,
+  stringr,
   tidyr
 Suggests:
     doParallel,

@@ -42,18 +42,20 @@
 #' @importFrom dplyr %>% bind_rows left_join mutate select tibble
 #' @importFrom purrr map map_chr map_int map_df map2_chr map2_df
 #' @importFrom readr read_csv
+#' @importFrom stringr str_replace
 process_experiments <- function(experiment, source_dir, results_dir, seed = NULL, sig.figs = 4, ledge_dist = 260, ledge_upper = 100, ledge_lower = 500)
 {
   # for all those pesky "no visible binding" notes
   if(FALSE)
-    bad <- X <- Y <- NULL
+    channel <- dup <- key <- X <- Y <- NULL
   
   options(dplyr.summarise.inform = FALSE)
 
   # source files for processing
   f <- list.files(source_dir)
   f <- map(experiment, ~ grep(.x, f, value = TRUE)) %>%
-    unlist()
+    unlist() |>
+    unique()
   
 
   ##### experiment metadata #####
@@ -66,8 +68,9 @@ process_experiments <- function(experiment, source_dir, results_dir, seed = NULL
         substr(1, 8) %>%
         as.Date(format = '%Y%m%d')},
     
-    bad = map_lgl(dat, ~ grepl(.x, pattern = '^[0-9]$') %>% any()), # some dates have two experiments - this will catch those
-
+    experiment = map_chr(dat, `[`, 1) |>
+      str_replace('-$', ''),
+    
     channel = map_int(dat, ~
                         {grep(.x, pattern = 'CH[1-6]', value = TRUE) %>%
                             substr(3, 3) %>%
@@ -86,9 +89,20 @@ process_experiments <- function(experiment, source_dir, results_dir, seed = NULL
                               grep(.x, pattern = 'fMLF|Basal|Buffer|C5a|SDF|IL.|LTB4',
                                    ignore.case = TRUE, value = TRUE)}[1])) %>%
 
-    mutate(sample = tolower(sample)) %>% # inconsistent capitalization
+    mutate(sample = tolower(sample),   # inconsistent capitalization
+           key = paste(experiment, channel),
+           dup = duplicated(key),
+           experiment = paste0(experiment, ifelse(dup, 'a',''))) %>%
 
-    dplyr::select(-dat)
+    dplyr::select(-dat, -key)
+  
+  # note any experiments that were run on the same day
+  if(any(results_meta$dup))
+  {
+    experiment <- c(experiment, unique(results_meta$experiment[results_meta$dup]))
+  }
+  
+  results_meta <- dplyr::select(results_meta, -dup)
 
 
   ##### read in raw data #####
@@ -103,12 +117,7 @@ process_experiments <- function(experiment, source_dir, results_dir, seed = NULL
 
     left_join(results_meta, by = 'f') %>%
 
-    # pull experiment name
-    mutate(experiment = map2_chr(f, ifelse(bad, 10, 8), ~ str_sub(.x, start = 1, end = .y))) %>%
-
-    filter(!is.na(X) & !is.na(Y)) %>%
-    
-    select(-bad)
+    filter(!is.na(X) & !is.na(Y))
 
   
   ##### pre-process data for these experiments #####
@@ -118,7 +127,9 @@ process_experiments <- function(experiment, source_dir, results_dir, seed = NULL
                          results_dir = results_dir, 
                          seed = seed,
                          sig.figs = sig.figs,
-                         ledge_dist = ledge_dist))
+                         ledge_dist = ledge_dist,
+                         ledge_upper = ledge_upper,
+                         ledge_lower = ledge_lower))
 
   list(expSummary   = map_df(retval, ~ .x$expSummary),
        expStats     = map_df(retval, ~ .x$expStats),
@@ -145,7 +156,7 @@ process_experiments <- function(experiment, source_dir, results_dir, seed = NULL
 #' @import rlang
 #' @importFrom magrittr %>%
 #' 
-#' @importFrom dplyr arrange case_when filter group_by left_join mutate reframe rename select starts_with summarize ungroup
+#' @importFrom dplyr arrange case_when filter group_by left_join mutate n_distinct reframe rename select starts_with summarize ungroup
 #' @importFrom tidyr pivot_longer
 #' @importFrom purrr map map_dbl map_lgl map2 map2_dbl pmap
 #' @importFrom stats lm median quantile sd smooth.spline splinefun
@@ -173,12 +184,20 @@ one_experiment <- function(dat_sub, experiment, results_dir, seed = NULL, sig.fi
   if(!file.exists(file.path(results_dir, 'images', experiment)))
     dir.create(file.path(results_dir, 'images', experiment), recursive = TRUE)
   
+  # make sure we aren't getting more than 6 channels (indicates we have a day with multiple experiments that we missed)
+  if(n_distinct(dat_sub$f) > 6)
+    paste('More than 6 channels detected. This is likely due to multiple experiments being run on the same day. Please check the data and try again.',
+          paste(unique(dat_sub$f), collapse = ', ')) |>
+    stop()
+  
   
   ##################################
   # Prep dat_sub for summarization #
   ##################################
   
   dat_sub <- dat_sub %>%
+    
+    unique() |> # remove duplicates - don't want them to be flagged as a key_violation below
     
     # should already be sorted, but just to be sure...
     arrange(experiment, channel, Track, Frame) %>%
@@ -230,6 +249,8 @@ one_experiment <- function(dat_sub, experiment, results_dir, seed = NULL, sig.fi
       f = gsub('.csv', '', f, fixed = TRUE)) %>%
 
     ungroup() %>%
+    
+    dplyr::select(-key_violation) |>
     
     # drop any "cells" that don't move at all (+/- a few pixels / at least one micrometer)
     filter(y_max - y_min > 1 &
