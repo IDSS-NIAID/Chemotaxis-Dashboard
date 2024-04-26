@@ -7,19 +7,16 @@
 #' 
 #' @return UI for Chemotaxis Dashboard
 #' @export
-#' @importFrom bslib page_sidebar sidebar
+#' @importFrom bslib page_navbar nav_panel sidebar
 #' @importFrom shiny actionButton icon tags
 #' @importFrom shinymanager secure_app
 app_ui <- function()
 {
-  ui <- page_sidebar(
-    title = 'Chemotaxis Dashboard',
-    sidebar = sidebar(
-      title = 'QC parameters', qc_sidebarUI('qc')
-    ),
-    
-    qc_cardsUI('qc')
-  ) %>%
+  ui <- page_navbar(title = 'Chemotaxis Dashboard',
+                    nav_panel(title = 'Cross-Experiment Summary',
+                              ces_cardsUI('ces')),
+                    nav_panel(title = 'QC parameters',
+                              qc_cardsUI('qc'))) |>
     secure_app(tags_top = tags$p(actionButton(inputId = "login_guest", 
                                               label = "Continue as guest", 
                                               icon = icon("user"))))
@@ -53,6 +50,8 @@ app_server <- function(credentials, con)
     res_auth <- secure_server(
       check_credentials = check_credentials(credentials)
     )
+    
+    ces_server("ces", con, reactiveValuesToList(res_auth)$user)
     
     qc_server("qc", con, reactiveValuesToList(res_auth)$user)
   }

@@ -24,8 +24,8 @@ qc_sidebarUI <- function(id, con, user)
                                   list(inputId = "sID",    label = "Sample"),
                                   list(inputId = "chanID", label = "Channel")),
                     inline = FALSE),
-    sliderInput(ns('qc_min_track_len'), 'Minimum Track Length', 3, 60, value = 6), # minimum track length in minutes
-    numericInput(ns('qc_n_cells'), 'Number of cells', value = 100)
+    #sliderInput(ns('qc_min_track_len'), 'Minimum Track Length', 3, 60, value = 6), # minimum track length in minutes
+    #numericInput(ns('qc_n_cells'), 'Number of cells', value = 100)
   )
 }
 
@@ -38,22 +38,23 @@ qc_sidebarUI <- function(id, con, user)
 #' @return A modularized tagList of cards
 #' @export
 #' 
-#' @importFrom bslib card card_header card_body card_footer
-#' @importFrom datamods select_group_ui
+#' @importFrom bslib card card_header card_body card_footer layout_sidebar
 #' @importFrom shiny downloadButton NS plotOutput tagList
 qc_cardsUI <- function(id)
 {
   ns <- NS(id)
   
   tagList(
-    card(full_screen = TRUE, 
-         card_header("Track length distribution"), 
-         card_body(plotOutput(ns("qc_track_len"))),
-         card_footer(downloadButton(ns('qc_track_len_download'), 'Download figure'))),
-    card(full_screen = TRUE, 
-         card_header("# Tracks (cells) over time"), 
-         card_body(plotOutput(ns("qc_n_cells"))),
-         card_footer(downloadButton(ns('qc_n_cells_download'), 'Download figure')))
+    layout_sidebar(
+      sidebar = sidebar(qc_sidebarUI('qc')),
+      card(full_screen = TRUE, 
+           card_header("Track length distribution"), 
+           card_body(plotOutput(ns("qc_track_len"))),
+           card_footer(downloadButton(ns('qc_track_len_download'), 'Download figure'))),
+      card(full_screen = TRUE, 
+           card_header("# Tracks (cells) over time"), 
+           card_body(plotOutput(ns("qc_n_cells"))),
+           card_footer(downloadButton(ns('qc_n_cells_download'), 'Download figure'))))
   )
 }
 
@@ -92,7 +93,7 @@ qc_server <- function(id, con, user)
                 user = user,
                 select = 'expID, trackID, frames',
                 from = 'trackRaw',
-                where = paste0( "expID=", chan_select()$expID,  " AND ",
+                where = paste0( "expID='", chan_select()$expID,  "' AND ",
                                "chanID=", chan_select()$chanID))
         })
       
