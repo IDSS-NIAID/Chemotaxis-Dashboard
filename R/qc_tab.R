@@ -7,14 +7,12 @@
 #' @name qc_tab
 #' 
 #' @param id Shiny namespace ID
-#' @param con Active DBI database connection
-#' @param user Username of the user
 #' 
 #' @return A modularized tagList
 #' @export
 #' @importFrom shiny NS numericInput sliderInput tagList
 #' @importFrom datamods select_group_ui
-qc_sidebarUI <- function(id, con, user)
+qc_sidebarUI <- function(id)
 {
   ns <- NS(id)
   

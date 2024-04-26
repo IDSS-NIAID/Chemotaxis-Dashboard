@@ -7,14 +7,12 @@
 #' @name ces_tab
 #' 
 #' @param id Shiny namespace ID
-#' @param con Active DBI database connection
-#' @param user Username of the user
 #' 
 #' @return A modularized tagList
 #' @export
 #' @importFrom shiny NS tagList
 #' @importFrom datamods select_group_ui
-ces_sidebarUI <- function(id, con, user)
+ces_sidebarUI <- function(id)
 {
   ns <- NS(id)
   
@@ -108,7 +106,7 @@ ces_server <- function(id, con, user)
         {
           where <- paste(paste0( "expID IN (", paste0('"', chan_select()$ expID, '"', collapse = ", "), ")"),
                          "AND",
-                         paste0("chanID IN (", paste(chan_select()$chanID, collapse = ", "), ")"))
+                         paste0("chanID IN (", paste(      chan_select()$chanID,      collapse = ", "), ")"))
         }else{
           where <- NULL
         }
