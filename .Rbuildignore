@@ -4,3 +4,5 @@
 ^shiny$
 ^data-raw$
 ^.data$
+
+^LICENSE\.md$
