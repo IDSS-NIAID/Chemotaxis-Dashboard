@@ -229,7 +229,7 @@ one_experiment <- function(dat_sub, experiment, results_dir, seed = NULL, sig.fi
                             all(Y < ledge_lower) ~ Frame[length(Y)],
                             
                             # if it isn't tracked until after it crosses the lower ledge, use the first frame as the ending point
-                            all(Y > ledge_lower) | Y[length(Y)] > ledge_lower ~ Frame[1],
+                            all(Y > ledge_lower) | Y[1] > ledge_lower ~ Frame[1],
                             
                             # if it crosses the bottom ledge, find the first frame where it crosses
                             TRUE           ~ suppressWarnings(min(Frame[c(FALSE, Y[-length(Y)] >  ledge_lower &
@@ -239,7 +239,7 @@ one_experiment <- function(dat_sub, experiment, results_dir, seed = NULL, sig.fi
       x = X - X[Frame == cross_at],
 
       # convert to micrometers
-      x =  X                * ledge_dist / (ledge_lower - ledge_upper),
+      x =  x                * ledge_dist / (ledge_lower - ledge_upper),
       y = (Y - ledge_upper) * ledge_dist / (ledge_lower - ledge_upper), # center at upper ledge before converting to micrometers
       
       y_min = min(y),
@@ -728,7 +728,7 @@ one_experiment <- function(dat_sub, experiment, results_dir, seed = NULL, sig.fi
        expStats = tibble(expID   = experiment,
                          within  = c(btw_samp$treatment, btw_trt$sample),
                          between = c(paste(btw_samp$a,    btw_samp$b,     sep = ', '),
-                                        paste( btw_trt$trt_a, btw_trt$trt_b, sep = ', ')),
+                                     paste( btw_trt$trt_a, btw_trt$trt_b, sep = ', ')),
                          test    = 'dissim',
                          stat    = c(map_dbl(btw_samp$a_vs_b, ~ .x['dissim']),
                                      map_dbl( btw_trt$a_vs_b, ~ .x['dissim'])),
@@ -749,7 +749,7 @@ one_experiment <- function(dat_sub, experiment, results_dir, seed = NULL, sig.fi
        chanRaw = map_df(1:nrow(channel_summ), ~ tibble(expID  = channel_summ$experiment[.x],
                                                        chanID = channel_summ$channel[.x],
                                                        x      = channel_summ$x[[.x]],
-                                                       y      = channel_summ$x[[.x]],
+                                                       y      = channel_summ$y[[.x]],
                                                        frames = channel_summ$frames[[.x]] %>% as.integer(),
                                                        v_x    = channel_summ$v_x[[.x]],
                                                        v_y    = channel_summ$v_y[[.x]],
@@ -766,13 +766,19 @@ one_experiment <- function(dat_sub, experiment, results_dir, seed = NULL, sig.fi
        
        trackRaw = map_df(1:nrow(track_summ), ~ tibble(expID   = track_summ$experiment[.x],
                                                       chanID  = track_summ$channel[.x],
-                                                      trackID = track_summ$Track[.x] %>% as.integer(),
-                                                      x       = track_summ$x[[.x]],
-                                                      y       = track_summ$x[[.x]],
-                                                      frames  = track_summ$frames[[.x]] %>% as.integer(),
-                                                      v_x     = track_summ$v_x[[.x]],
-                                                      v_y     = track_summ$v_y[[.x]],
-                                                      v       = track_summ$v[[.x]])))
+                                                      trackID = track_summ$Track[.x] %>% as.integer()) |>
+                           
+                           left_join(select(dat_sub, experiment, channel, Track, X, Y), # add X,Y position data back in (pixel coordinates)
+                                     by = c('expID' = 'experiment', 'chanID' = 'channel', 'trackID' = 'Track')) |>
+                           rename(x_px = X, y_px = Y) |>
+                           
+                           mutate(x       = track_summ$x[[.x]],
+                                  y       = track_summ$y[[.x]],
+                                  frames  = track_summ$frames[[.x]] %>% as.integer(),
+                                  v_x     = track_summ$v_x[[.x]],
+                                  v_y     = track_summ$v_y[[.x]],
+                                  v       = track_summ$v[[.x]]))
+       )
 }
 
 
