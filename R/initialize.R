@@ -134,8 +134,8 @@ dbinit <- function(db_path, data = NULL)
   # @param expID (key) Character, maps to `expSummary$expID`
   # @param chanID (key) Integer, maps to `chanSummary$chanID`
   # @param trackID (key) Integer, maps to `trackSummary$trackID`
-  # @param X Double, x-position for the track in proportion of the channel width
-  # @param Y Double, y-position for the track in proportion of the channel width
+  # @param x_px Double, x-position for the track in proportion of the channel width
+  # @param y_px Double, y-position for the track in proportion of the channel width
   # @param x Double, x-position for the track in micrometers
   # @param y Double, y-position for the track in micrometers
   # @param frames (key) Integer, frame (sampled every 30 seconds)
