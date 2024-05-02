@@ -347,10 +347,13 @@ one_experiment <- function(dat_sub, experiment, results_dir, seed = NULL, sig.fi
       # at the track level, we want to know if the cell ever passes the bottom ledge
       # to understand that, we set a variable "finished" to be TRUE if the cell crosses the bottom ledge and 0 if it does not
       max_y = map_dbl(y, ~ max(.x)),
-      finished = max_y >= ledge_dist)
+      finished = max_y >= ledge_dist) |>
   
-  #deleting columns with intermediate variables (used for calculation but not needed in end file)
-  track_summ <- select(track_summ, -delta_y, -delta_x, -distance_traveled, -max_y)
+    # drop any tracks with very little total movement
+    filter(sqrt(delta_y^2 + delta_x^2) > 10) |>
+  
+    #deleting columns with intermediate variables (used for calculation but not needed in end file)
+    select(-delta_y, -delta_x, -distance_traveled, -max_y)
   
   
   ###############################
