@@ -16,7 +16,7 @@
 #' 
 #' @importFrom dplyr %>%
 #' @importFrom dplyr join_by
-#' @importFrom dplyr left_join
+#' @importFrom dplyr inner_join
 get_dat <- function(con, user, select = '*', from, where = NULL)
 {
   # pesky binding warning
@@ -29,7 +29,7 @@ get_dat <- function(con, user, select = '*', from, where = NULL)
     query <- paste(query, 'WHERE', where)
   
   dbGetQuery(con, paste0("SELECT expID FROM access WHERE user='", user, "'")) %>%
-    left_join(dbGetQuery(con, query), by = join_by(expID))
+    inner_join(dbGetQuery(con, query), by = join_by(expID))
 }
 
 
