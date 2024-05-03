@@ -22,7 +22,7 @@ ces_sidebarUI <- function(id)
                                   list(inputId =       "sID", label = "Sample"),
                                   list(inputId =    "chanID", label = "Channel"),
                                   list(inputId = "treatment", label = "Treatment")),
-                    inline = FALSE),
+                    inline = FALSE)
   )
 }
 
@@ -68,6 +68,9 @@ ces_cardsUI <- function(id)
 #' Server logic for the Cross-Experiment Summary tab
 #' 
 #' @rdname ces_tab
+#' 
+#' @param con Active DBI database connection
+#' @param user Username of the user
 #' 
 #' @export
 #' @importFrom datamods select_group_server
@@ -132,7 +135,7 @@ ces_server <- function(id, con, user)
       # directed velocity plot
       output$ces_vy <- renderPlot({
         (vals$ces_vy <- chan_raw() |> 
-           rename(v = v_y) |>
+           mutate(v = v_y) |>
            ces_v('Relative velocity (y - directed)'))
       })
       
@@ -140,7 +143,7 @@ ces_server <- function(id, con, user)
       # undirected velocity plot
       output$ces_vx <- renderPlot({
         (vals$ces_vx <- chan_raw() |> 
-           rename(v = v_x) |>
+           mutate(v = v_x) |>
            ces_v('Relative velocity (x - undirected)'))
       })
     }

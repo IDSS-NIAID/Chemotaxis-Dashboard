@@ -8,7 +8,7 @@
 \title{qc_sidebarUI
 UI element for the QC sidebar}
 \usage{
-qc_sidebarUI(id, con, user)
+qc_sidebarUI(id)
 
 qc_cardsUI(id)
 

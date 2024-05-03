@@ -8,7 +8,7 @@
 \title{ces_sidebarUI
 UI element for the CE sidebar}
 \usage{
-ces_sidebarUI(id, con, user)
+ces_sidebarUI(id)
 
 ces_cardsUI(id)
 

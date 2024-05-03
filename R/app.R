@@ -15,6 +15,8 @@ app_ui <- function()
   ui <- page_navbar(title = 'Chemotaxis Dashboard',
                     nav_panel(title = 'Cross-Experiment Summary',
                               ces_cardsUI('ces')),
+                    nav_panel(title = 'Within-Experiment Summary',
+                              ses_cardsUI('ses')),
                     nav_panel(title = 'QC parameters',
                               qc_cardsUI('qc'))) |>
     secure_app(tags_top = tags$p(actionButton(inputId = "login_guest", 
@@ -52,6 +54,8 @@ app_server <- function(credentials, con)
     )
     
     ces_server("ces", con, reactiveValuesToList(res_auth)$user)
+    
+    ses_server("ses", con, reactiveValuesToList(res_auth)$user)
     
     qc_server("qc", con, reactiveValuesToList(res_auth)$user)
   }

@@ -21,7 +21,7 @@ qc_sidebarUI <- function(id)
                     params = list(list(inputId = "expID",  label = "Experiment"),
                                   list(inputId = "sID",    label = "Sample"),
                                   list(inputId = "chanID", label = "Channel")),
-                    inline = FALSE),
+                    inline = FALSE)
     #sliderInput(ns('qc_min_track_len'), 'Minimum Track Length', 3, 60, value = 6), # minimum track length in minutes
     #numericInput(ns('qc_n_cells'), 'Number of cells', value = 100)
   )
@@ -62,6 +62,9 @@ qc_cardsUI <- function(id)
 #' 
 #' @rdname qc_tab
 #' 
+#' @param con Active DBI database connection
+#' @param user Username of the user
+#'
 #' @export
 #' @importFrom datamods select_group_server
 #'
