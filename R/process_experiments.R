@@ -43,7 +43,8 @@
 #' @importFrom purrr map map_chr map_int map_df map2_chr map2_df
 #' @importFrom readr read_csv
 #' @importFrom stringr str_replace
-process_experiments <- function(experiment, source_dir, results_dir, seed = NULL, sig.figs = 4, ledge_dist = 260, ledge_upper = 100, ledge_lower = 500)
+process_experiments <- function(experiment, source_dir, results_dir, seed = NULL, sig.figs = 4,
+                                ledge_dist = 260, ledge_upper = 100, ledge_lower = 500)
 {
   # for all those pesky "no visible binding" notes
   if(FALSE)
@@ -181,8 +182,8 @@ one_experiment <- function(dat_sub, experiment, results_dir, seed = NULL, sig.fi
     set.seed(seed)
   
   # make sure file structure inside of `results_dir` is correct
-  if(!file.exists(file.path(results_dir, 'images', experiment)))
-    dir.create(file.path(results_dir, 'images', experiment), recursive = TRUE)
+  # if(!file.exists(file.path(results_dir, 'images', experiment)))
+  #   dir.create(file.path(results_dir, 'images', experiment), recursive = TRUE)
   
   # make sure we aren't getting more than 6 channels (indicates we have a day with multiple experiments that we missed)
   if(n_distinct(dat_sub$f) > 6)
@@ -591,125 +592,6 @@ one_experiment <- function(dat_sub, experiment, results_dir, seed = NULL, sig.fi
                        tracks_v = file.path('images', experiment, 'tracks_v'),
                        angle_migration = file.path('images', experiment, 'angle_migration'),
                        ce = file.path('images', experiment, 'ce'))
-  
-  
-  ### tracks_time: time-coded tracks
-  tracks_time <- arrange(dat_sub, channel, Track, Frame) %>%
-    
-    mutate(lab = paste0(channel, ": ", sample, ", ", treatment),
-           minutes = Frame / 2) %>%
-    
-    ggplot(aes(x = x, y = y, group = Track, color = minutes)) +
-    geom_path() + #connects observations in the order in which they appear in the dataset
-    
-    ylab('Directed Movement') +
-    xlab('Non-directed Movement') +
-    
-    facet_wrap(~ lab) + #produces multi-panel plot, separate by 'lab'
-    
-    scale_y_reverse() +
-    scale_color_gradient2(low  = 'blue',
-                          mid  = rgb(  0, .62, .45),
-                          high = rgb(.9, .62, 0),
-                          midpoint = 30) +
-    
-    geom_hline(yintercept = 0, linetype = 2) + #draws a horizontal line at y = 0
-    geom_hline(yintercept = 1, linetype = 2) #draws a horizontal line at y = 1
-  
-  save(tracks_time,
-       file = file.path(results_dir, paste0(expSummary$tracks_time, '.RData')))
-  
-  ggsave(file.path(results_dir, paste0(expSummary$tracks_time, '.png')),
-         tracks_time, width = 10, height = 6)
-  
-  
-  ### tracks_v: velocity over time graphs
-  tracks_v <-  pivot_longer(track_summ, starts_with('v'), names_to = 'd', values_to = 'v') %>%
-    filter(d != 'v') %>% #filters out first row (I think)
-    #d = direction, pivot_longer makes data frame longer by making a column 'd' for direction (x-undirected, y-directed)
-    
-    # split out velocity curves for each track
-    group_by(channel, Track, sample, treatment, d) %>% #making data frame longer allows us to split by directed and undirected (d)
-    reframe(v = unlist(v), #list -> vector
-            Frame = unlist(frames)) %>%
-    mutate(grp = paste(channel, d)) %>% 
-    
-    
-    # join channels that have the same sample and treatment
-    group_by(sample, treatment, d) %>%
-    mutate(joint_channels = paste0(paste(unique(channel), collapse = '/'), ": ", unique(sample), ', ', unique(treatment))) %>%
-    ungroup() %>%
-    
-    # sort and plot
-    arrange(channel, d, Track, Frame) %>%
-    mutate(minutes = Frame / 2) %>%
-    
-    
-    #plots velocity (v) over time (Frame), grouping the data by grp which is channel and direction, coloring them by direction  
-    ggplot(aes(minutes, v, group = grp, color = d)) +
-    
-    stat_smooth(method = lm, formula = y ~ bs(x, df = 3), se = FALSE) +
-    stat_smooth(method = lm, formula = y ~ 1, se = FALSE, linetype = 2, linewidth = .5) +
-    
-    scale_color_manual(values = c('black', 'gold3'), labels = c('Undirected', 'Directed')) +
-    theme(legend.title = element_blank(),
-          legend.position = 'top') +
-    ylab(expression(paste('Relative Velocity (', mu, 'm / min)'))) +
-    geom_hline(yintercept = 0, linetype = 3, linewidth = .5)
-  
-  #if sample and treatment are available, split by these labels; if not, use channels
-  if(!(any(is.na(track_summ$sample)))){
-    tracks_v <- tracks_v + facet_wrap(~joint_channels)
-  }else{
-    tracks_v <- tracks_v + facet_wrap(~channel)
-  }
-  
-  save(tracks_v,
-       file = file.path(results_dir, paste0(expSummary$tracks_v, '.RData')))
-  
-  ggsave(file.path(results_dir, paste0(expSummary$tracks_v, '.png')),
-         tracks_v, width = 10, height = 6)
-  
-  
-  ### angle of migration
-  angle_migration_plot <- track_summ %>% 
-    group_by(channel, sample, treatment) %>% 
-    
-    ggplot(aes(x=as.character(channel), y=angle_migration, group=channel)) +
-    
-    geom_violin(scale = "width", width = 0.5, trim=FALSE) + 
-    geom_jitter(width = 0.1,size = 0.75,alpha=0.3) + 
-    geom_boxplot(width = 0.05) +
-    
-    ylab("Migration angle (degrees from vertical)") + 
-    xlab("Channel")
-  
-  save(angle_migration_plot,
-       file = file.path(results_dir, paste0(expSummary$angle_migration, '.RData')))
-  
-  ggsave(file.path(results_dir, paste0(expSummary$angle_migration, '.png')),
-         angle_migration_plot, width = 10, height = 6)
-  
-  
-  ### chemotactic efficiency
-  ce_plot <- track_summ %>% 
-    group_by(channel, sample, treatment) %>% 
-    
-    ggplot(aes(x=as.character(channel), y=ce, group=channel)) +
-    
-    geom_violin(scale = "width", width = 0.5, trim=FALSE) + 
-    geom_jitter(width = 0.1, size = 0.75, alpha=0.3) + 
-    geom_boxplot(width = 0.05) +
-    
-    ylab("Chemotactic efficiency (% vertical movement)") + 
-    xlab("Channel")
-  
-  save(ce_plot,
-       file = file.path(results_dir, paste0(expSummary$ce, '.RData')))
-  
-  ggsave(file.path(results_dir, paste0(expSummary$ce, '.png')),
-         ce_plot, width = 10, height = 6)
-
     
   ##### Return Results #####
   

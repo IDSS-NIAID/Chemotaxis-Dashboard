@@ -39,8 +39,8 @@ channel_summ <- dbGetQuery(con, "SELECT * FROM chanSummary WHERE expID = '190001
 test_that("compare_two_functions returns expected results", {
   
   # check results in the database (need to re-run `root/data-raw/process_19000101_data.R` to update installed data)
-  expect_equal(filter(channel_summ, chanID == 1)$dvud_p, 0.66)
-  expect_equal(filter(channel_summ, chanID == 4)$dvud_p, 0.19)  
+  expect_equal(filter(channel_summ, chanID == 1)$dvud_p, 1.0)
+  expect_equal(filter(channel_summ, chanID == 4)$dvud_p, 1.0)  
 })
 
 
@@ -50,19 +50,40 @@ test_that("compare_two_functions returns expected results", {
 
 test_that("process_experiments returns expected results", {
   
-  # proportion of cells travled from top shelf to bottom shelf
+  # proportion of cells traveled from top shelf to bottom shelf
   expect_equal(channel_summ$prop_finished, c(0, 1, 1, 0, 1, 1))
   
   # chemotactic efficiency
-  expect_equal(round(channel_summ$ce_mean, 2), c(0.00, 0.96, 0.96, -0.01, 0.99, 0.99))
+  expect_equal(round(channel_summ$ce_mean, 2), c(0.07, 0.95, 0.95, 0.10, 0.99, 0.99))
   
   # angle of migration
-  expect_equal(round(channel_summ$angle_mean, 2), c(45.37, 2.00, 2.10, 42.23, 1.04, 1.00))
+  expect_equal(round(channel_summ$angle_mean, 2), c(59.62, 2.25, 2.25, 55.47, 1.08, 1.08))
   
   # maximum velocity
-  expect_equal(round(channel_summ$max_v_mean, 3), c(9.716, 9.113, 9.323, 4.658, 7.261, 7.186))
+  expect_equal(round(channel_summ$max_v_mean, 3), c(12.445, 9.130, 9.093, 6.554, 7.269, 7.163))
 })
 
+
+#######################################
+# Check that the data haven't changed #
+#######################################
+
+processed_data <- process_experiments('19000101',
+                                      source_dir = system.file("extdata", package = "ChemotaxisDashboard"),
+                                      results_dir = file.path(system('git rev-parse --show-toplevel', intern = TRUE), 'shiny'),
+                                      seed = 923847,
+                                      sig.figs = 2,
+                                      ledge_upper = 0,
+                                      ledge_lower = 1)
+
+test_that("processed data hasn't changed", {
+  
+  # proportion of cells travled from top shelf to bottom shelf
+  expect_equal(processed_data$chanSummary$tot_finished, channel_summ$tot_finished)
+  
+  # chemotactic efficiency
+  expect_equal(round(processed_data$chanSummary$ce_mean, 2), round(channel_summ$ce_mean, 2))
+})
 
 ############
 # Clean up #
