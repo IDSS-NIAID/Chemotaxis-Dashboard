@@ -156,9 +156,9 @@ process_experiments <- function(experiment, source_dir, results_dir, seed = NULL
 #' @import rlang
 #' @importFrom magrittr %>%
 #' 
-#' @importFrom dplyr arrange case_when filter group_by left_join mutate n_distinct reframe rename select starts_with summarize ungroup
+#' @importFrom dplyr arrange case_when distinct filter group_by left_join mutate n_distinct reframe rename select starts_with summarize ungroup
 #' @importFrom tidyr pivot_longer
-#' @importFrom purrr map map_dbl map_lgl map2 map2_dbl pmap
+#' @importFrom purrr map map_dbl map2 map2_dbl map2_lgl pmap
 #' @importFrom stats lm median quantile sd smooth.spline splinefun
 #' @importFrom splines bs
 #' @importFrom utils combn
@@ -263,29 +263,16 @@ one_experiment <- function(dat_sub, experiment, results_dir, seed = NULL, sig.fi
            
            y >= 0,             # drop any points below the upper ledge
            y <= ledge_dist)    # and above the lower ledge
-    
-    
-  # ###################
-  # # Collapse tracks #
-  # ###################
-  # 
-  # # start with tracks that we know crossed the top ledge
-  # tracks <- filter(dat_sub, y_min < 0) %>%
-  #   
-  #   arrange(min_frame, y_min, Track, Frame)
-  # 
-  # for(i in unique(dat_sub$channel))
-  # {
-  #   for(j in 0:120)
-  #   {
-  #     
-  #   }
-  # }
-  
-  
+
+
   #############################
   # Track-level summarization #
   #############################
+
+  # we will use this in our track summary below
+  channel_summ <- select(dat_sub, channel, Track, y_max) %>%
+    distinct() %>%
+    ungroup()
   
   track_summ <- group_by(dat_sub, channel, sample, treatment, Track, experiment) %>%
     
@@ -346,14 +333,14 @@ one_experiment <- function(dat_sub, experiment, results_dir, seed = NULL, sig.fi
       # Proportion of cells making it past the threshold
       # at the track level, we want to know if the cell ever passes the bottom ledge
       # to understand that, we set a variable "finished" to be TRUE if the cell crosses the bottom ledge and 0 if it does not
-      max_y = map_dbl(y, ~ max(.x)),
-      finished = max_y >= ledge_dist) |>
+      # - since we filtered all cells after they pass the lower ledge, we need to refer to dat_sub$y_max to see if they pass the ledge
+      finished = map2_lgl(channel, Track, ~ filter(channel_summ, channel == .x, Track == .y)$y_max >= ledge_dist)) |>
   
     # drop any tracks with very little total movement
     filter(sqrt(delta_y^2 + delta_x^2) > 10) |>
   
     #deleting columns with intermediate variables (used for calculation but not needed in end file)
-    select(-delta_y, -delta_x, -distance_traveled, -max_y)
+    select(-delta_y, -delta_x, -distance_traveled)
   
   
   ###############################
@@ -401,8 +388,8 @@ one_experiment <- function(dat_sub, experiment, results_dir, seed = NULL, sig.fi
     # add summary of track statistics (proportion finished, chemotactic efficiency, angle of migration)
     left_join({
       group_by(track_summ, experiment, channel) %>%
-        summarize(tot_finished = length(finished),
-                  prop_finished = sum(finished) / tot_finished,
+        summarize( tot_finished = sum(finished),
+                  prop_finished = tot_finished / length(finished),
                   
                   ce_median = median(ce, na.rm = TRUE),
                   ce_mean   =   mean(ce, na.rm = TRUE),
@@ -819,7 +806,7 @@ one_experiment <- function(dat_sub, experiment, results_dir, seed = NULL, sig.fi
 #' @importFrom magrittr %>%
 #' @importFrom dplyr matches select mutate
 #' @importFrom foreach foreach %dopar%
-#' @importFrom stats na.omit rbinom smooth.spline
+#' @importFrom stats na.omit rbinom smooth.spline splinefun
 #' @importFrom briKmeans kma.similarity
 compare_two_functions <- function(data, frames.f, f, g, sig.figs, frames.g = frames.f, lab = NULL)
 {
@@ -862,7 +849,7 @@ compare_two_functions <- function(data, frames.f, f, g, sig.figs, frames.g = fra
   for(i in 2:max(2, sig.figs))
   {
     
-    perms <- foreach(i = 1:1*10^i,
+    perms <- foreach(i = 1:(1*10^i),
                      .combine = 'c') %dopar%
       {
         # shuffle f and g
@@ -871,14 +858,18 @@ compare_two_functions <- function(data, frames.f, f, g, sig.figs, frames.g = fra
           # pick tracks to shuffle
           pick_track <- as.logical(rbinom(length(tracks), 1, 0.5))
           
-          shuffled <- mutate(data, 
-                             f.tmp = ifelse(Track %in% tracks[pick_track], g, f),
-                             g     = ifelse(Track %in% tracks[pick_track], f, g),
-                             f     = f.tmp)
+          shuffled <- dplyr::mutate(data, 
+                                    f.tmp = ifelse(Track %in% tracks[pick_track], g, f),
+                                    g     = ifelse(Track %in% tracks[pick_track], f, g),
+                                    f     = f.tmp)
           
           # smooth f and g
-          f_shuff <- smooth.spline(shuffled$Frame, shuffled$f)
-          g_shuff <- smooth.spline(shuffled$Frame, shuffled$g)
+          tmp <- smooth.spline(shuffled$Frame, shuffled$f) |>
+            with(splinefun(x, y))
+          f_shuff <- list(x = tmp(tracks), y = tracks)
+          tmp <- smooth.spline(shuffled$Frame, shuffled$g) |>
+            with(splinefun(x, y))
+          g_shuff <- list(x = tmp(tracks), y = tracks)
         }else{
           # pick tracks to be in group 1, the others fall into group 2 (should exactly two groups)
           grp1 <- sample(tracks, grps[1])
@@ -889,24 +880,28 @@ compare_two_functions <- function(data, frames.f, f, g, sig.figs, frames.g = fra
           
           # smooth f and g
           tmp <- dplyr::filter(shuffled, lab == names(grps)[1])  # filter by shuffled group
-          f_shuff <- list(smooth.spline(tmp$Frame, tmp$x),             # smooth undirected function
-                          smooth.spline(tmp$Frame, tmp$y))             # smooth directed function
+          tmp_f <- list(smooth.spline(tmp$Frame, tmp$x) |>
+                          with(splinefun(x, y)),             # smooth undirected function
+                        smooth.spline(tmp$Frame, tmp$y) |>
+                          with(splinefun(x, y)))             # smooth directed function
           
-          f_shuff <- list(x = sapply(f_shuff, function(.x) .x$x),
-                          y = sapply(f_shuff, function(.x) .x$y))      # return two columns (un/directed) of smoothed functions
+          f_shuff <- list(x = cbind(tracks, tracks),
+                          y = cbind(tmp_f[[1]](tracks), tmp_f[[2]](tracks)))      # return two columns (un/directed) of smoothed functions
           
           tmp <- dplyr::filter(shuffled, lab == names(grps)[2])  # filter by shuffled group
-          g_shuff <- list(smooth.spline(tmp$Frame, tmp$x),             # smooth undirected function
-                          smooth.spline(tmp$Frame, tmp$y))             # smooth directed function
+          tmp_g <- list(smooth.spline(tmp$Frame, tmp$x) |>
+                          with(splinefun(x, y)),             # smooth undirected function
+                        smooth.spline(tmp$Frame, tmp$y) |>
+                          with(splinefun(x, y)))             # smooth directed function
           
-          g_shuff <- list(x = sapply(g_shuff, function(.x) .x$x),
-                          y = sapply(g_shuff, function(.x) .x$y))      # return two columns (un/directed) of smoothed functions
+          g_shuff <- list(x = cbind(tracks, tracks),
+                          y = cbind(tmp_g[[1]](tracks), tmp_g[[2]](tracks)))      # return two columns (un/directed) of smoothed functions
         }
         
         # calculate similarity
-        suppressWarnings(kma.similarity(x.f = f_shuff$x, y0.f = f_shuff$y, 
-                                        x.g = g_shuff$x, y0.g = g_shuff$y,
-                                        similarity.method = 'd0.L2'))
+        suppressWarnings(briKmeans::kma.similarity(x.f = f_shuff$x, y0.f = f_shuff$y, 
+                                                   x.g = g_shuff$x, y0.g = g_shuff$y,
+                                                   similarity.method = 'd0.L2'))
       } %>%
       
       c(perms)
