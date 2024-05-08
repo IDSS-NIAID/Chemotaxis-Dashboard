@@ -2,6 +2,7 @@
 
 # Load packages
 library(RSQLite)
+library(dplyr)
 
 
 ###########################
@@ -15,7 +16,7 @@ if(length(root) != 1)
 {
   db_path <- 'chemo-dash.sqlite'
 }else{
-  db_path <- file.path(root, '.data', 'chemo-dash.sqlite')
+  db_path <- file.path(root, 'shiny', 'chemo-dash.sqlite')
 }
 
 # check if a database has been set up with test data

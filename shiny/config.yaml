@@ -1,2 +1,2 @@
 default:
-  db_path: file.path(system('git rev-parse --show-toplevel', intern = TRUE), '.data', 'chemo-dash.sqlite')
+  db_path: 'chemo-dash.sqlite'

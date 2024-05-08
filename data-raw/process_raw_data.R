@@ -18,7 +18,7 @@ parallel::makeCluster(parallel::detectCores() - 1,
 
 # root directory of the repo
 root <- system('git rev-parse --show-toplevel', intern = TRUE)
-dat_path <- file.path(root, '.data')
+dat_path <- file.path(root, 'shiny')
 db_path <- file.path(dat_path, 'chemo-dash.sqlite')
 
 
@@ -48,7 +48,7 @@ if(length(all_experiments) > 0)
 {
   processed_data <- process_experiments(experiment = all_experiments,
                                         source_dir = file.path(root, 'data-raw', 'results_csv'),
-                                        results_dir = file.path(root, '.data'),
+                                        results_dir = file.path(root, 'shiny'),
                                         seed = 923847)
   
   # add access to processed data

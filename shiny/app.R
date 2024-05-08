@@ -24,8 +24,7 @@ library(dplyr)
 # Configuration #
 #################
 
-config <- config::get(file = file.path(system('git rev-parse --show-toplevel', intern = TRUE),
-                                       'shiny', 'config.yaml'))
+config <- config::get(file = 'config.yaml')
 
 # if db_path doesn't exist, try parsing it
 if(!file.exists(config$db_path))

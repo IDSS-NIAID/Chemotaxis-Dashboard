@@ -12,7 +12,7 @@ parallel::makeCluster(parallel::detectCores() - 1,
 # process test data
 processed_data <- process_experiments('19000101',
                                       source_dir = system.file("extdata", package = "ChemotaxisDashboard"),
-                                      results_dir = file.path(system('git rev-parse --show-toplevel', intern = TRUE), '.data'),
+                                      results_dir = file.path(system('git rev-parse --show-toplevel', intern = TRUE), 'shiny'),
                                       seed = 923847,
                                       ledge_upper = 0,
                                       ledge_lower = 1)
