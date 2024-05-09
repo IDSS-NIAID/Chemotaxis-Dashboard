@@ -47,17 +47,17 @@ ces_cardsUI <- function(id)
       sidebar = ces_sidebarUI('ces'),
       card(full_screen = TRUE, 
            card_header("Selected Samples"), 
-           card_body(DT::dataTableOutput(ns("ces_sample_table")))),
-      #card_footer(downloadButton(ns('ces_sample_table_download'), 'Download table')),
+           card_body(DT::dataTableOutput(ns("ces_sample_table"))),
+      card_footer(downloadButton(ns('ces_sample_table_download'), 'Download table'))),
       layout_columns(
         card(full_screen = TRUE, 
              card_header("Directed cell velocity over time (y)"), 
-             card_body(plotOutput(ns("ces_vy")))),
-        #card_footer(downloadButton(ns('ces_n_cells_download'), 'Download figure')))
+             card_body(plotOutput(ns("ces_vy"))),
+        card_footer(downloadButton(ns('ces_vy_download'), 'Download figure'))),
         card(full_screen = TRUE, 
              card_header("Undirected cell velocity over time (x)"), 
-             card_body(plotOutput(ns("ces_vx"))))
-        #card_footer(downloadButton(ns('ces_n_cells_download'), 'Download figure')))
+             card_body(plotOutput(ns("ces_vx"))),
+        card_footer(downloadButton(ns('ces_vx_download'), 'Download figure')))
       )
     )
   )
@@ -76,7 +76,8 @@ ces_cardsUI <- function(id)
 #' @importFrom datamods select_group_server
 #' @importFrom dplyr mutate left_join join_by rename
 #' @importFrom DT renderDataTable
-#' @importFrom shiny moduleServer reactive reactiveValues renderPlot
+#' @importFrom shiny downloadHandler moduleServer reactive reactiveValues renderPlot
+#' @importFrom utils write.csv
 ces_server <- function(id, con, user)
 {
   # for all those pesky "no visible binding" notes
@@ -131,6 +132,13 @@ ces_server <- function(id, con, user)
         chan_select()
       })
       
+      output$ces_sample_table_download <- downloadHandler(
+        filename = function() {
+          paste0('ces_sample_table_', Sys.Date(), '.csv')},
+        content = function(file) {
+          write.csv(chan_select(), file, row.names = FALSE)}
+      )
+      
       
       # directed velocity plot
       output$ces_vy <- renderPlot({
@@ -139,6 +147,13 @@ ces_server <- function(id, con, user)
            ces_v('Relative velocity (y - directed)'))
       })
       
+      output$ces_vy_download <- downloadHandler(
+        filename = function() {
+          paste0('ces_vy_', Sys.Date(), '.png')},
+        content = function(file) {
+          ggsave(file, vals$ces_vy)}
+      )
+      
       
       # undirected velocity plot
       output$ces_vx <- renderPlot({
@@ -146,6 +161,13 @@ ces_server <- function(id, con, user)
            mutate(v = v_x) |>
            ces_v('Relative velocity (x - undirected)'))
       })
+      
+      output$ces_vx_download <- downloadHandler(
+        filename = function() {
+          paste0('ces_vx_', Sys.Date(), '.png')},
+        content = function(file) {
+          ggsave(file, vals$ces_vx)}
+      )
     }
   )
 }

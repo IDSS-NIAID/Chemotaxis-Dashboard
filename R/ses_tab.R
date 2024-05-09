@@ -43,24 +43,25 @@ ses_cardsUI <- function(id)
       sidebar = ses_sidebarUI('ses'),
       card(full_screen = TRUE, 
            card_header("Tracks over time"), 
-           card_body(plotOutput(ns("ses_tracks_time")))),
-#           card_footer(downloadButton(ns('ses_track_len_download'), 'Download figure'))),
+           card_body(plotOutput(ns("ses_tracks_time"))),
+           card_footer(downloadButton(ns('ses_tracks_time_download'), 'Download figure'))),
       card(full_screen = TRUE, 
            card_header("Track velocity"), 
-           card_body(plotOutput(ns("ses_tracks_v")))),
-#           card_footer(downloadButton(ns('ses_n_cells_download'), 'Download figure'))))
+           card_body(plotOutput(ns("ses_tracks_v"))),
+           card_footer(downloadButton(ns('ses_tracks_v_download'), 'Download figure'))),
       card(full_screen = TRUE, 
            card_header("Angle of migration"), 
-           card_body(plotOutput(ns("ses_angle_migration")))),
-#           card_footer(downloadButton(ns('ses_track_len_download'), 'Download figure'))),
+           card_body(plotOutput(ns("ses_angle_migration"))),
+           card_footer(downloadButton(ns('ses_angle_migration_download'), 'Download figure'))),
       card(full_screen = TRUE, 
            card_header("Chemotactic Efficiency"), 
-           card_body(plotOutput(ns("ses_ce")))),
-#           card_footer(downloadButton(ns('ses_n_cells_download'), 'Download figure'))))
+           card_body(plotOutput(ns("ses_ce"))),
+           card_footer(downloadButton(ns('ses_ce_download'), 'Download figure'))),
       card(full_screen = TRUE, 
            card_header("Statistics"), 
-           card_body(tableOutput(ns("ses_stats"))))
-#           card_footer(downloadButton(ns('ses_n_cells_download'), 'Download figure'))))
+           card_body(tableOutput(ns("ses_stats"))),
+           card_footer(downloadButton(ns('ses_stats_download'), 'Download statistics'),
+                       downloadButton(ns('ses_raw_download'), 'Download raw data')))
     )
   )
 }
@@ -75,8 +76,9 @@ ses_cardsUI <- function(id)
 #' @param user Username of the user
 #'
 #' @export
-#' @importFrom shiny moduleServer reactive reactiveValues renderPlot renderTable
+#' @importFrom shiny downloadHandler moduleServer reactive reactiveValues renderPlot renderTable
 #' @importFrom dplyr left_join
+#' @importFrom utils write.csv
 ses_server <- function(id, con, user)
 {
   moduleServer(id, function(input, output, session)
@@ -139,6 +141,16 @@ ses_server <- function(id, con, user)
       }
     })
     
+    output$ses_tracks_time_download <- downloadHandler(
+      filename = function() {
+        paste0("tracks_time_", exp_select()[1], ".png")
+      },
+      content = function(file) {
+        ggsave(file, vals$ses_tracks_time)
+      }
+    )
+    
+    
     # Track velocity
     output$ses_tracks_v <- renderPlot({
       if(length(exp_select()) != 1)
@@ -149,6 +161,16 @@ ses_server <- function(id, con, user)
           ses_tracks_v())
       }
     })
+    
+    output$ses_tracks_v_download <- downloadHandler(
+      filename = function() {
+        paste0("tracks_v_", exp_select()[1], ".png")
+      },
+      content = function(file) {
+        ggsave(file, vals$ses_tracks_v)
+      }
+    )
+    
     
     # Angle of migration
     output$ses_angle_migration <- renderPlot({
@@ -161,6 +183,16 @@ ses_server <- function(id, con, user)
       }
     })
     
+    output$ses_angle_migration_download <- downloadHandler(
+      filename = function() {
+        paste0("angle_migration_", exp_select()[1], ".png")
+      },
+      content = function(file) {
+        ggsave(file, vals$ses_angle_migration)
+      }
+    )
+    
+    
     # Chemotactic Efficiency
     output$ses_ce <- renderPlot({
       if(length(exp_select()) != 1)
@@ -171,6 +203,16 @@ ses_server <- function(id, con, user)
           ses_chemotactic_efficiency())
       }
     })
+    
+    output$ses_ce_download <- downloadHandler(
+      filename = function() {
+        paste0("ce_", exp_select()[1], ".png")
+      },
+      content = function(file) {
+        ggsave(file, vals$ses_ce)
+      }
+    )
+    
     
     # Statistics
     output$ses_stats <- renderTable({
@@ -185,5 +227,23 @@ ses_server <- function(id, con, user)
                                    where = paste0("expID='", exp_select()[1], "'")))
       }
     })
+    
+    output$ses_stats_download <- downloadHandler(
+      filename = function() {
+        paste0("stats_", exp_select()[1], ".csv")
+      },
+      content = function(file) {
+        write.csv(vals$ses_stats, file, row.names = FALSE)
+      }
+    )
+    
+    output$ses_raw_download <- downloadHandler(
+      filename = function() {
+        paste0("raw_tracks", exp_select()[1], ".csv")
+      },
+      content = function(file) {
+        write.csv(track_raw(), file, row.names = FALSE)
+      }
+    )
   })
 }
