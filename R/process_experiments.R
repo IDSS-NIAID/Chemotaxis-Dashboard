@@ -437,25 +437,34 @@ one_experiment <- function(dat_sub, experiment, results_dir, seed = NULL, sig.fi
     for(i in 1:nrow(within_grp))
     {
       # get functions to compare
-      f <- filter(dat_sub, paste(treatment) == paste(within_grp$treatment[i]) &
-                    paste(sample   ) == paste(within_grp$sample[i]) &
-                    channel    == within_grp$channel_a[i])
-      f <- list(smooth.spline(f$Frame, f$x),
-                smooth.spline(f$Frame, f$y))
+      f_dat <- filter(dat_sub, paste(treatment) == paste(within_grp$treatment[i]) &
+                               paste(sample   ) == paste(within_grp$sample[i]) &
+                                     channel    ==       within_grp$channel_a[i])
       
-      g <- filter(dat_sub, paste(treatment) == paste(within_grp$treatment[i]) &
-                    paste(sample   ) == paste(within_grp$sample[i]) &
-                    channel    ==       within_grp$channel_b[i])
-      g <- list(smooth.spline(g$Frame, g$x),
-                smooth.spline(g$Frame, g$y))
+      f <- list(smooth.spline(f_dat$Frame, f_dat$x),
+                smooth.spline(f_dat$Frame, f_dat$y)) |>
+        map(~ splinefun(.x$x, .x$y))
+      
+      frames.f <- unique(arrange(f_dat, Frame)$Frame)
+      
+      
+      g_dat <- filter(dat_sub, paste(treatment) == paste(within_grp$treatment[i]) &
+                               paste(sample   ) == paste(within_grp$sample[i]) &
+                                     channel    ==       within_grp$channel_b[i])
+      
+      g <- list(smooth.spline(g_dat$Frame, g_dat$x),
+                smooth.spline(g_dat$Frame, g_dat$y)) |>
+        map(~ splinefun(.x$x, .x$y))
+      
+      frames.g <- unique(arrange(g_dat, Frame)$Frame)
       
       # calculate similarity and p-value
       within_grp$a_vs_b[[i]] <- filter(dat_sub, paste(treatment) == paste(within_grp$treatment[i]) &
-                                         paste(sample   ) == paste(within_grp$sample[i]) &
-                                         channel   %in%    c(within_grp$channel_a[i], within_grp$channel_b[i])) %>%
+                                                paste(sample   ) == paste(within_grp$sample[i]) &
+                                                      channel   %in%    c(within_grp$channel_a[i], within_grp$channel_b[i])) %>%
         mutate(f = x) %>%
-        compare_two_functions(f = sapply(f, function(.x) .x$y), frames.f = f[[1]]$x, 
-                              g = sapply(g, function(.x) .x$y), frames.g = g[[1]]$x,
+        compare_two_functions(f = sapply(f, function(.x) .x(frames.f)), frames.f = frames.f, 
+                              g = sapply(g, function(.x) .x(frames.g)), frames.g = frames.g,
                               sig.figs = sig.figs, lab = 'channel')
     }
   }else{
@@ -748,10 +757,10 @@ compare_two_functions <- function(data, frames.f, f, g, sig.figs, frames.g = fra
           # smooth f and g
           tmp <- smooth.spline(shuffled$Frame, shuffled$f) |>
             with(splinefun(x, y))
-          f_shuff <- list(x = tmp(tracks), y = tracks)
+          f_shuff <- list(x = tmp(frames.f), y = frames.f)
           tmp <- smooth.spline(shuffled$Frame, shuffled$g) |>
             with(splinefun(x, y))
-          g_shuff <- list(x = tmp(tracks), y = tracks)
+          g_shuff <- list(x = tmp(frames.g), y = frames.g)
         }else{
           # pick tracks to be in group 1, the others fall into group 2 (should exactly two groups)
           grp1 <- sample(tracks, grps[1])
@@ -767,8 +776,8 @@ compare_two_functions <- function(data, frames.f, f, g, sig.figs, frames.g = fra
                         smooth.spline(tmp$Frame, tmp$y) |>
                           with(splinefun(x, y)))             # smooth directed function
           
-          f_shuff <- list(x = cbind(tracks, tracks),
-                          y = cbind(tmp_f[[1]](tracks), tmp_f[[2]](tracks)))      # return two columns (un/directed) of smoothed functions
+          f_shuff <- list(x = cbind(frames.f, frames.f),
+                          y = cbind(tmp_f[[1]](frames.f), tmp_f[[2]](frames.f)))      # return two columns (un/directed) of smoothed functions
           
           tmp <- dplyr::filter(shuffled, lab == names(grps)[2])  # filter by shuffled group
           tmp_g <- list(smooth.spline(tmp$Frame, tmp$x) |>
@@ -776,8 +785,8 @@ compare_two_functions <- function(data, frames.f, f, g, sig.figs, frames.g = fra
                         smooth.spline(tmp$Frame, tmp$y) |>
                           with(splinefun(x, y)))             # smooth directed function
           
-          g_shuff <- list(x = cbind(tracks, tracks),
-                          y = cbind(tmp_g[[1]](tracks), tmp_g[[2]](tracks)))      # return two columns (un/directed) of smoothed functions
+          g_shuff <- list(x = cbind(frames.g, frames.g),
+                          y = cbind(tmp_g[[1]](frames.g), tmp_g[[2]](frames.g)))      # return two columns (un/directed) of smoothed functions
         }
         
         # calculate similarity
