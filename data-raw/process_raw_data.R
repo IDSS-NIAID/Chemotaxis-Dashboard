@@ -55,11 +55,16 @@ if(length(all_experiments) > 0)
   processed_data$access <- data.frame(user = 'kuhnslab',
                                       expID = processed_data$expSummary$expID)
   
-  # need to do this once (pick a better password)
-  # dbExecute(con, 'INSERT INTO users VALUES ("kuhnslab", "12345")')
-
   # add new records to the database
   dbinit(db_path, processed_data)
 }
 
 parallel::stopCluster(parallel::getDefaultCluster())
+
+##### helpful queries #####
+
+# need to do this once (pick a better password)
+# dbExecute(con, 'INSERT INTO users VALUES ("kuhnslab", "12345")')
+
+# this one is rather odd - need to look into it
+# dbGetQuery(con, "DELETE FROM chanRaw WHERE expID='20161221' AND chanID=4")
