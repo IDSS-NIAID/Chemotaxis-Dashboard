@@ -14,5 +14,13 @@
 *.zip
 *.pdf
 *.sqlite
+*.jpg
+*.gif
+*.png
+
+*.pptx
+*.xls
+*.xlsx
 
 .data/
+docs/

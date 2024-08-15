@@ -31,15 +31,15 @@ dbinit <- function(db_path, data = NULL)
   # User table for authentication
   # 
   # @param user (key) Character, username - used in: 
-  #   `access`
-  # @param password Character, password
+  #                     `access`
+  # @param password   Character, password
   dbupdate(con, 'users', data$users, 'user')
   
   
   # access
   # User access table defining which experiments the user can access
   # 
-  # @param user (key) Character, maps to `users$user`
+  # @param user  (key) Character, maps to `users$user`
   # @param expID (key) Character, maps to `expSummary$expID`
   dbupdate(con, 'access', data$access, c('user', 'expID'))
 
@@ -47,102 +47,102 @@ dbinit <- function(db_path, data = NULL)
   # expSummary
   # Experiment summary table
   # 
-  # @param expID (key) Character, experiment ID - used in: 
-  #   `access`
-  #   `expStats`
-  #   `chanSummary`
-  #   `chanRaw`
-  #   `trackSummary`
-  #   `trackRaw`
-  # @param tracks_time Character, path to figure of tracks over time for each channel
-  # @param tracks_v Character, path to figure of velocity over time for each grouping
+  # @param expID     (key) Character, experiment ID - used in: 
+  #                          `access`
+  #                          `expStats`
+  #                          `chanSummary`
+  #                          `chanRaw`
+  #                          `trackSummary`
+  #                          `trackRaw`
+  # @param tracks_time     Character, path to figure of tracks over time for each channel
+  # @param tracks_v        Character, path to figure of velocity over time for each grouping
   # @param angle_migration Character, path to figure of angle of migration viloin plots for each channel
-  # @param ce Character, path to figure of chemotactic efficiency violin plots for each channel
+  # @param ce              Character, path to figure of chemotactic efficiency violin plots for each channel
   dbupdate(con, 'expSummary', data$expSummary, 'expID')
 
   
   # expStats
   # Table of summary statistics for each experiment
   # 
-  # @param expID (key) Character, maps to `expSummary$expID`
-  # @param within (key) Character, group for the comparison (i.e. within normals treated with fMLF8)
+  # @param expID   (key) Character, maps to `expSummary$expID`
+  # @param within  (key) Character, group for the comparison (i.e. within normals treated with fMLF8)
   # @param between (key) Character, contrast for the comparison (i.e. between channels 3 and 4)
-  # @param test (key) Character, test used to compare the `between` groups
-  # @param stat Double, test statistics comparing the `between` groups
-  # @param p Double, p-value for `stat`
+  # @param test    (key) Character, test used to compare the `between` groups
+  # @param stat          Double, test statistics comparing the `between` groups
+  # @param p             Double, p-value for `stat`
   dbupdate(con, 'expStats', data$expStats, c('expID', 'within', 'between', 'test'))
 
   
   # chanSummary
   # Channel summary table
   # 
-  # @param expID (key) Character, maps to `expSummary$expID`
-  # @param chanID (key) Integer, channel ID - used in:
-  #   `chanRaw`
-  #   `trackRaw`
-  #   `trackSummary`
-  # @param sID Character, sample ID - used in:
-  # @param treatment Character, treatment applied to this channel
-  # @param tot_finished Integer, Total number of cells that reached the bottom ledge
+  # @param expID   (key) Character, maps to `expSummary$expID`
+  # @param chanID  (key) Integer, channel ID - used in:
+  #                        `chanRaw`
+  #                        `trackRaw`
+  #                        `trackSummary`
+  # @param sID           Character, sample ID - used in:
+  # @param treatment     Character, treatment applied to this channel
+  # @param tot_finished  Integer, Total number of cells that reached the bottom ledge
   # @param prop_finished Double, proportion of cells that reached the bottom ledge
-  # @param ce_median Double, median chemotactic efficiency
-  # @param ce_mean Double, mean chemotactic efficiency
-  # @param ce_sd Double, standard deviation of chemotactic efficiency
-  # @param angle_median Double, median angle of migration
-  # @param angle_mean Double, mean angle of migration
-  # @param angle_sd Double, standard deviation of angle of migration
-  # @param max_v_median Double, median maximum velocity
-  # @param max_v_mean Double, mean maximum velocity
-  # @param max_v_sd Double, standard deviation of maximum velocity
-  # @param dvud Double, dissimilarity score comparing directed and undirected trajectories
-  # @param dvud_p Double, p-value for `dvud`
+  # @param ce_median     Double, median chemotactic efficiency
+  # @param ce_mean       Double, mean chemotactic efficiency
+  # @param ce_sd         Double, standard deviation of chemotactic efficiency
+  # @param angle_median  Double, median angle of migration
+  # @param angle_mean    Double, mean angle of migration
+  # @param angle_sd      Double, standard deviation of angle of migration
+  # @param max_v_median  Double, median maximum velocity
+  # @param max_v_mean    Double, mean maximum velocity
+  # @param max_v_sd      Double, standard deviation of maximum velocity
+  # @param dvud          Double, dissimilarity score comparing directed and undirected trajectories
+  # @param dvud_p        Double, p-value for `dvud`
   dbupdate(con, 'chanSummary', data$chanSummary, c('expID', 'chanID'))
   
   
   # chanRaw
   # Table of smoothed trajectories over all tracks in a channel
   # 
-  # @param expID (key) Character, maps to `expSummary$expID`
+  # @param expID  (key) Character, maps to `expSummary$expID`
   # @param chanID (key) Integer, maps to `chanSummary$chanID`
-  # @param x Double, smoothed x-position for the channel
-  # @param y Double, smoothed y-position for the channel
+  # @param x            Double, smoothed x-position for the channel
+  # @param y            Double, smoothed y-position for the channel
   # @param frames (key) Integer, frame (sampled every 30 seconds)
-  # @param v_x Double, velocity in the x direction (undirected)
-  # @param v_y Double, velocity in the y direction (directed)
-  # @param v Double, total velocity
+  # @param v_x          Double, velocity in the x direction (undirected)
+  # @param v_y          Double, velocity in the y direction (directed)
+  # @param v            Double, total velocity
   dbupdate(con, 'chanRaw', data$chanRaw, c('expID', 'chanID', 'frames'))
 
   
   # trackSummary
   # Track summary table
   # 
-  # @param expID (key) Character, maps to `expSummary$expID`
-  # @param chanID (key) Integer, maps to `chanSummary$chanID`
-  # @param trackID (key) Integer, track ID - used in:
-  #   `trackRaw`
-  # @param ce Double, chemotactic efficiency
+  # @param expID     (key) Character, maps to `expSummary$expID`
+  # @param chanID    (key) Integer, maps to `chanSummary$chanID`
+  # @param trackID   (key) Integer, track ID - used in:
+  #                          `trackRaw`
+  # @param ce              Double, chemotactic efficiency
   # @param angle_migration Double, angle of migration
-  # @param max_v Double, maximum velocity in μm per minute
-  # @param av_velocity Double, mean velocity in μm per minute
-  # @param finished  Logical, TRUE when the cell passed the bottom ledge
+  # @param max_v           Double, maximum velocity in μm per minute
+  # @param av_velocity     Double, mean velocity in μm per minute
+  # @param finished        Logical, TRUE when the cell passed the bottom ledge
   dbupdate(con, 'trackSummary', data$trackSummary, c('expID', 'chanID', 'trackID'))
 
   
   # trackRaw
   # Raw track information
   # 
-  # @param expID (key) Character, maps to `expSummary$expID`
-  # @param chanID (key) Integer, maps to `chanSummary$chanID`
+  # @param expID   (key) Character, maps to `expSummary$expID`
+  # @param chanID  (key) Integer, maps to `chanSummary$chanID`
   # @param trackID (key) Integer, maps to `trackSummary$trackID`
-  # @param x_px Double, x-position for the track in proportion of the channel width
-  # @param y_px Double, y-position for the track in proportion of the channel width
-  # @param x Double, x-position for the track in micrometers
-  # @param y Double, y-position for the track in micrometers
-  # @param frames (key) Integer, frame (sampled every 30 seconds)
-  # @param time Double, time in minutes
-  # @param v_x Double, velocity in the x direction (undirected) in micrometers per minute
-  # @param v_y Double, velocity in the y direction (directed) in micrometers per minute
-  # @param v Double, total velocity
+  # @param x_px          Double, x-position for the track in proportion of the channel width
+  # @param y_px          Double, y-position for the track in proportion of the channel width
+  # @param x             Double, x-position for the track in micrometers
+  # @param y             Double, y-position for the track in micrometers
+  # @param frames  (key) Integer, frame (sampled every 30 seconds)
+  # @param time          Double, time in minutes
+  # @param v_x           Double, velocity in the x direction (undirected) in micrometers per minute
+  # @param v_y           Double, velocity in the y direction (directed) in micrometers per minute
+  # @param v             Double, total velocity
   dbupdate(con, 'trackRaw', data$trackRaw, c('expID', 'chanID', 'trackID', 'frames'))
 
   

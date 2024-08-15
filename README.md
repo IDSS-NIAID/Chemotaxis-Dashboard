@@ -15,7 +15,7 @@ To setup and install your own copy of the Chemotaxis Dashboard:
 * Install the Chemotaxis-Dashboard package with:
 
 ```
-
+devtools::install_github("abcsfrederick/Chemotaxis-Dashboard", ref= "chemo-dash2")
 ```
 
 * Run `Chemotaxis-Dashboard::initialize()` - This only needs to be run once and will set up the database and other parts that the shiny app will look for.
