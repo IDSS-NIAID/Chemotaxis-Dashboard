@@ -330,18 +330,40 @@ one_experiment <- function(dat_sub, experiment, results_dir, seed = NULL, sig.fi
       #average velocity and standard deviation
       av_velocity = map_dbl(v, ~ mean(.x)),
       sd_velocity = map_dbl(v, ~ sd(.x)),
+
+      # # --- use observe_finish ---      
+      # # Proportion of cells making it past the threshold
+      # # at the track level, we want to know if the cell ever passes the bottom ledge
+      # # to understand that, we set a variable "finished" to be TRUE if the cell crosses the bottom ledge and 0 if it does not
+      # # - since we filtered all cells after they pass the lower ledge, we need to refer to dat_sub$y_max to see if they pass the ledge
+      # finished = map2_lgl(channel, Track, ~ filter(channel_summ, channel == .x, Track == .y)$y_max >= ledge_dist),
       
-      # Proportion of cells making it past the threshold
-      # at the track level, we want to know if the cell ever passes the bottom ledge
-      # to understand that, we set a variable "finished" to be TRUE if the cell crosses the bottom ledge and 0 if it does not
-      # - since we filtered all cells after they pass the lower ledge, we need to refer to dat_sub$y_max to see if they pass the ledge
-      finished = map2_lgl(channel, Track, ~ filter(channel_summ, channel == .x, Track == .y)$y_max >= ledge_dist)) |>
-  
-    # drop any tracks with very little total movement
-    filter(sqrt(delta_y^2 + delta_x^2) > 10) |>
+      # Survival time for each track in minutes (finish_at and cross_at are in Frames, so divide by 2)
+      # Only count if we know when it crossed the top ledge (or thereabouts - allow `y_min <= 15μm` for the first frame)
+      surv_start = map2_dbl(channel, Track, ~ dplyr::filter(dat_sub, channel == .x, Track == .y) |>
+                                              dplyr::select(Track, cross_at) |>
+                                              distinct() |>
+                                              dplyr::select(cross_at) |>
+                                              unlist()) / 2,
+      surv_end   = map2_dbl(channel, Track, ~ dplyr::filter(dat_sub, channel == .x, Track == .y) |>
+                                              dplyr::select(Track, finish_at) |>
+                                              distinct() |>
+                                              dplyr::select(finish_at) |>
+                                              unlist()) / 2,
+      event = case_when( observe_start &  observe_finish ~ 1,    # 1 = both start and finish
+                         observe_start & !observe_finish ~ 0,    # 0 = right censored
+                        !observe_start &  observe_finish ~ 2,    # 2 = left censored
+                        !observe_start & !observe_finish ~ 3,    # 3 = interval censored
+                         TRUE                             ~ NA)) |>
   
     #deleting columns with intermediate variables (used for calculation but not needed in end file)
-    select(-delta_y, -delta_x, -distance_traveled)
+    select(-delta_y, -delta_x, -distance_traveled) |>
+    
+    # record the number of frames dropped from each track
+    left_join(pre_start_frames, by = c("channel", "Track")) |>
+    left_join(post_end_frames, by = c("channel", "Track")) |>
+    mutate(pre_start_frames = ifelse(is.na(pre_start_frames), 0, pre_start_frames),
+           post_end_frames  = ifelse(is.na( post_end_frames), 0,  post_end_frames))
   
   
   ###############################
