@@ -693,16 +693,17 @@ one_experiment <- function(dat_sub, experiment, results_dir, seed = NULL, ledge_
                                                        v_y    = channel_summ$v_y[[.x]],
                                                        v      = channel_summ$v[[.x]])),
        
-       trackSummary = tibble(expID           = track_summ$experiment,
+       trackSummary = tibble(expID           = experiment,
                              chanID          = track_summ$channel,
                              trackID         = track_summ$Track %>% as.integer(),
                              ce              = track_summ$ce,
                              angle_migration = track_summ$angle_migration,
                              max_v           = track_summ$max_v,
                              av_velocity     = track_summ$av_velocity,
-                             finished        = track_summ$finished),
+                             finished        = track_summ$observe_finish, # same as surv_event
+                             surv            = track_summ$surv_time),
        
-       trackRaw = map_df(1:nrow(track_summ), ~ tibble(expID   = track_summ$experiment[.x],
+       trackRaw = map_df(1:nrow(track_summ), ~ tibble(expID   = experiment,
                                                       chanID  = track_summ$channel[.x],
                                                       trackID = track_summ$Track[.x] %>% as.integer()) |>
                            
@@ -713,6 +714,7 @@ one_experiment <- function(dat_sub, experiment, results_dir, seed = NULL, ledge_
                            mutate(x       = track_summ$x[[.x]],
                                   y       = track_summ$y[[.x]],
                                   frames  = track_summ$frames[[.x]] %>% as.integer(),
+                                  time    = frames / 2,
                                   v_x     = track_summ$v_x[[.x]],
                                   v_y     = track_summ$v_y[[.x]],
                                   v       = track_summ$v[[.x]]))

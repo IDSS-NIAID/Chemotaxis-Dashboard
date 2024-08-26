@@ -1,19 +1,13 @@
 # process_19000101_data.R
 
 library(ChemotaxisDashboard)
-library(magrittr)
-
-# start up parallel back end
-parallel::makeCluster(parallel::detectCores() - 1, 
-                      type = "PSOCK"
-                      ) %>%
-  doParallel::registerDoParallel()
 
 # process test data
-processed_data <- process_experiments('19000101',
+processed_data <- process_experiments(experiment = '19000101',
                                       source_dir = system.file("extdata", package = "ChemotaxisDashboard"),
                                       results_dir = file.path(system('git rev-parse --show-toplevel', intern = TRUE), 'shiny'),
                                       seed = 923847,
+                                      ledge_dist = 260,
                                       ledge_upper = 0,
                                       ledge_lower = 1)
 

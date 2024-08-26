@@ -54,23 +54,18 @@ dbinit <- function(db_path, data = NULL)
   #                          `chanRaw`
   #                          `trackSummary`
   #                          `trackRaw`
-  # @param tracks_time     Character, path to figure of tracks over time for each channel
-  # @param tracks_v        Character, path to figure of velocity over time for each grouping
-  # @param angle_migration Character, path to figure of angle of migration viloin plots for each channel
-  # @param ce              Character, path to figure of chemotactic efficiency violin plots for each channel
   dbupdate(con, 'expSummary', data$expSummary, 'expID')
 
   
-  # expStats
+  # expSummary
   # Table of summary statistics for each experiment
   # 
-  # @param expID   (key) Character, maps to `expSummary$expID`
-  # @param within  (key) Character, group for the comparison (i.e. within normals treated with fMLF8)
-  # @param between (key) Character, contrast for the comparison (i.e. between channels 3 and 4)
-  # @param test    (key) Character, test used to compare the `between` groups
-  # @param stat          Double, test statistics comparing the `between` groups
-  # @param p             Double, p-value for `stat`
-  dbupdate(con, 'expStats', data$expStats, c('expID', 'within', 'between', 'test'))
+  # @param expID      (key) Character, maps to `expSummary$expID`
+  # @param comparison (key) Character, description of the comparison (e.g. Within normals: Buffer vs fMLF8)
+  # @param test       (key) Character, test used for the statistical comparison
+  # @param stat             Double, test statistic
+  # @param p                Double, p-value for `stat`
+  dbupdate(con, 'expStats', data$expStats, c('expID', 'comparison', 'test'))
 
   
   # chanSummary
@@ -123,6 +118,7 @@ dbinit <- function(db_path, data = NULL)
   # @param max_v           Double, maximum velocity in μm per minute
   # @param av_velocity     Double, mean velocity in μm per minute
   # @param finished        Logical, TRUE when the cell passed the bottom ledge
+  # @param surv            Double, survival time in minutes (not helpful right now due to split tracks)
   dbupdate(con, 'trackSummary', data$trackSummary, c('expID', 'chanID', 'trackID'))
 
   
