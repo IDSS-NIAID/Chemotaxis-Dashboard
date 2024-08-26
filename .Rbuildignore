@@ -6,3 +6,8 @@
 ^.data$
 
 ^LICENSE\.md$
+
+scratch.R
+docs/
+
+^.*\.pptx$
