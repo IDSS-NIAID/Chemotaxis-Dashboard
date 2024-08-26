@@ -12,7 +12,6 @@
 #' @param source_dir Path to directory containing raw csv tracks files
 #' @param results_dir Path to processed data directory
 #' @param seed Random seed to use
-#' @param sig.figs Number of significant figures to pass to one_experiment`
 #' @param ledge_dist Numeric, distance between top and bottom ledges of the microscope image in micrometers (default is 260)
 #' @param ledge_upper Numeric, location of the upper ledge in the raw Y coordinate system (default is 100)
 #' @param ledge_lower Numeric, location of the lower ledge in the raw Y coordinate system (default is 500)
@@ -43,7 +42,7 @@
 #' @importFrom purrr map map_chr map_int map_df map2_chr map2_df
 #' @importFrom readr read_csv
 #' @importFrom stringr str_replace
-process_experiments <- function(experiment, source_dir, results_dir, seed = NULL, sig.figs = 4,
+process_experiments <- function(experiment, source_dir, results_dir, seed = NULL,
                                 ledge_dist = 260, ledge_upper = 100, ledge_lower = 500)
 {
   # for all those pesky "no visible binding" notes
@@ -127,7 +126,6 @@ process_experiments <- function(experiment, source_dir, results_dir, seed = NULL
                          experiment = .x,
                          results_dir = results_dir, 
                          seed = seed,
-                         sig.figs = sig.figs,
                          ledge_dist = ledge_dist,
                          ledge_upper = ledge_upper,
                          ledge_lower = ledge_lower))
@@ -147,7 +145,6 @@ process_experiments <- function(experiment, source_dir, results_dir, seed = NULL
 #' @param experiment Date of the experiment to run. Argument should be of the form: `experiment="\%Y\%m\%d"`.
 #' @param results_dir path to directory for saving data
 #' @param seed seed for random number generation
-#' @param sig.figs maximum significant digits for p-values obtained by permutation testing
 #' @param ledge_dist Numeric, distance between top and bottom ledge of the microscope image in micrometers (default is 260)
 #' @param ledge_upper Numeric, location of the upper ledge in the raw Y coordinate system (default is 100). This should be the first ledge crossed.
 #' @param ledge_lower Numeric, location of the lower ledge in the raw Y coordinate system (default is 500). This should be the second ledge crossed.
@@ -166,7 +163,7 @@ process_experiments <- function(experiment, source_dir, results_dir, seed = NULL
 #' @importFrom ggplot2 aes ggplot element_blank facet_wrap geom_boxplot geom_jitter geom_hline geom_path geom_violin ggsave scale_y_reverse scale_color_gradient2 scale_color_manual stat_smooth theme theme_set xlab ylab
 #' @importFrom cowplot theme_cowplot
 #' @importFrom grDevices rgb
-one_experiment <- function(dat_sub, experiment, results_dir, seed = NULL, sig.figs = 4, ledge_dist = 260, ledge_upper = 100, ledge_lower = 500)
+one_experiment <- function(dat_sub, experiment, results_dir, seed = NULL, ledge_dist = 260, ledge_upper = 100, ledge_lower = 500)
 {
   # for all those pesky "no visible binding" notes
   if(FALSE)

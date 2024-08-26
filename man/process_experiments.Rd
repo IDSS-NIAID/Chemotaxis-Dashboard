@@ -10,7 +10,6 @@ process_experiments(
   source_dir,
   results_dir,
   seed = NULL,
-  sig.figs = 4,
   ledge_dist = 260,
   ledge_upper = 100,
   ledge_lower = 500
@@ -24,8 +23,6 @@ process_experiments(
 \item{results_dir}{Path to processed data directory}
 
 \item{seed}{Random seed to use}
-
-\item{sig.figs}{Number of significant figures to pass to one_experiment`}
 
 \item{ledge_dist}{Numeric, distance between top and bottom ledges of the microscope image in micrometers (default is 260)}
 

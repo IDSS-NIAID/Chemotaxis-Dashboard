@@ -9,7 +9,6 @@ one_experiment(
   experiment,
   results_dir,
   seed = NULL,
-  sig.figs = 4,
   ledge_dist = 260,
   ledge_upper = 100,
   ledge_lower = 500
@@ -23,8 +22,6 @@ one_experiment(
 \item{results_dir}{path to directory for saving data}
 
 \item{seed}{seed for random number generation}
-
-\item{sig.figs}{maximum significant digits for p-values obtained by permutation testing}
 
 \item{ledge_dist}{Numeric, distance between top and bottom ledge of the microscope image in micrometers (default is 260)}
 
