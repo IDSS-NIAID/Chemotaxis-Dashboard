@@ -427,8 +427,16 @@ one_experiment <- function(dat_sub, experiment, results_dir, seed = NULL, ledge_
                    tmp <- smooth.spline(.x, .y)
                    splinefun(tmp$x, tmp$y)
                  }),
-      frames = map(list(Frame), ~ unique(.x))) %>%
+      frames = map(list(Frame), ~ unique(.x)),
+      
+      # calculate total number of tracks in each channel (as the max of the smoothed number of tracks for each frame)
+      tab = map(list(Frame), ~ table(.x)),
+      n_cells = map_int(tab, ~ smooth.spline(as.numeric(names(.x)), .x)$y |>
+                          max() |>
+                          floor())
+    ) |>
     ungroup() %>%
+    dplyr::select(-tab) |>
     
     mutate(
       # calculate velocity over time
@@ -445,10 +453,9 @@ one_experiment <- function(dat_sub, experiment, results_dir, seed = NULL, ledge_
     
     # add summary of track statistics (proportion finished, chemotactic efficiency, angle of migration)
     left_join({
-      group_by(track_summ, experiment, channel) %>%
-        summarize( tot_finished = sum(finished),
-                  prop_finished = tot_finished / length(finished),
-                  
+      group_by(track_summ, channel) %>%
+        summarize( tot_finished = sum(observe_finish),
+
                   ce_median = median(ce, na.rm = TRUE),
                   ce_mean   =   mean(ce, na.rm = TRUE),
                   ce_sd     =     sd(ce, na.rm = TRUE),
@@ -460,7 +467,27 @@ one_experiment <- function(dat_sub, experiment, results_dir, seed = NULL, ledge_
                   max_v_median = median(max_v, na.rm = TRUE),
                   max_v_mean   =   mean(max_v, na.rm = TRUE),
                   max_v_sd     =     sd(max_v, na.rm = TRUE)
-        )}, by = c("experiment", "channel"))
+        )}, by = "channel") |>
+    
+    # add proportion of cells finished
+    mutate(prop_finished = tot_finished / n_cells) |>
+    
+    # add numbers of tracks and frames filtered for various reasons
+    left_join(non_movers, by = "channel") |>
+    left_join(little_movement, by = "channel") |>
+    left_join(dns, by = "channel") |>
+    left_join(few_frames, by = "channel") |>
+    left_join({group_by(pre_start_frames, channel) |>
+                  summarize(pre_start_frames = sum(pre_start_frames))}, by = c("channel")) |>
+    left_join({group_by(post_end_frames, channel) |>
+                  summarize(post_end_frames = sum(post_end_frames))}, by = c("channel")) |>
+    
+    mutate(non_movers = ifelse(is.na(non_movers), 0, non_movers),
+           little_movement = ifelse(is.na(little_movement), 0, little_movement),
+           dns = ifelse(is.na(dns), 0, dns),
+           few_frames = ifelse(is.na(few_frames), 0, few_frames),
+           pre_start_frames = ifelse(is.na(pre_start_frames), 0, pre_start_frames),
+           post_end_frames = ifelse(is.na(post_end_frames), 0, post_end_frames))
   
   ##############################
   # Experiment-level summaries #
