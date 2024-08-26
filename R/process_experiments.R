@@ -520,6 +520,17 @@ one_experiment <- function(dat_sub, experiment, results_dir, seed = NULL, ledge_
     # make comparisons for all pairs
     for(i in 1:nrow(within_grp))
     {
+      ### difference of proportion finished ###
+      tmp <- filter(channel_summ, treatment == within_grp$treatment[i]) |>
+        
+        group_by(channel) |>
+        summarize(n_finished = sum(prop_finished * n_cells),
+                  n_cells = sum(n_cells)) |>
+        
+        with(suppressWarnings(prop.test(n_finished, n_cells)))
+
+      within_grp$a_vs_b[[i]] <- list(fc = tmp$estimate[1] / tmp$estimate[2],
+                                     prop_test = tmp$p.value)
     }
   }else{
     within_grp <- tibble(date = as.Date(NA),
@@ -532,7 +543,15 @@ one_experiment <- function(dat_sub, experiment, results_dir, seed = NULL, ledge_
       filter(channel_a != -1)
   }
   
-  exp_summ$within_grp <- within_grp
+  if(dim(within_grp)[1] > 0)
+  {
+    exp_summ <- bind_rows(exp_summ,
+                          tibble(expID      = within_grp$experiment,
+                                 comparison = with(within_grp, paste0('Within ', sample, ', ', treatment, ": ", channel_a, ' vs ', channel_b)),
+                                 test       = 'prop.test (FC)',
+                                 stat       = map_dbl(within_grp$a_vs_b, ~ .x[['fc']]),
+                                 p          = map_dbl(within_grp$a_vs_b, ~ .x[['prop_test']])))
+  }
   
   
   ### btw_trt: Between-treatment statistics (same sample, different treatment)
@@ -558,6 +577,17 @@ one_experiment <- function(dat_sub, experiment, results_dir, seed = NULL, ledge_
     # make comparisons for all pairs
     for(i in 1:nrow(btw_trt))
     {
+      ### difference of proportion finished ###
+      tmp <- filter(channel_summ, sample == btw_trt$sample[i]) |>
+        
+        group_by(treatment) |>
+        summarize(n_finished = sum(prop_finished * n_cells),
+                  n_cells = sum(n_cells)) |>
+        
+        with(suppressWarnings(prop.test(n_finished, n_cells)))
+      
+      btw_trt$a_vs_b[[i]] <- list(fc = tmp$estimate[1] / tmp$estimate[2],
+                                  prop_test = tmp$p.value)
     }
   }else{
     btw_trt <- tibble(date = as.Date(NA),
@@ -569,7 +599,16 @@ one_experiment <- function(dat_sub, experiment, results_dir, seed = NULL, ledge_
       filter(!is.na(date))
   }
   
-  exp_summ$btw_trt <- btw_trt
+  if(dim(btw_trt)[1] > 0)
+  {
+    exp_summ <- bind_rows(exp_summ,
+                          tibble(expID      = btw_trt$experiment,
+                                 comparison = with(btw_trt, paste0('Within ', sample, ": ", trt_a, ' vs ', trt_b)),
+                                 test       = 'prop.test (FC)',
+                                 stat       = map_dbl(btw_trt$a_vs_b, ~ .x[['fc']]),
+                                 p          = map_dbl(btw_trt$a_vs_b, ~ .x[['prop_test']])))
+  }
+  
   
   
   ### btw_samp: Between-sample comparison statistics (same treatment, different sample)
@@ -578,8 +617,8 @@ one_experiment <- function(dat_sub, experiment, results_dir, seed = NULL, ledge_
     # check to see how many channels we have in each group  
     mutate(nsamps = length(unique(na.omit(sample)))) %>%
     
-    # drop any groups that only have one channel (nothing to compare)
-    dplyr::filter(nsamps > 1)
+    dplyr::filter(nsamps > 1,        # drop any groups that only have one channel (nothing to compare)
+                  !is.na(treatment)) # drop any groups with NA treatment
   
   # if we have different between-treatment statistics to calculate...
   if(nrow(btw_samp) > 0)
@@ -594,53 +633,53 @@ one_experiment <- function(dat_sub, experiment, results_dir, seed = NULL, ledge_
     # make comparisons for all pairs
     for(i in 1:nrow(btw_samp))
     {
+      ### difference of proportion finished ###
+      tmp <- filter(channel_summ, treatment == btw_samp$treatment[i]) |>
+        
+        group_by(sample) |>
+        summarize(n_finished = sum(prop_finished * n_cells),
+                  n_cells = sum(n_cells)) |>
+        
+        with(suppressWarnings(prop.test(n_finished, n_cells)))
+      
+      btw_samp$a_vs_b[[i]] <- list(fc = tmp$estimate[1] / tmp$estimate[2],
+                                   prop_test = tmp$p.value)
     }
   }else{
     btw_samp <- tibble(date = as.Date(NA),
                        experiment = '',
                        treatment = '',
-                       trt_a = '',
-                       trt_b = '',
                        a = '',
                        b = '',
                        a_vs_b = list('')) %>%
       filter(!is.na(date))
   }
   
-  exp_summ$btw_samp <- btw_samp
+  if(dim(btw_samp)[1] > 0)
+  {
+    exp_summ <- bind_rows(exp_summ,
+                          tibble(expID      = btw_samp$experiment,
+                                 comparison = with(btw_samp, paste0('Within ', treatment, ": ", a, ' vs ', b)),
+                                 test       = 'prop.test (FC)',
+                                 stat       = map_dbl(btw_samp$a_vs_b, ~ .x[['fc']]),
+                                 p          = map_dbl(btw_samp$a_vs_b, ~ .x[['prop_test']])))
+  }
   
   
-  ###########
-  # Figures #
-  ###########
-  
-  expSummary <- tibble(expID = experiment,
-                       tracks_time = file.path('images', experiment, 'tracks_time'),
-                       tracks_v = file.path('images', experiment, 'tracks_v'),
-                       angle_migration = file.path('images', experiment, 'angle_migration'),
-                       ce = file.path('images', experiment, 'ce'))
-    
   ##### Return Results #####
   
-  list(expSummary = expSummary,
+  # compare this output with the comments in `initialize.R`
+  list(expSummary = tibble(expID = experiment),
        
-       expStats = tibble(expID   = experiment,
-                         within  = c(btw_samp$treatment, btw_trt$sample),
-                         between = c(paste(btw_samp$a,    btw_samp$b,     sep = ', '),
-                                     paste( btw_trt$trt_a, btw_trt$trt_b, sep = ', ')),
-                         test    = 'dissim',
-                         stat    = c(map_dbl(btw_samp$a_vs_b, ~ .x['dissim']),
-                                     map_dbl( btw_trt$a_vs_b, ~ .x['dissim'])),
-                         p       = c(map_dbl(btw_samp$a_vs_b, ~ .x['p']),
-                                     map_dbl( btw_trt$a_vs_b, ~ .x['p']))),
+       expStats = exp_summ,
        
        chanSummary = select(channel_summ, 
                             experiment, channel, sample, treatment, 
                             tot_finished, prop_finished, 
                             ce_median, ce_mean, ce_sd,
                             angle_median, angle_mean, angle_sd,
-                            max_v_median, max_v_mean, max_v_sd,
-                            dvud, dvud_p) %>%
+                            max_v_median, max_v_mean, max_v_sd) |>
+                            # dvud, dvud_p
          rename(expID  = experiment, 
                 chanID = channel,
                 sID    = sample),
