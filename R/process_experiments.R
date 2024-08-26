@@ -398,14 +398,6 @@ one_experiment <- function(dat_sub, experiment, results_dir, seed = NULL, sig.fi
       y = map2(y, frames, function(y, f) y(f)),
       
       #directed vs undirected statistics for each channel
-      directed_v_undirected = pmap(list(chan = channel, frames = frames, f = x, g = y),
-                                   function(chan, frames, f, g)
-                                     filter(dat_sub, channel == chan) %>%
-                                     dplyr::select(Track, Frame, x, y) %>% 
-                                     rename(f = x, g = y) %>%
-                                     compare_two_functions(frames, f, g, sig.figs)),
-      dvud   = map_dbl(directed_v_undirected, ~ .x['dissim']),
-      dvud_p = map_dbl(directed_v_undirected, ~ .x['p']),
     ) %>%
     
     # add summary of track statistics (proportion finished, chemotactic efficiency, angle of migration)
@@ -458,36 +450,6 @@ one_experiment <- function(dat_sub, experiment, results_dir, seed = NULL, sig.fi
     # make comparisons for all pairs
     for(i in 1:nrow(within_grp))
     {
-      # get functions to compare
-      f_dat <- filter(dat_sub, paste(treatment) == paste(within_grp$treatment[i]) &
-                               paste(sample   ) == paste(within_grp$sample[i]) &
-                                     channel    ==       within_grp$channel_a[i])
-      
-      f <- list(smooth.spline(f_dat$Frame, f_dat$x),
-                smooth.spline(f_dat$Frame, f_dat$y)) |>
-        map(~ splinefun(.x$x, .x$y))
-      
-      frames.f <- unique(arrange(f_dat, Frame)$Frame)
-      
-      
-      g_dat <- filter(dat_sub, paste(treatment) == paste(within_grp$treatment[i]) &
-                               paste(sample   ) == paste(within_grp$sample[i]) &
-                                     channel    ==       within_grp$channel_b[i])
-      
-      g <- list(smooth.spline(g_dat$Frame, g_dat$x),
-                smooth.spline(g_dat$Frame, g_dat$y)) |>
-        map(~ splinefun(.x$x, .x$y))
-      
-      frames.g <- unique(arrange(g_dat, Frame)$Frame)
-      
-      # calculate similarity and p-value
-      within_grp$a_vs_b[[i]] <- filter(dat_sub, paste(treatment) == paste(within_grp$treatment[i]) &
-                                                paste(sample   ) == paste(within_grp$sample[i]) &
-                                                      channel   %in%    c(within_grp$channel_a[i], within_grp$channel_b[i])) %>%
-        mutate(f = x) %>%
-        compare_two_functions(f = sapply(f, function(.x) .x(frames.f)), frames.f = frames.f, 
-                              g = sapply(g, function(.x) .x(frames.g)), frames.g = frames.g,
-                              sig.figs = sig.figs, lab = 'channel')
     }
   }else{
     within_grp <- tibble(date = as.Date(NA),
@@ -526,24 +488,6 @@ one_experiment <- function(dat_sub, experiment, results_dir, seed = NULL, sig.fi
     # make comparisons for all pairs
     for(i in 1:nrow(btw_trt))
     {
-      # get functions to compare
-      f <- filter(dat_sub, paste(treatment) == paste(btw_trt$trt_a[i]) &
-                                 sample     ==       btw_trt$sample[i])
-      f <- list(smooth.spline(f$Frame, f$x),
-                smooth.spline(f$Frame, f$y))
-      
-      g <- filter(dat_sub, paste(treatment) == paste(btw_trt$trt_b[i]) &
-                                 sample     ==       btw_trt$sample[i])
-      g <- list(smooth.spline(g$Frame, g$x),
-                smooth.spline(g$Frame, g$y))
-      
-      # calculate similarity and p-value
-      btw_trt$a_vs_b[[i]] <- filter(dat_sub, paste(treatment) %in% c(paste(btw_trt$trt_a[i]), paste(btw_trt$trt_b[i])) &
-                                      sample == btw_trt$sample[i]) %>%
-        mutate(f = x) %>%
-        compare_two_functions(f = sapply(f, function(.x) .x$y), frames.f = f[[1]]$x, 
-                              g = sapply(g, function(.x) .x$y), frames.g = g[[1]]$x,
-                              sig.figs = sig.figs, lab = 'treatment')
     }
   }else{
     btw_trt <- tibble(date = as.Date(NA),
@@ -580,24 +524,6 @@ one_experiment <- function(dat_sub, experiment, results_dir, seed = NULL, sig.fi
     # make comparisons for all pairs
     for(i in 1:nrow(btw_samp))
     {
-      # get functions to compare
-      f <- filter(dat_sub, paste(sample   ) == paste(btw_samp$a[i]) &
-                    paste(treatment) == paste(btw_samp$treatment[i]))
-      f <- list(smooth.spline(f$Frame, f$x),
-                smooth.spline(f$Frame, f$y))
-      
-      g <- filter(dat_sub, paste(sample   ) == paste(btw_samp$b[i]) &
-                    paste(treatment) == paste(btw_samp$treatment[i]))
-      g <- list(smooth.spline(g$Frame, g$x),
-                smooth.spline(g$Frame, g$y))
-      
-      # calculate similarity and p-value
-      btw_samp$a_vs_b[[i]] <- filter(dat_sub, paste(sample  ) %in% c(paste(btw_samp$a[i]), paste(btw_samp$b[i])) &
-                                       paste(treatment) ==    paste(btw_samp$treatment[i])) %>%
-        mutate(f = x) %>%
-        compare_two_functions(f = sapply(f, function(.x) .x$y), frames.f = f[[1]]$x, 
-                              g = sapply(g, function(.x) .x$y), frames.g = g[[1]]$x,
-                              sig.figs = sig.figs, lab = 'sample')
     }
   }else{
     btw_samp <- tibble(date = as.Date(NA),
@@ -682,151 +608,4 @@ one_experiment <- function(dat_sub, experiment, results_dir, seed = NULL, sig.fi
                                   v_y     = track_summ$v_y[[.x]],
                                   v       = track_summ$v[[.x]]))
        )
-}
-
-
-#' Functional data analysis comparison of two functions, f1 and f2
-#' 
-#' @param data A subset of dat_sub with variables, f and g, for permutation testing. When `lab` is specified, only `f` is used.
-#' @param frames.f A vector of frames over which the function, f, is defined
-#' @param f A vector or matrix of responses for f
-#' @param g A vector or matrix of responses for g
-#' @param sig.figs Integer, maximum significant digits for p-values obtained by permutation testing
-#' @param frames.g A vector of frames over which the function, g, is defined
-#' @param lab A character string indicating which variable is to be shuffled in the permutations. If NULL, then it is assumed that the two variables to be compared are `f` and `g`.
-#' 
-#' @details There are two main uses for this function: to compare two functions defined for each track (i.e. directed vs
-#' undirected travel, where we shuffle un/directed values for each individual track) and to compare a single function 
-#' between two different groups of tracks.
-#' 
-#' 1) When comparing two functions defined for each track, we assume that there are two columns of data, labeled `f` 
-#' and `g`. The will be compared, and in the permutation stage, they will be randomly swapped for about half of the 
-#' Tracks in each permutation.
-#' 
-#' 2) When comparing a single between two different groups of tracks, we assume that there is one column of data labeled,
-#' `f`, and another column identified by `lab`. During the permutation stage, a group of tracks will be randomly assigned
-#' group labels, maintaining the total number of Tracks in each group. Exactly two groups should be included in the data
-#' set.
-#' 
-#' @return A named vector containing the similarity measure and permutation p-value
-#' .data <- filter(dat_sub, channel == 1) %>% dplyr::select(Track, Frame, x, y) %>% rename(f = x, g = y)
-#' frames <- channel_summ$frames[[1]]
-#' f <- channel_summ$x[[1]]
-#' g <- channel_summ$y[[1]]
-#' 
-#' @export
-#' @import rlang
-#' @importFrom magrittr %>%
-#' @importFrom dplyr matches select mutate
-#' @importFrom foreach foreach %dopar%
-#' @importFrom stats na.omit rbinom smooth.spline splinefun
-#' @importFrom briKmeans kma.similarity
-compare_two_functions <- function(data, frames.f, f, g, sig.figs, frames.g = frames.f, lab = NULL)
-{
-  # for all those pesky "no visible binding" notes
-  if(FALSE)
-    f.tmp <- perm_lab <- Track <- NULL
-  
-  if(is.null(lab))
-  {
-    # tracks for permutation test
-    tracks <- unique(data$Track)
-  }else{
-    # if we are using a label, tabulate how many tracks fall into each group
-    grps <- dplyr::select(data, Track, matches(lab)) %>%
-      unique() %>%
-      dplyr::select(-Track) %>%
-      unlist() %>%
-      paste() %>% # need this to catch 'NA' as an option
-      table()
-    
-    # labels for permutation test
-    data$perm_lab <- paste(data[[lab]], data$Track)
-    tracks <- unique(data$perm_lab)
-    
-    # for some reason, we need to do this - from the documentation, it seems like we shouldn't, but...
-    frames.f <- cbind(frames.f, frames.f)
-    frames.g <- cbind(frames.g, frames.g)
-  }
-  
-  # similarity measure
-  dissim <- suppressWarnings(kma.similarity(x.f = frames.f, y0.f = f,
-                                            x.g = frames.g, y0.g = g, 
-                                            similarity.method = 'd0.L2'))
-  
-  # permutation test
-  # shuffles labels on data then generates distribution of test statistic for each shuffle
-  # then calculates p-value for actual data's statistic as compared to the simulated test statistic
-  # will shuffle ~10^i times (min i = 2 = 100 shuffles)
-  perms <- numeric(0)
-  for(i in 2:max(2, sig.figs))
-  {
-    
-    perms <- foreach(i = 1:(1*10^i),
-                     .combine = 'c') %dopar%
-      {
-        # shuffle f and g
-        if(is.null(lab))
-        {
-          # pick tracks to shuffle
-          pick_track <- as.logical(rbinom(length(tracks), 1, 0.5))
-          
-          shuffled <- dplyr::mutate(data, 
-                                    f.tmp = ifelse(Track %in% tracks[pick_track], g, f),
-                                    g     = ifelse(Track %in% tracks[pick_track], f, g),
-                                    f     = f.tmp)
-          
-          # smooth f and g
-          tmp <- smooth.spline(shuffled$Frame, shuffled$f) |>
-            with(splinefun(x, y))
-          f_shuff <- list(x = tmp(frames.f), y = frames.f)
-          tmp <- smooth.spline(shuffled$Frame, shuffled$g) |>
-            with(splinefun(x, y))
-          g_shuff <- list(x = tmp(frames.g), y = frames.g)
-        }else{
-          # pick tracks to be in group 1, the others fall into group 2 (should exactly two groups)
-          grp1 <- sample(tracks, grps[1])
-          
-          # shuffle
-          shuffled <- mutate(data,
-                             lab = ifelse(perm_lab %in% grp1, names(grps)[1], names(grps)[2]))
-          
-          # smooth f and g
-          tmp <- dplyr::filter(shuffled, lab == names(grps)[1])  # filter by shuffled group
-          tmp_f <- list(smooth.spline(tmp$Frame, tmp$x) |>
-                          with(splinefun(x, y)),             # smooth undirected function
-                        smooth.spline(tmp$Frame, tmp$y) |>
-                          with(splinefun(x, y)))             # smooth directed function
-          
-          f_shuff <- list(x = cbind(frames.f, frames.f),
-                          y = cbind(tmp_f[[1]](frames.f), tmp_f[[2]](frames.f)))      # return two columns (un/directed) of smoothed functions
-          
-          tmp <- dplyr::filter(shuffled, lab == names(grps)[2])  # filter by shuffled group
-          tmp_g <- list(smooth.spline(tmp$Frame, tmp$x) |>
-                          with(splinefun(x, y)),             # smooth undirected function
-                        smooth.spline(tmp$Frame, tmp$y) |>
-                          with(splinefun(x, y)))             # smooth directed function
-          
-          g_shuff <- list(x = cbind(frames.g, frames.g),
-                          y = cbind(tmp_g[[1]](frames.g), tmp_g[[2]](frames.g)))      # return two columns (un/directed) of smoothed functions
-        }
-        
-        # calculate similarity
-        suppressWarnings(briKmeans::kma.similarity(x.f = f_shuff$x, y0.f = f_shuff$y, 
-                                                   x.g = g_shuff$x, y0.g = g_shuff$y,
-                                                   similarity.method = 'd0.L2'))
-      } %>%
-      
-      c(perms)
-    
-    # return permutation test p-value, null hypothesis is that f and g are the same
-    retval <- c(dissim = dissim,
-                p = sum(dissim < perms) / length(perms))
-    
-    # don't do extra simulations if it looks like the p-value is too large
-    if(retval['p'] > 1*10^-(i - 1))
-      break
-  }
-  
-  return(retval)
 }

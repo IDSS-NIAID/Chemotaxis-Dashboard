@@ -94,8 +94,6 @@ dbinit <- function(db_path, data = NULL)
   # @param max_v_median  Double, median maximum velocity
   # @param max_v_mean    Double, mean maximum velocity
   # @param max_v_sd      Double, standard deviation of maximum velocity
-  # @param dvud          Double, dissimilarity score comparing directed and undirected trajectories
-  # @param dvud_p        Double, p-value for `dvud`
   dbupdate(con, 'chanSummary', data$chanSummary, c('expID', 'chanID'))
   
   

@@ -8,14 +8,12 @@ License: MIT + file LICENSE
 Depends: 
   R (>= 4.0)
 Imports:
-  briKmeans,
   bslib,
   cowplot,
   datamods,
   DBI,
   dplyr,
   DT,
-  foreach,
   ggplot2,
   grDevices,
   magrittr,
