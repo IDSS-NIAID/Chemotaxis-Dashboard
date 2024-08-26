@@ -232,12 +232,22 @@ one_experiment <- function(dat_sub, experiment, results_dir, seed = NULL, sig.fi
                             # if it isn't tracked until after it crosses the lower ledge, use the first frame as the ending point
                             all(Y > ledge_lower) | Y[1] > ledge_lower ~ Frame[1],
                             
-                            # if it crosses the bottom ledge, find the first frame where it crosses
-                            TRUE           ~ suppressWarnings(min(Frame[c(FALSE, Y[-length(Y)] >  ledge_lower &
-                                                                                 Y[-1]         <= ledge_lower)], na.rm = TRUE))),
+                            # if it crosses the bottom ledge, find the first frame below the threshold
+                            TRUE           ~ suppressWarnings(min(Frame[Y >= ledge_lower]))),
       
+      # track cells that we observe crossing the top/bottom ledges
+      #   (or that started across the ledge and are reasonably close to the top ledge in the first image)
+      observe_start = any(Y >= ledge_upper) & (any(Y < ledge_upper) | any(cross_at == 1 & Y < 0.05)),
+      observe_finish = any(Y >= ledge_lower) & any(Y < ledge_lower),
+      
+      # calculate starting X position for each track
+      Xo = X[Frame == cross_at]
+    ) |>
+    ungroup() |>
+    
+    mutate(
       # translate X st each cell starts at (0,~0) when first crossing top ledge
-      x = X - X[Frame == cross_at],
+      x = X - Xo,
 
       # convert to micrometers
       x =  x                * ledge_dist / (ledge_lower - ledge_upper),
@@ -389,32 +399,8 @@ one_experiment <- function(dat_sub, experiment, results_dir, seed = NULL, sig.fi
       
       #average velocity and standard deviation
       av_velocity = map_dbl(v, ~ mean(.x)),
-      sd_velocity = map_dbl(v, ~ sd(.x)),
-
-      # # --- use observe_finish ---      
-      # # Proportion of cells making it past the threshold
-      # # at the track level, we want to know if the cell ever passes the bottom ledge
-      # # to understand that, we set a variable "finished" to be TRUE if the cell crosses the bottom ledge and 0 if it does not
-      # # - since we filtered all cells after they pass the lower ledge, we need to refer to dat_sub$y_max to see if they pass the ledge
-      # finished = map2_lgl(channel, Track, ~ filter(channel_summ, channel == .x, Track == .y)$y_max >= ledge_dist),
-      
-      # Survival time for each track in minutes (finish_at and cross_at are in Frames, so divide by 2)
-      # Only count if we know when it crossed the top ledge (or thereabouts - allow `y_min <= 15μm` for the first frame)
-      surv_start = map2_dbl(channel, Track, ~ dplyr::filter(dat_sub, channel == .x, Track == .y) |>
-                                              dplyr::select(Track, cross_at) |>
-                                              distinct() |>
-                                              dplyr::select(cross_at) |>
-                                              unlist()) / 2,
-      surv_end   = map2_dbl(channel, Track, ~ dplyr::filter(dat_sub, channel == .x, Track == .y) |>
-                                              dplyr::select(Track, finish_at) |>
-                                              distinct() |>
-                                              dplyr::select(finish_at) |>
-                                              unlist()) / 2,
-      event = case_when( observe_start &  observe_finish ~ 1,    # 1 = both start and finish
-                         observe_start & !observe_finish ~ 0,    # 0 = right censored
-                        !observe_start &  observe_finish ~ 2,    # 2 = left censored
-                        !observe_start & !observe_finish ~ 3,    # 3 = interval censored
-                         TRUE                             ~ NA)) |>
+      sd_velocity = map_dbl(v, ~ sd(.x))
+    ) |>
   
     #deleting columns with intermediate variables (used for calculation but not needed in end file)
     select(-delta_y, -delta_x, -distance_traveled) |>
