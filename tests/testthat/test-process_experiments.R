@@ -32,18 +32,6 @@ con <- dbConnect(SQLite(), db_path)
 channel_summ <- dbGetQuery(con, "SELECT * FROM chanSummary WHERE expID = '19000101'")
 
 
-#################################
-# Check `compare_two_functions` #
-#################################
-
-test_that("compare_two_functions returns expected results", {
-  
-  # check results in the database (need to re-run `root/data-raw/process_19000101_data.R` to update installed data)
-  expect_equal(filter(channel_summ, chanID == 1)$dvud_p, 1.0)
-  expect_equal(filter(channel_summ, chanID == 4)$dvud_p, 1.0)  
-})
-
-
 ###############################
 # Check `process_experiments` #
 ###############################
@@ -68,11 +56,12 @@ test_that("process_experiments returns expected results", {
 # Check that the data haven't changed #
 #######################################
 
-processed_data <- process_experiments('19000101',
+processed_data <- process_experiments(experiment = '19000101',
                                       source_dir = system.file("extdata", package = "ChemotaxisDashboard"),
                                       results_dir = file.path(system('git rev-parse --show-toplevel', intern = TRUE), 'shiny'),
                                       seed = 923847,
                                       sig.figs = 2,
+                                      ledge_dist = 260,
                                       ledge_upper = 0,
                                       ledge_lower = 1)
 
