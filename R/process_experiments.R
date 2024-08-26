@@ -245,56 +245,116 @@ one_experiment <- function(dat_sub, experiment, results_dir, seed = NULL, sig.fi
       
       y_min = min(y),
       y_max = max(y),
-
+      
       # remove '.csv' from file names
-      f = gsub('.csv', '', f, fixed = TRUE)) %>%
+      f = gsub('.csv', '', f, fixed = TRUE),
 
-    ungroup() %>%
+      # filter out tracks and frames that we don't want to include in the analysis
+      non_mover  = y_max - y_min < 1,                                                     # drop any "cells" that don't move at all (+/- a few pixels / at least one micrometer)
+      pre_start  = Frame < cross_at | y < 0,                                              # frames prior to crossing the upper ledge
+      no_start   = y_max < 0,                                                             # as well as any tracks that never cross the upper ledge
+      post_end   = Frame > finish_at | y > ledge_dist,                                    # frames after crossing the lower ledge
+      drop       = ifelse(is.na(treatment), FALSE, treatment == 'fMLF (did not work)') |  # drop this one that didn't work
+                   non_mover | pre_start | no_start | post_end) |>
     
-    dplyr::select(-key_violation) |>
-    
-    # drop any "cells" that don't move at all (+/- a few pixels / at least one micrometer)
-    filter(y_max - y_min > 1 &
-             # drop this one that didn't work
-             (is.na(treatment) | treatment != 'fMLF (did not work)'),
-    
-           Frame >= cross_at,  # drop any frames prior to crossing the upper ledge
-           y_max > 0,          # as well as any tracks that never cross the upper ledge
-           Frame <= finish_at, # and any frames after crossing the lower ledge
+    # calculate additional summary statistics only with frames that pass the filters above
+    group_by(channel, Track) |>
+    mutate(pass_filters = sum(!drop), # count number of frames we have data for each track (and pass the filtering requirements above)
            
-           y >= 0,             # drop any points below the upper ledge
-           y <= ledge_dist)    # and above the lower ledge
+           # raw distance
+           raw_distance = c(0, diff(x[!drop])^2 + diff(y[!drop])^2) |> # add the 0 to avoid empty vectors
+             sqrt() |>
+             sum()
+           ) |>
+    ungroup() |>
+    
+    # add few tracks to drop criteria
+    mutate(few_frames = pass_filters <= 3,                                                     # drop tracks with fewer than 3 frames
+           little_movement = raw_distance < 10,                                                # drop tracks with less than 10 μm of movement
+           drop = few_frames | little_movement | drop)
+  
 
+  ### count dropped records ###
+  
+  # tracks that didn't move
+  non_movers <- dat_sub |>
+    dplyr::select(channel, Track, non_mover) |>
+    dplyr::distinct() |>
+    group_by(channel) |>
+    dplyr::summarize(non_movers = sum(non_mover)) |>
+    ungroup()
+  
+  # tracks with very little movement (< 10 μm) - don't include tracks with few frames
+  little_movement <- filter(dat_sub, !few_frames) |>
+    dplyr::select(channel, Track, little_movement) |>
+    dplyr::distinct() |>
+    group_by(channel) |>
+    dplyr::summarize(little_movement = sum(little_movement)) |>
+    ungroup()
+  
+  # tracks that never started
+  dns <- dat_sub |>
+    dplyr::select(channel, Track, pre_start) |>
+    dplyr::distinct() |>
+    group_by(channel, Track) |>
+    mutate(all_pre_start = all(pre_start)) |>
+    ungroup() |>
+    group_by(channel) |>
+    dplyr::summarize(dns = sum(all_pre_start)) |>
+    ungroup()
+  
+  # tracks that have few observations
+  few_frames <- dat_sub |>
+    dplyr::select(channel, Track, few_frames) |>
+    dplyr::distinct() |>
+    group_by(channel) |>
+    summarize(few_frames = sum(few_frames)) |>
+    ungroup()
+  
+  # frames before the start
+  pre_start_frames <- group_by(dat_sub, channel, Track) |>
+    summarize(pre_start_frames = sum(pre_start)) |>
+    ungroup() |>
+    dplyr::filter(pre_start_frames > 0)
+  
+  # frames after the end
+  post_end_frames <- group_by(dat_sub, channel, Track) |>
+    summarize(post_end_frames = sum(post_end)) |>
+    ungroup() |>
+    dplyr::filter(post_end_frames > 0)
+  
+  ### drop records ###
+  dat_sub <- dat_sub |>
+    dplyr::filter(!drop) |>
+    dplyr::select(-key_violation, -drop, -non_mover, -pre_start, -no_start, -post_end, -few_frames, -little_movement, -raw_distance)
 
+  
   #############################
   # Track-level summarization #
   #############################
 
-  # we will use this in our track summary below
-  channel_summ <- select(dat_sub, channel, Track, y_max) %>%
-    distinct() %>%
-    ungroup()
-  
-  track_summ <- group_by(dat_sub, channel, sample, treatment, Track, experiment) %>%
-    
-    # make sure we have enough observations to use the track
-    mutate(l = sum(!is.na(x))) %>%
-    filter(l > 3) %>%
-    
-    # calculate smooth functions of x and y over time
+  track_summ <- dat_sub |>
+    group_by(channel, Track, observe_finish) |>
     summarize(
-      x = map2(list(Frame), list(x), ~ 
+      # calculate smooth functions of x and y over time
+      x = map2(list(Frame), list(x), ~
                  {
                    tmp <- smooth.spline(.x, .y)
                    splinefun(tmp$x, tmp$y)
                  }),
-      y = map2(list(Frame), list(y), ~ 
+      y = map2(list(Frame), list(y), ~
                  {
                    tmp <- smooth.spline(.x, .y)
                    splinefun(tmp$x, tmp$y)
                  }),
-      frames = map(list(Frame), ~ unique(.x))) %>%
-    ungroup() %>%
+      frames = map(list(Frame), ~ unique(.x)),
+      
+      # calculate survival time
+      # (finish_at and cross_at are in Frames, so divide by 2 for time in minutes)
+      surv_time = unique(ifelse(observe_start, finish_at - cross_at, NA) / 2), # drop left censored tracks
+      surv_event = unique(observe_finish)
+    ) %>%
+    ungroup() |>
     
     mutate(
       # calculate velocity over time (multiply by 2 to calculate velocity in micrometers  per minute - frames are every 30 seconds)
