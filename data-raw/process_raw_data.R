@@ -2,18 +2,11 @@
 
 library(ChemotaxisDashboard)
 
-library(magrittr)
 library(stringr)
 library(purrr)
 
 library(DBI)
 library(RSQLite)
-
-# start up parallel back end
-parallel::makeCluster(parallel::detectCores() - 1, 
-                      type = "PSOCK"
-                      ) %>%
-  doParallel::registerDoParallel()
 
 
 # root directory of the repo
@@ -34,9 +27,9 @@ if(file.exists(db_path) & file.size(db_path) > 0)
 
 
 # get all experiments
-all_experiments <- list.files(file.path(root, 'data-raw', 'results_csv')) %>%
-  grep(pattern = '19000101', value = TRUE, invert = TRUE, fixed = TRUE) %>%
-  str_split(pattern = '_') %>%
+all_experiments <- list.files(file.path(root, 'data-raw', 'results_csv')) |>
+  grep(pattern = '19000101', value = TRUE, invert = TRUE, fixed = TRUE) |>
+  str_split(pattern = '_') |>
   sapply(`[`, 1) |>
   str_replace('-$', '') |>
   unique()
@@ -58,8 +51,6 @@ if(length(all_experiments) > 0)
   # add new records to the database
   dbinit(db_path, processed_data)
 }
-
-parallel::stopCluster(parallel::getDefaultCluster())
 
 ##### helpful queries #####
 
