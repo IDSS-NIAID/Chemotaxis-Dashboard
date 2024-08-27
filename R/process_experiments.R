@@ -157,7 +157,7 @@ process_experiments <- function(experiment, source_dir, results_dir, seed = NULL
 #' @importFrom dplyr arrange case_when distinct filter group_by left_join mutate n_distinct reframe rename select starts_with summarize ungroup
 #' @importFrom tidyr pivot_longer
 #' @importFrom purrr map map_dbl map2 map2_dbl map2_lgl pmap
-#' @importFrom stats lm median quantile sd smooth.spline splinefun
+#' @importFrom stats lm median quantile sd smooth.spline splinefun na.omit
 #' @importFrom splines bs
 #' @importFrom utils combn
 #' @importFrom ggplot2 aes ggplot element_blank facet_wrap geom_boxplot geom_jitter geom_hline geom_path geom_violin ggsave scale_y_reverse scale_color_gradient2 scale_color_manual stat_smooth theme theme_set xlab ylab
@@ -173,6 +173,8 @@ one_experiment <- function(dat_sub, experiment, results_dir, seed = NULL, ledge_
     dvud <- dvud_p <- experiment <- finish_at <- finished <- Frame <- frames <- grp <- key_violation <- l <- max_y <- NULL
     max_v <- max_v_mean <- max_v_median <- max_v_sd <- minutes <- nchannels <- nsamps <- ntrts <- prop_finished <- NULL
     tot_finished <- Track <- treatment <- v <- v_x <- v_y <- X <- x <- Y <- y <- y_max <- y_min <- NULL
+    Xo <- f <- non_mover <- pre_start <- post_end <- pass_filters <- raw_distance <- all_pre_start <- NULL
+    observe_finish <- observe_start <- tab <- n_cells <- no_start <- NULL
   }
   
   if(!is.null(seed))
@@ -207,10 +209,7 @@ one_experiment <- function(dat_sub, experiment, results_dir, seed = NULL, ledge_
     filter(!key_violation &                                      # matches the row after this
            !c(FALSE, key_violation[-length(key_violation)])) %>% # matches the row previous to this
   
-    # split tracks that have large gaps in them (see if we still need this after upgrades to the tracking software)
-    # split_tracks() %>%
-    
-    group_by(f, date, experiment, channel, sample, treatment, Track) %>%
+    group_by(channel, Track) %>%
     mutate(
       # this is the frame where the cell first crosses the upper ledge
       cross_at = case_when(    Y[1] >= ledge_upper  ~ Frame[1],
@@ -372,11 +371,11 @@ one_experiment <- function(dat_sub, experiment, results_dir, seed = NULL, ledge_
       # convert functions of x and y back to values
       x = map2(x, frames, function(x, f) x(f)),
       y = map2(y, frames, function(y, f) y(f)),
-      
+    
       # Chemotactic efficiency
       # calculate net change in y direction - return a value for each track (this could be negative if the cell travels in the wrong direction)
       delta_y = map_dbl(y, ~ .x[length(.x)] - .x[1]),
-      
+
       # calculate the total distance traveled using the distance formula
       distance_traveled = map2_dbl(x, y, ~ sum( sqrt( (.x[-1]-.x[-length(.x)])^2+(.y[-1]-.y[-length(.y)])^2 ) )),
       
