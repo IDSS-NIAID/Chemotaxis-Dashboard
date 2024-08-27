@@ -492,7 +492,11 @@ one_experiment <- function(dat_sub, experiment, results_dir, seed = NULL, ledge_
   # Experiment-level summaries #
   ##############################
   
-  exp_summ <- list()
+  exp_summ <- tibble(expID = character(),
+                     comparison = character(),
+                     test = character(),
+                     stat = numeric(),
+                     p = numeric())
   
   trts <- paste(unique(channel_summ$treatment))
   samps <- unique(channel_summ$sample)
@@ -504,7 +508,9 @@ one_experiment <- function(dat_sub, experiment, results_dir, seed = NULL, ledge_
     mutate(nchannels = length(unique(na.omit(channel)))) %>%
     
     # drop any groups that only have one channel (nothing to compare)
-    dplyr::filter(nchannels > 1)
+    dplyr::filter(nchannels > 1,
+                  !is.na(treatment),
+                  !is.na(sample))
   
   # if we have different within-group statistics to calculate...
   if(nrow(within_grp) > 0)
@@ -520,11 +526,13 @@ one_experiment <- function(dat_sub, experiment, results_dir, seed = NULL, ledge_
     for(i in 1:nrow(within_grp))
     {
       ### difference of proportion finished ###
-      tmp <- filter(channel_summ, treatment == within_grp$treatment[i]) |>
+      tmp <- filter(channel_summ, 
+                    treatment == within_grp$treatment[i],
+                    sample == within_grp$sample) |>
         
         group_by(channel) |>
         summarize(n_finished = sum(prop_finished * n_cells),
-                  n_cells = sum(n_cells)) |>
+                  n_cells = max(n_finished, sum(n_cells))) |>
         
         with(suppressWarnings(prop.test(n_finished, n_cells)))
 
@@ -577,11 +585,13 @@ one_experiment <- function(dat_sub, experiment, results_dir, seed = NULL, ledge_
     for(i in 1:nrow(btw_trt))
     {
       ### difference of proportion finished ###
-      tmp <- filter(channel_summ, sample == btw_trt$sample[i]) |>
+      tmp <- filter(channel_summ, 
+                    sample == btw_trt$sample[i],
+                    treatment %in% c(btw_trt$trt_a[i], btw_trt$trt_b[i])) |>
         
         group_by(treatment) |>
         summarize(n_finished = sum(prop_finished * n_cells),
-                  n_cells = sum(n_cells)) |>
+                  n_cells = max(n_finished, sum(n_cells))) |> # make sure denominator is at least as large as numerator (sometimes the estimated number of cells is a little off when all - or nearly all cells cross the bottom ledge)
         
         with(suppressWarnings(prop.test(n_finished, n_cells)))
       
@@ -633,11 +643,13 @@ one_experiment <- function(dat_sub, experiment, results_dir, seed = NULL, ledge_
     for(i in 1:nrow(btw_samp))
     {
       ### difference of proportion finished ###
-      tmp <- filter(channel_summ, treatment == btw_samp$treatment[i]) |>
+      tmp <- filter(channel_summ,
+                    treatment == btw_samp$treatment[i],
+                    sample %in% c(btw_samp$a[i], btw_samp$b[i])) |>
         
         group_by(sample) |>
         summarize(n_finished = sum(prop_finished * n_cells),
-                  n_cells = sum(n_cells)) |>
+                  n_cells = max(n_finished, sum(n_cells))) |>
         
         with(suppressWarnings(prop.test(n_finished, n_cells)))
       
