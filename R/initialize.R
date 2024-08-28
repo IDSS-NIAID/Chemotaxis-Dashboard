@@ -71,24 +71,31 @@ dbinit <- function(db_path, data = NULL)
   # chanSummary
   # Channel summary table
   # 
-  # @param expID   (key) Character, maps to `expSummary$expID`
-  # @param chanID  (key) Integer, channel ID - used in:
-  #                        `chanRaw`
-  #                        `trackRaw`
-  #                        `trackSummary`
-  # @param sID           Character, sample ID - used in:
-  # @param treatment     Character, treatment applied to this channel
-  # @param tot_finished  Integer, Total number of cells that reached the bottom ledge
-  # @param prop_finished Double, proportion of cells that reached the bottom ledge
-  # @param ce_median     Double, median chemotactic efficiency
-  # @param ce_mean       Double, mean chemotactic efficiency
-  # @param ce_sd         Double, standard deviation of chemotactic efficiency
-  # @param angle_median  Double, median angle of migration
-  # @param angle_mean    Double, mean angle of migration
-  # @param angle_sd      Double, standard deviation of angle of migration
-  # @param max_v_median  Double, median maximum velocity
-  # @param max_v_mean    Double, mean maximum velocity
-  # @param max_v_sd      Double, standard deviation of maximum velocity
+  # @param expID      (key) Character, maps to `expSummary$expID`
+  # @param chanID     (key) Integer, channel ID - used in:
+  #                           `chanRaw`
+  #                           `trackRaw`
+  #                           `trackSummary`
+  # @param sID              Character, sample ID - used in:
+  # @param treatment        Character, treatment applied to this channel
+  # @param tot_finished     Integer, Total number of cells that reached the bottom ledge
+  # @param prop_finished    Double, proportion of cells that reached the bottom ledge
+  # @param n_cells          Integer, estimated number of cells in the channel
+  # @param ce_median        Double, median chemotactic efficiency
+  # @param ce_mean          Double, mean chemotactic efficiency
+  # @param ce_sd            Double, standard deviation of chemotactic efficiency
+  # @param angle_median     Double, median angle of migration
+  # @param angle_mean       Double, mean angle of migration
+  # @param angle_sd         Double, standard deviation of angle of migration
+  # @param max_v_median     Double, median maximum velocity
+  # @param max_v_mean       Double, mean maximum velocity
+  # @param max_v_sd         Double, standard deviation of maximum velocity
+  # @param non_movers       Integer, number of tracks removed because they do not move
+  # @param little_movement  Integer, number of tracks removed because they move very little
+  # @param dns              Integer, number of tracks removed bacause they do not cross the upper threshold
+  # @param few_frames       Integer, number of tracks removed because they have 3 or fewer frames
+  # @param pre_start_frames Integer, number of frames removed prior to a track crossing the upper threshold
+  # @param post_end_frames  Integer, number of frames removed after a track crosses the bottom threshold
   dbupdate(con, 'chanSummary', data$chanSummary, c('expID', 'chanID'))
   
   

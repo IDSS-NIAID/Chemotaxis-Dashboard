@@ -630,10 +630,12 @@ one_experiment <- function(dat_sub, experiment, results_dir, seed = NULL, ledge_
        
        chanSummary = select(channel_summ, 
                             experiment, channel, sample, treatment, 
-                            tot_finished, prop_finished, 
+                            tot_finished, prop_finished, n_cells,
                             ce_median, ce_mean, ce_sd,
                             angle_median, angle_mean, angle_sd,
-                            max_v_median, max_v_mean, max_v_sd) |>
+                            max_v_median, max_v_mean, max_v_sd,
+                            non_movers, little_movement, dns,
+                            few_frames, pre_start_frames, post_end_frames) |>
                             # dvud, dvud_p
          rename(expID  = experiment, 
                 chanID = channel,
