@@ -469,7 +469,10 @@ one_experiment <- function(dat_sub, experiment, results_dir, seed = NULL, ledge_
         )}, by = "channel") |>
     
     # add proportion of cells finished
-    mutate(prop_finished = tot_finished / n_cells) |>
+    mutate(n_cells = ifelse(n_cells < tot_finished,  # estimate can be a little off when we have a lot of tracks (all of them) that finished
+                            tot_finished,
+                            n_cells),
+           prop_finished = tot_finished / n_cells) |>
     
     # add numbers of tracks and frames filtered for various reasons
     left_join(non_movers, by = "channel") |>
@@ -526,40 +529,20 @@ one_experiment <- function(dat_sub, experiment, results_dir, seed = NULL, ledge_
     for(i in 1:nrow(within_grp))
     {
       ### difference of proportion finished ###
-      tmp <- filter(channel_summ, 
-                    treatment == within_grp$treatment[i],
-                    sample == within_grp$sample) |>
-        
-        group_by(channel) |>
-        summarize(n_finished = sum(prop_finished * n_cells),
-                  n_cells = max(n_finished, sum(n_cells))) |>
-        
-        with(suppressWarnings(prop.test(n_finished, n_cells)))
-
-      within_grp$a_vs_b[[i]] <- list(fc = tmp$estimate[1] / tmp$estimate[2],
-                                     prop_test = tmp$p.value)
+      within_grp$a_vs_b[[i]] <- compare_prop_finish(channel_summ,
+                                                    comp_grp = 'channel',
+                                                    trt = within_grp$treatment[i],
+                                                    samp = within_grp$sample[i])
     }
-  }else{
-    within_grp <- tibble(date = as.Date(NA),
-                         experiment = '',
-                         sample = '',
-                         treatment = '',
-                         channel_a = -1,
-                         channel_b = -1,
-                         a_vs_b = list('')) %>%
-      filter(channel_a != -1)
-  }
-  
-  if(dim(within_grp)[1] > 0)
-  {
+    
     exp_summ <- bind_rows(exp_summ,
                           tibble(expID      = within_grp$experiment,
                                  comparison = with(within_grp, paste0('Within ', sample, ', ', treatment, ": ", channel_a, ' vs ', channel_b)),
                                  test       = 'prop.test (FC)',
                                  stat       = map_dbl(within_grp$a_vs_b, ~ .x[['fc']]),
-                                 p          = map_dbl(within_grp$a_vs_b, ~ .x[['prop_test']])))
+                                 p          = map_dbl(within_grp$a_vs_b, ~ .x[['prop_test_p']])))
   }
-  
+
   
   ### btw_trt: Between-treatment statistics (same sample, different treatment)
   btw_trt <- group_by(dat_sub, date, experiment, sample) %>%
@@ -585,39 +568,19 @@ one_experiment <- function(dat_sub, experiment, results_dir, seed = NULL, ledge_
     for(i in 1:nrow(btw_trt))
     {
       ### difference of proportion finished ###
-      tmp <- filter(channel_summ, 
-                    sample == btw_trt$sample[i],
-                    treatment %in% c(btw_trt$trt_a[i], btw_trt$trt_b[i])) |>
-        
-        group_by(treatment) |>
-        summarize(n_finished = sum(prop_finished * n_cells),
-                  n_cells = max(n_finished, sum(n_cells))) |> # make sure denominator is at least as large as numerator (sometimes the estimated number of cells is a little off when all - or nearly all cells cross the bottom ledge)
-        
-        with(suppressWarnings(prop.test(n_finished, n_cells)))
-      
-      btw_trt$a_vs_b[[i]] <- list(fc = tmp$estimate[1] / tmp$estimate[2],
-                                  prop_test = tmp$p.value)
+      btw_trt$a_vs_b[[i]] <- compare_prop_finish(channel_summ,
+                                                 comp_grp = 'treatment',
+                                                 trt = c(btw_trt$trt_a[i], btw_trt$trt_b[i]),
+                                                 samp = btw_trt$sample[i])
     }
-  }else{
-    btw_trt <- tibble(date = as.Date(NA),
-                      experiment = '',
-                      sample = '',
-                      trt_a = '',
-                      trt_b = '',
-                      a_vs_b = list('')) %>%
-      filter(!is.na(date))
-  }
-  
-  if(dim(btw_trt)[1] > 0)
-  {
-    exp_summ <- bind_rows(exp_summ,
+    
+   exp_summ <- bind_rows(exp_summ,
                           tibble(expID      = btw_trt$experiment,
                                  comparison = with(btw_trt, paste0('Within ', sample, ": ", trt_a, ' vs ', trt_b)),
                                  test       = 'prop.test (FC)',
                                  stat       = map_dbl(btw_trt$a_vs_b, ~ .x[['fc']]),
-                                 p          = map_dbl(btw_trt$a_vs_b, ~ .x[['prop_test']])))
+                                 p          = map_dbl(btw_trt$a_vs_b, ~ .x[['prop_test_p']])))
   }
-  
   
   
   ### btw_samp: Between-sample comparison statistics (same treatment, different sample)
@@ -643,37 +606,18 @@ one_experiment <- function(dat_sub, experiment, results_dir, seed = NULL, ledge_
     for(i in 1:nrow(btw_samp))
     {
       ### difference of proportion finished ###
-      tmp <- filter(channel_summ,
-                    treatment == btw_samp$treatment[i],
-                    sample %in% c(btw_samp$a[i], btw_samp$b[i])) |>
-        
-        group_by(sample) |>
-        summarize(n_finished = sum(prop_finished * n_cells),
-                  n_cells = max(n_finished, sum(n_cells))) |>
-        
-        with(suppressWarnings(prop.test(n_finished, n_cells)))
-      
-      btw_samp$a_vs_b[[i]] <- list(fc = tmp$estimate[1] / tmp$estimate[2],
-                                   prop_test = tmp$p.value)
+      btw_samp$a_vs_b[[i]] <- compare_prop_finish(channel_summ,
+                                                  comp_grp = 'sample',
+                                                  trt = btw_samp$treatment[i],
+                                                  samp = c(btw_samp$a[i], btw_samp$b[i]))
     }
-  }else{
-    btw_samp <- tibble(date = as.Date(NA),
-                       experiment = '',
-                       treatment = '',
-                       a = '',
-                       b = '',
-                       a_vs_b = list('')) %>%
-      filter(!is.na(date))
-  }
   
-  if(dim(btw_samp)[1] > 0)
-  {
     exp_summ <- bind_rows(exp_summ,
                           tibble(expID      = btw_samp$experiment,
                                  comparison = with(btw_samp, paste0('Within ', treatment, ": ", a, ' vs ', b)),
                                  test       = 'prop.test (FC)',
                                  stat       = map_dbl(btw_samp$a_vs_b, ~ .x[['fc']]),
-                                 p          = map_dbl(btw_samp$a_vs_b, ~ .x[['prop_test']])))
+                                 p          = map_dbl(btw_samp$a_vs_b, ~ .x[['prop_test_p']])))
   }
   
   
