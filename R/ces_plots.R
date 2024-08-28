@@ -12,6 +12,7 @@
 #' @export
 #' @importFrom dplyr mutate
 #' @importFrom ggplot2 ggplot aes expand_limits geom_line geom_hline facet_wrap xlab ylab
+#' @importFrom grDevices rgb
 ces_v <- function(dat, ylab, wrap_by = 'none')
 {
   # check that we have the variables needed

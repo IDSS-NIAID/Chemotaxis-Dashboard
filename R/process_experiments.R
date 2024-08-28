@@ -158,11 +158,7 @@ process_experiments <- function(experiment, source_dir, results_dir, seed = NULL
 #' @importFrom tidyr pivot_longer
 #' @importFrom purrr map map_dbl map2 map2_dbl map2_lgl pmap
 #' @importFrom stats lm median quantile sd smooth.spline splinefun na.omit
-#' @importFrom splines bs
 #' @importFrom utils combn
-#' @importFrom ggplot2 aes ggplot element_blank facet_wrap geom_boxplot geom_jitter geom_hline geom_path geom_violin ggsave scale_y_reverse scale_color_gradient2 scale_color_manual stat_smooth theme theme_set xlab ylab
-#' @importFrom cowplot theme_cowplot
-#' @importFrom grDevices rgb
 one_experiment <- function(dat_sub, experiment, results_dir, seed = NULL, ledge_dist = 260, ledge_upper = 100, ledge_lower = 500)
 {
   # for all those pesky "no visible binding" notes
@@ -174,7 +170,7 @@ one_experiment <- function(dat_sub, experiment, results_dir, seed = NULL, ledge_
     max_v <- max_v_mean <- max_v_median <- max_v_sd <- minutes <- nchannels <- nsamps <- ntrts <- prop_finished <- NULL
     tot_finished <- Track <- treatment <- v <- v_x <- v_y <- X <- x <- Y <- y <- y_max <- y_min <- NULL
     Xo <- f <- non_mover <- pre_start <- post_end <- pass_filters <- raw_distance <- all_pre_start <- NULL
-    observe_finish <- observe_start <- tab <- n_cells <- no_start <- NULL
+    observe_finish <- observe_start <- tab <- n_cells <- no_start <- n_finished <- NULL
   }
   
   if(!is.null(seed))
@@ -453,11 +449,11 @@ one_experiment <- function(dat_sub, experiment, results_dir, seed = NULL, ledge_
     # add summary of track statistics (proportion finished, chemotactic efficiency, angle of migration)
     left_join({
       group_by(track_summ, channel) %>%
-        summarize( tot_finished = sum(observe_finish),
+        summarize(tot_finished = sum(observe_finish),
 
-                  ce_median = median(ce, na.rm = TRUE),
-                  ce_mean   =   mean(ce, na.rm = TRUE),
-                  ce_sd     =     sd(ce, na.rm = TRUE),
+                  ce_median    = median(ce, na.rm = TRUE),
+                  ce_mean      =   mean(ce, na.rm = TRUE),
+                  ce_sd        =     sd(ce, na.rm = TRUE),
 
                   angle_median = median(angle_migration, na.rm = TRUE),
                   angle_mean   =   mean(angle_migration, na.rm = TRUE),

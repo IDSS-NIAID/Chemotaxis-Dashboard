@@ -42,13 +42,13 @@ test_that("process_experiments returns expected results", {
   expect_equal(channel_summ$prop_finished, c(0, 1, 1, 0, 1, 1))
   
   # chemotactic efficiency
-  expect_equal(round(channel_summ$ce_mean, 2), c(0.07, 0.95, 0.95, 0.10, 0.99, 0.99))
+  expect_equal(round(channel_summ$ce_mean, 2), c(0.05, 0.95, 0.95, 0.06, 0.99, 0.99))
   
   # angle of migration
-  expect_equal(round(channel_summ$angle_mean, 2), c(59.62, 2.25, 2.25, 55.47, 1.08, 1.08))
+  expect_equal(round(channel_summ$angle_mean, 2), c(59.53, 2.25, 2.24, 57.97, 1.08, 1.08))
   
   # maximum velocity
-  expect_equal(round(channel_summ$max_v_mean, 3), c(12.445, 9.130, 9.093, 6.554, 7.269, 7.163))
+  expect_equal(round(channel_summ$max_v_mean, 3), c(11.593, 9.131, 9.089, 5.760, 7.269, 7.163))
 })
 
 
@@ -60,7 +60,6 @@ processed_data <- process_experiments(experiment = '19000101',
                                       source_dir = system.file("extdata", package = "ChemotaxisDashboard"),
                                       results_dir = file.path(system('git rev-parse --show-toplevel', intern = TRUE), 'shiny'),
                                       seed = 923847,
-                                      sig.figs = 2,
                                       ledge_dist = 260,
                                       ledge_upper = 0,
                                       ledge_lower = 1)

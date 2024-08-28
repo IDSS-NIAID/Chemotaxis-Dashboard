@@ -76,6 +76,7 @@ ces_cardsUI <- function(id)
 #' @importFrom datamods select_group_server
 #' @importFrom dplyr mutate left_join join_by rename
 #' @importFrom DT renderDataTable
+#' @importFrom ggplot2 ggsave
 #' @importFrom shiny downloadHandler moduleServer reactive reactiveValues renderPlot
 #' @importFrom utils write.csv
 ces_server <- function(id, con, user)

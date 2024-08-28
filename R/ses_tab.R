@@ -1,5 +1,5 @@
 # ses_tab.R
-# UI and server elements for the Single Eperiment Statistics tab
+# UI and server elements for the Single Experiment Statistics tab
 
 #' ses_sidebarUI
 #' UI element for the SE sidebar
@@ -78,6 +78,7 @@ ses_cardsUI <- function(id)
 #' @export
 #' @importFrom shiny downloadHandler moduleServer reactive reactiveValues renderPlot renderTable
 #' @importFrom dplyr left_join
+#' @importFrom ggplot2 ggsave
 #' @importFrom utils write.csv
 ses_server <- function(id, con, user)
 {

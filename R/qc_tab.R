@@ -69,7 +69,7 @@ qc_cardsUI <- function(id)
 #' @importFrom datamods select_group_server
 #'
 #' @importFrom dplyr arrange group_by mutate summarize ungroup
-#' @importFrom ggplot2 aes geom_line geom_segment ggplot labs
+#' @importFrom ggplot2 ggsave
 #' @importFrom shiny downloadHandler moduleServer reactive reactiveValues reactiveValuesToList renderPlot
 qc_server <- function(id, con, user)
 {

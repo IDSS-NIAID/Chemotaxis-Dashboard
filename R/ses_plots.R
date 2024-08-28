@@ -10,6 +10,7 @@
 #' @export
 #' @importFrom dplyr arrange mutate
 #' @importFrom ggplot2 aes facet_wrap geom_hline geom_path ggplot scale_color_gradient2 scale_y_reverse
+#' @importFrom grDevices rgb
 ses_tracks_time <- function(dat)
 {
   # take care of those pesky "no visible binding" notes
