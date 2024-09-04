@@ -23,8 +23,14 @@ get_dat <- function(con, user, select = '*', from, where = NULL)
   if(FALSE)
     expID <- NULL
   
+  # add expID if it is missing
+  if(!(grepl('expID', select) | select == '*'))
+    select <- paste('expID,', select)
+  
+  # build query
   query <- paste("SELECT", select, "FROM", from)
   
+  # add where clause if it exists
   if(!is.null(where))
     query <- paste(query, 'WHERE', where)
   
