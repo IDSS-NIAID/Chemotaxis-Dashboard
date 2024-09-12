@@ -8,16 +8,8 @@
 #
 
 library(ChemotaxisDashboard)
-library(shiny)
-library(shinymanager)
 library(RSQLite)
 library(DBI)
-library(bslib)
-
-library(ggplot2)
-library(cowplot)
-theme_set(theme_cowplot())
-library(dplyr)
 
 
 #################

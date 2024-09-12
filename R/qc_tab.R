@@ -52,7 +52,11 @@ qc_cardsUI <- function(id)
       card(full_screen = TRUE, 
            card_header("# Tracks (cells) over time"), 
            card_body(plotOutput(ns("qc_n_cells"))),
-           card_footer(downloadButton(ns('qc_n_cells_download'), 'Download figure'))))
+           card_footer(downloadButton(ns('qc_n_cells_download'), 'Download figure'))),
+      card(full_screen = TRUE, 
+           card_header("Statistics"), 
+           card_body(tableOutput(ns("qc_stats"))),
+           card_footer(downloadButton(ns('qc_stats_download'), 'Download statistics'))))
   )
 }
 
@@ -71,11 +75,12 @@ qc_cardsUI <- function(id)
 #' @importFrom dplyr arrange group_by mutate summarize ungroup
 #' @importFrom ggplot2 ggsave
 #' @importFrom shiny downloadHandler moduleServer reactive reactiveValues reactiveValuesToList renderPlot
+#' @importFrom tibble rownames_to_column
 qc_server <- function(id, con, user)
 {
   # for all of those pesky "no visible binding" notes
   if(FALSE)
-    chanID <- expID <- sID <- NULL
+    chanID <- expID <- sID <- V1 <- NULL
   
   moduleServer(
     id,
@@ -137,6 +142,46 @@ qc_server <- function(id, con, user)
           ggsave(file, vals$n_cells)
         }
       )
+      
+      # statistics
+      output$qc_stats <- renderTable({
+        if(dim(chan_select())[1] != 1)
+        {
+          (vals$qc_stats <- data.frame())
+        }else{
+          (vals$qc_stats <- get_dat(con,
+                                     user = user,
+                                     select = "non_movers, little_movement, dns, few_frames, pre_start_frames, post_end_frames",
+                                     from = "chanSummary",
+                                     where = paste0("expID='", chan_select()$expID[1], "'", " AND ",
+                                                    "chanID='", chan_select()$chanID[1], "'")
+                                    )  |> 
+             select(-expID) |>
+             t() |> 
+             as.data.frame() |> 
+             rename(count = V1) |>
+             rownames_to_column("Filtered") |>
+             mutate(count = as.integer(count),
+                    Filtered = case_when(Filtered == "non_movers"       ~ "Track didn't change position",
+                                         Filtered == "little_movement"  ~ "Track moved only a little",
+                                         Filtered == "dns"              ~ "Track never crossed the upper ledge",
+                                         Filtered == "few_frames"       ~ "Track had ≤3 frames",
+                                         Filtered == "pre_start_frames" ~ "# frames before crossing upper ledge",
+                                         Filtered == "post_end_frames"  ~ "# frames after crossing lower ledge",
+                                         TRUE ~ Filtered))
+           )
+        }
+      })
+      
+      output$qc_stats_download <- downloadHandler(
+        filename = function() {
+          paste0("qc_stats_", paste(chan_select()[1,], collapse = '_'), ".csv")
+        },
+        content = function(file) {
+          write.csv(vals$qc_stats, file, row.names = FALSE)
+        }
+      )
+      
     }
   )
 }

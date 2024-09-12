@@ -37,9 +37,9 @@ all_experiments <- all_experiments[!all_experiments %in% done]
 
 
 # process experiments that haven't been processed yet
-if(length(all_experiments) > 0)
+for(i in 1:length(all_experiments))
 {
-  processed_data <- process_experiments(experiment = all_experiments,
+  processed_data <- process_experiments(experiment = all_experiments[i],
                                         source_dir = file.path(root, 'data-raw', 'results_csv'),
                                         results_dir = file.path(root, 'shiny'),
                                         seed = 923847)
