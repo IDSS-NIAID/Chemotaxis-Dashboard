@@ -1,12 +1,13 @@
 ^.*\.Rproj$
 ^\.Rproj\.user$
 
-^data$
-^docs$
-^Notes$
-^testdata$
-^tmp$
-^utils$
 ^shiny$
+^data-raw$
+^.data$
 
-Dockerfile
+^LICENSE\.md$
+
+scratch.R
+docs/
+
+^.*\.pptx$

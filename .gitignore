@@ -1,8 +1,11 @@
+.DS_Store
+
 .RData
 .Rhistory
 .Rproj.user
 *.RProj
-.DS_Store
+*.RData
+
 *.mov
 *.csv
 *.tif
@@ -10,8 +13,15 @@
 *.mp4
 *.zip
 *.pdf
-*.RData
-tmp/
-data
-results_csv
+*.sqlite
+*.jpg
+*.gif
+*.png
 
+*.pptx
+*.xls
+*.xlsx
+
+.data/
+docs/
+scratch.R
