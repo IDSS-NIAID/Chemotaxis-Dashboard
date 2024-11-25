@@ -10,7 +10,7 @@ library(RSQLite)
 
 
 # root directory of the repo
-root <- system('git rev-parse --show-toplevel', intern = TRUE)
+root <- here::here()
 dat_path <- file.path(root, 'shiny')
 db_path <- file.path(dat_path, 'chemo-dash.sqlite')
 
@@ -51,6 +51,8 @@ for(i in 1:length(all_experiments))
   # add new records to the database
   dbinit(db_path, processed_data)
 }
+
+dbDisconnect(con)
 
 ##### helpful queries #####
 
