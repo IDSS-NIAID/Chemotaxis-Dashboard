@@ -1,0 +1,102 @@
+---
+title: "Chemotaxis report for 20240920FloresGueveraKMNC"
+format: docx
+execute:
+  message: false
+  echo: false
+  fig-dpi: 300
+---
+
+```{r setup}
+#| include: false
+
+library(ChemotaxisDashboard)
+
+library(RSQLite)
+library(DBI)
+library(dbplyr)
+library(dplyr)
+
+library(readr)
+
+##### input variables #####
+root <- here::here()
+expID <- '20240920FloresGueveraKMNC'
+seed <- 923847
+db <- file.path(root, 'shiny', 'chemo-dash.sqlite')
+outdir <- file.path('~/Downloads', 'stuff')
+###########################
+
+# load database
+con <- dbConnect(SQLite(), db)
+
+# import data for the given experiment
+trkRaw <- tbl(con, "trackRaw") |>
+  filter(expID == !!expID)
+
+trkSumm <- tbl(con, "trackSummary") |>
+  filter(expID == !!expID)
+
+chSumm <- tbl(con, "chanSummary") |>
+  filter(expID == !!expID)
+
+# export csv files
+if(FALSE)
+{
+for(i in unique(collect(trkRaw)$chanID))
+{
+  treatment <- chSumm |>
+    filter(chanID == !!i) |>
+    select(treatment) |>
+    collect() |>
+    unlist()
+  
+  sample <- chSumm |>
+    filter(chanID == !!i) |>
+    select(sID) |>
+    collect() |>
+    unlist()
+
+  trkRaw |>
+    filter(chanID == !!i) |>
+    collect() |>
+    write_csv(file.path(outdir, paste0(expID, 
+                                       '_CH', i, 
+                                       '_', toupper(sample),
+                                       '_', treatment,
+                                       '.csv')))
+}}
+```
+
+## Experiment Summary
+
+```{r}
+#| fig-cap: "Distance traveled for each track in μm, with distance in the direction of the chemoattractant on the y-axis, and distance perpendicular to the chemoattractant on the x-axis. Each pane represents a channel in the assay, and tracks are time coded by color."
+
+# Single Experiment Tracks Plot
+left_join(trkRaw, chSumm, by = join_by(expID, chanID)) |>
+  select(sID, chanID, trackID, treatment, x, y, frames) |>
+  collect() |>
+  ses_tracks_time()
+```
+
+```{r}
+#| fig-cap: "Average velocity in μm per minute (y-axis) over time (x-axis) for each channel in the assay. Orange lines represent the velocity in the direction of the chemoattractant, and black lines represent the velocity perpendicular to the chemoattractant. The average over the entire duration of the assy is represented by the dashed lines."
+
+# Single Experiment Velocity Summary Plot
+left_join(trkRaw, chSumm, by = join_by(expID, chanID)) |>
+  select(sID, chanID, trackID, treatment, v_x, v_y, frames) |>
+  collect() |>
+  ses_tracks_v()
+```
+
+```{r}
+#| fig-cap: ""
+#| eval: false
+
+# Single Experiment Angle Migration Plot
+left_join(trkSumm, chSumm, by = join_by(expID, chanID)) |>
+  select(sID, chanID, trackID, treatment, angle_migration, frames) |>
+  collect() |>
+  ses_angle_migration()
+```

@@ -87,7 +87,7 @@ ses_tracks_v <- function(dat)
     geom_hline(yintercept = 0, linetype = 3, linewidth = .5)
   
   #if sample and treatment are available, split by these labels; if not, use channels
-  if(!(any(is.na(dat$sample)))){
+  if(!(any(is.na(dat$sID)))){
     tracks_v <- tracks_v + facet_wrap(~joint_channels)
   }else{
     tracks_v <- tracks_v + facet_wrap(~chanID)
