@@ -57,7 +57,7 @@ dbinit <- function(db_path, data = NULL)
   dbupdate(con, 'expSummary', data$expSummary, 'expID')
 
   
-  # expSummary
+  # expStats
   # Table of summary statistics for each experiment
   # 
   # @param expID      (key) Character, maps to `expSummary$expID`
@@ -84,9 +84,12 @@ dbinit <- function(db_path, data = NULL)
   # @param ce_median        Double, median chemotactic efficiency
   # @param ce_mean          Double, mean chemotactic efficiency
   # @param ce_sd            Double, standard deviation of chemotactic efficiency
-  # @param angle_median     Double, median angle of migration
-  # @param angle_mean       Double, mean angle of migration
-  # @param angle_sd         Double, standard deviation of angle of migration
+  # @param angle_median     Double, median angle of migration (net)
+  # @param angle_mean       Double, mean angle of migration (net)
+  # @param angle_sd         Double, standard deviation of angle of migration (net)
+  # @param theta_median     Double, median instantaneous angle of migration
+  # @param theta_mean       Double, mean instantaneous angle of migration
+  # @param theta_sd         Double, standard deviation of instantaneous angle of migration
   # @param max_v_median     Double, median maximum velocity
   # @param max_v_mean       Double, mean maximum velocity
   # @param max_v_sd         Double, standard deviation of maximum velocity
@@ -110,6 +113,7 @@ dbinit <- function(db_path, data = NULL)
   # @param v_x          Double, velocity in the x direction (undirected)
   # @param v_y          Double, velocity in the y direction (directed)
   # @param v            Double, total velocity
+  # @param theta        Double, smoothed angle of migration at each frame
   dbupdate(con, 'chanRaw', data$chanRaw, c('expID', 'chanID', 'frames'))
 
   
@@ -121,7 +125,8 @@ dbinit <- function(db_path, data = NULL)
   # @param trackID   (key) Integer, track ID - used in:
   #                          `trackRaw`
   # @param ce              Double, chemotactic efficiency
-  # @param angle_migration Double, angle of migration
+  # @param angle_migration Double, angle of migration (net)
+  # @param av_theta        Double, mean instantaneous angle of migration
   # @param max_v           Double, maximum velocity in μm per minute
   # @param av_velocity     Double, mean velocity in μm per minute
   # @param finished        Logical, TRUE when the cell passed the bottom ledge
@@ -144,6 +149,7 @@ dbinit <- function(db_path, data = NULL)
   # @param v_x           Double, velocity in the x direction (undirected) in micrometers per minute
   # @param v_y           Double, velocity in the y direction (directed) in micrometers per minute
   # @param v             Double, total velocity
+  # @param theta         Double, instantaneous angle of migration
   dbupdate(con, 'trackRaw', data$trackRaw, c('expID', 'chanID', 'trackID', 'frames'))
 
   

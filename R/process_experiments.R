@@ -124,7 +124,7 @@ process_experiments <- function(experiment, source_dir, results_dir, seed = NULL
   retval <- unique(dat$experiment) %>%
     map(~ one_experiment(dat_sub = filter(dat, experiment == .x),
                          experiment = .x,
-                         results_dir = results_dir, 
+                         results_dir = results_dir,
                          seed = seed,
                          ledge_dist = ledge_dist,
                          ledge_upper = ledge_upper,
@@ -164,11 +164,12 @@ one_experiment <- function(dat_sub, experiment, results_dir, seed = NULL, ledge_
   # for all those pesky "no visible binding" notes
   if(FALSE)
   {
-    angle_mean <- angle_median <- angle_migration <- angle_sd <- ce <- ce_mean <- ce_median <- ce_sd <- NULL
-    channel <- channel_a <- cross_at <- d <- delta_x <- delta_y <- directed_v_undirected <- distance_traveled <- NULL
+    angle_mean <- angle_median <- angle_migration <- angle_sd <- av_theta <- ce <- ce_mean <- ce_median <- ce_sd <- NULL
+    channel <- channel_a <- cross_at <- d <- d1 <- d2 <- delta_x <- delta_y <- directed_v_undirected <- distance_traveled <- NULL
     dvud <- dvud_p <- experiment <- finish_at <- finished <- Frame <- frames <- grp <- key_violation <- l <- max_y <- NULL
-    max_v <- max_v_mean <- max_v_median <- max_v_sd <- minutes <- nchannels <- nsamps <- ntrts <- prop_finished <- NULL
-    tot_finished <- Track <- treatment <- v <- v_x <- v_y <- X <- x <- Y <- y <- y_max <- y_min <- NULL
+    max_v <- max_v_mean <- max_v_median <- max_v_sd <- minutes <- nchannels <- nsamps <- ntrts <- prop_finished <- sd_theta <- NULL
+    theta <- theta_median <- theta_mean <- theta_sd <- tot_finished <- Track <- treatment <- v <- v_x <- v_y <- NULL
+    X <- x <- Y <- y <- y_max <- y_min <- NULL
     Xo <- f <- non_mover <- pre_start <- post_end <- pass_filters <- raw_distance <- all_pre_start <- NULL
     observe_finish <- observe_start <- tab <- n_cells <- no_start <- n_finished <- NULL
   }
@@ -266,8 +267,18 @@ one_experiment <- function(dat_sub, experiment, results_dir, seed = NULL, ledge_
            # raw distance
            raw_distance = c(0, diff(x[!drop])^2 + diff(y[!drop])^2) |> # add the 0 to avoid empty vectors
              sqrt() |>
-             sum()
-           ) |>
+             sum(),
+           
+           ##### calculate angle of migration at each time point #####
+           # d1 is the angle from the previous frame to the current frame
+           d1 = c(NA, atan2(y[-1] - y[-n()], x[-1] - x[-n()])),
+             
+           # d2 is the angle from the current frame to the next frame
+           d2 = c(d1[-1], NA),
+           
+           # theta is the average of d1 and d2
+           theta = map2_dbl(d1, d2, ~ mean(c(.x, .y), na.rm = TRUE)) / pi * 180) |>
+    dplyr::select(-d1, -d2) |>
     ungroup() |>
     
     # add few tracks to drop criteria
@@ -338,17 +349,23 @@ one_experiment <- function(dat_sub, experiment, results_dir, seed = NULL, ledge_
   track_summ <- dat_sub |>
     group_by(channel, Track, observe_finish) |>
     summarize(
-      # calculate smooth functions of x and y over time
-      x = map2(list(Frame), list(x), ~
-                 {
-                   tmp <- smooth.spline(.x, .y)
-                   splinefun(tmp$x, tmp$y)
-                 }),
-      y = map2(list(Frame), list(y), ~
-                 {
-                   tmp <- smooth.spline(.x, .y)
-                   splinefun(tmp$x, tmp$y)
-                 }),
+      # calculate smooth functions of x, y, and theta over time
+      x     = map2(list(Frame), list(x), ~
+                     {
+                        tmp <- smooth.spline(.x, .y)
+                        splinefun(tmp$x, tmp$y)
+                     }),
+      y     = map2(list(Frame), list(y), ~
+                     {
+                       tmp <- smooth.spline(.x, .y)
+                       splinefun(tmp$x, tmp$y)
+                     }),
+      sd_theta = sd(theta),
+      theta = map2(list(Frame), list(theta), ~
+                     {
+                       tmp <- smooth.spline(.x, .y)
+                       splinefun(tmp$x, tmp$y)
+                     }),
       frames = map(list(Frame), ~ unique(.x)),
       
       # calculate survival time
@@ -364,9 +381,10 @@ one_experiment <- function(dat_sub, experiment, results_dir, seed = NULL, ledge_
       v_y = map2(y, frames, function(y, f) y(f, deriv = 1) * 2),
       v = map2(v_x, v_y, ~ sqrt(.x^2 + .y^2) * sign(.y)), # going down = positive velocity, going up = negative velocity
       
-      # convert functions of x and y back to values
-      x = map2(x, frames, function(x, f) x(f)),
-      y = map2(y, frames, function(y, f) y(f)),
+      # convert functions of x, y, and theta back to values
+      x     = map2(    x, frames, function(    x, f)     x(f)),
+      y     = map2(    y, frames, function(    y, f)     y(f)),
+      theta = map2(theta, frames, function(theta, f) theta(f)),
     
       # Chemotactic efficiency
       # calculate net change in y direction - return a value for each track (this could be negative if the cell travels in the wrong direction)
@@ -385,6 +403,9 @@ one_experiment <- function(dat_sub, experiment, results_dir, seed = NULL, ledge_
       # this finds the angle of migration between the start and end point, converts from radians to degrees
       # zero degrees would represent a net movement straight in the vertical direction. angle is measured from this vertical line of 0 degrees
       angle_migration = 180*(abs(atan(delta_x/delta_y)))/pi,
+
+      # average instantaneous angle of migration (theta)
+      av_theta = map_dbl(theta, ~ mean(.x)),
       
       #peak velocity
       max_v = map_dbl(v, ~ max(.x)),
@@ -411,7 +432,7 @@ one_experiment <- function(dat_sub, experiment, results_dir, seed = NULL, ledge_
   channel_summ <- group_by(dat_sub, f, date, experiment, channel, sample, treatment) %>%
     
     summarize(
-      # calculate smooth functions of x and y over time
+      # calculate smooth functions of x, y and theta over time
       x = map2(list(Frame), list(x), ~ 
                  {
                    tmp <- smooth.spline(.x, .y)
@@ -422,6 +443,23 @@ one_experiment <- function(dat_sub, experiment, results_dir, seed = NULL, ledge_
                    tmp <- smooth.spline(.x, .y)
                    splinefun(tmp$x, tmp$y)
                  }),
+      sd_theta = map2(list(Frame), list(theta), ~ 
+                     {
+                       tmp <- tibble(frames = unique(.x),
+                                     sd_theta = map_dbl(frames, function(f) sd(.y[.x == f], na.rm = TRUE))) |>
+                         na.omit()
+                       
+                       if(nrow(tmp) < 4)
+                         return(NULL)
+                       
+                       tmp <- smooth.spline(tmp$frames, tmp$sd_theta)
+                       splinefun(tmp$x, tmp$y)
+                     }),
+      theta = map2(list(Frame), list(theta), ~ 
+                     {
+                       tmp <- smooth.spline(.x, .y)
+                       splinefun(tmp$x, tmp$y)
+                     }),
       frames = map(list(Frame), ~ unique(.x)),
       
       # calculate total number of tracks in each channel (as the max of the smoothed number of tracks for each frame)
@@ -433,20 +471,28 @@ one_experiment <- function(dat_sub, experiment, results_dir, seed = NULL, ledge_
     ungroup() %>%
     dplyr::select(-tab) |>
     
-    mutate(
+    mutate(,
       # calculate velocity over time
       v_x = map2(x, frames, function(x, f) x(f, deriv = 1)),
       v_y = map2(y, frames, function(y, f) y(f, deriv = 1)),
       v = map2(v_x, v_y, ~ sqrt(.x^2 + .y^2) * sign(.y)), # going down = positive velocity, going up = negative velocity
+
+      # calculate angle of migration and variability over time
+      sd_theta = map2(sd_theta, frames, function(sd_theta, f)
+                      {
+                         if(is.null(sd_theta))
+                           return(NULL) 
+                         sd_theta(f)}),
+      theta    = map2(   theta, frames, function(   theta, f)    theta(f)),
       
-      # convert functions of x and y back to values
+      # convert functions of x, y and theta back to values
       x = map2(x, frames, function(x, f) x(f)),
       y = map2(y, frames, function(y, f) y(f)),
       
       #directed vs undirected statistics for each channel
     ) %>%
     
-    # add summary of track statistics (proportion finished, chemotactic efficiency, angle of migration)
+    # add summary of track statistics (proportion finished, chemotactic efficiency, angle of migration, instantaneous angle, and velocity)
     left_join({
       group_by(track_summ, channel) %>%
         summarize(tot_finished = sum(observe_finish),
@@ -458,6 +504,10 @@ one_experiment <- function(dat_sub, experiment, results_dir, seed = NULL, ledge_
                   angle_median = median(angle_migration, na.rm = TRUE),
                   angle_mean   =   mean(angle_migration, na.rm = TRUE),
                   angle_sd     =     sd(angle_migration, na.rm = TRUE),
+                  
+                  theta_median = median(av_theta, na.rm = TRUE),
+                  theta_mean   =   mean(av_theta, na.rm = TRUE),
+                  theta_sd     =     sd(av_theta, na.rm = TRUE),
 
                   max_v_median = median(max_v, na.rm = TRUE),
                   max_v_mean   =   mean(max_v, na.rm = TRUE),
@@ -629,6 +679,7 @@ one_experiment <- function(dat_sub, experiment, results_dir, seed = NULL, ledge_
                             tot_finished, prop_finished, n_cells,
                             ce_median, ce_mean, ce_sd,
                             angle_median, angle_mean, angle_sd,
+                            theta_median, theta_mean, theta_sd,
                             max_v_median, max_v_mean, max_v_sd,
                             non_movers, little_movement, dns,
                             few_frames, pre_start_frames, post_end_frames) |>
@@ -644,13 +695,16 @@ one_experiment <- function(dat_sub, experiment, results_dir, seed = NULL, ledge_
                                                        frames = channel_summ$frames[[.x]] %>% as.integer(),
                                                        v_x    = channel_summ$v_x[[.x]],
                                                        v_y    = channel_summ$v_y[[.x]],
-                                                       v      = channel_summ$v[[.x]])),
+                                                       v      = channel_summ$v[[.x]],
+                                                       theta   = channel_summ$theta[[.x]])),
        
        trackSummary = tibble(expID           = experiment,
                              chanID          = track_summ$channel,
                              trackID         = track_summ$Track %>% as.integer(),
                              ce              = track_summ$ce,
                              angle_migration = track_summ$angle_migration,
+                             av_theta        = track_summ$av_theta,
+                             sd_theta        = track_summ$sd_theta,
                              max_v           = track_summ$max_v,
                              av_velocity     = track_summ$av_velocity,
                              finished        = track_summ$observe_finish, # same as surv_event
@@ -670,6 +724,7 @@ one_experiment <- function(dat_sub, experiment, results_dir, seed = NULL, ledge_
                                   time    = frames / 2,
                                   v_x     = track_summ$v_x[[.x]],
                                   v_y     = track_summ$v_y[[.x]],
-                                  v       = track_summ$v[[.x]]))
+                                  v       = track_summ$v[[.x]],
+                                  theta   = track_summ$theta[[.x]]))
        )
 }
