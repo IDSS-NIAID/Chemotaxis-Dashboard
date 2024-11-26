@@ -80,7 +80,7 @@ qc_server <- function(id, con, user)
 {
   # for all of those pesky "no visible binding" notes
   if(FALSE)
-    chanID <- expID <- sID <- V1 <- NULL
+    chanID <- count <- expID <- sID <- V1 <- NULL
   
   moduleServer(
     id,
@@ -165,7 +165,7 @@ qc_server <- function(id, con, user)
                     Filtered = case_when(Filtered == "non_movers"       ~ "Track didn't change position",
                                          Filtered == "little_movement"  ~ "Track moved only a little",
                                          Filtered == "dns"              ~ "Track never crossed the upper ledge",
-                                         Filtered == "few_frames"       ~ "Track had ≤3 frames",
+                                         Filtered == "few_frames"       ~ "Track had < 4 frames",
                                          Filtered == "pre_start_frames" ~ "# frames before crossing upper ledge",
                                          Filtered == "post_end_frames"  ~ "# frames after crossing lower ledge",
                                          TRUE ~ Filtered))
