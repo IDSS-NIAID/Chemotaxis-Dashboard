@@ -17,6 +17,7 @@ Imports:
   grDevices,
   magrittr,
   purrr,
+  quarto,
   readr,
   rlang,
   RSQLite,
@@ -27,6 +28,7 @@ Imports:
   tidyr
 Suggests:
   cowplot,
+  dbplyr,
   doParallel,
   testthat (>= 3.0.0),
   usethis

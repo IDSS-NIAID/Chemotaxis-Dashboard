@@ -1,11 +1,16 @@
 ---
-title: "Chemotaxis report for 20240920FloresGueveraKMNC"
-format: docx
+title: "Chemotaxis report for <<experiment>>"
+format: <<format>>
 execute:
+  output-file: "<<file>>"
+  output-ext: "<<file_ext>>"
   message: false
   echo: false
   fig-dpi: 300
 ---
+
+<!-- This file is meant to be edited and run by `export_ses`.
+Running it outside of `export_ses` will not work without modifying the file -->
 
 ```{r setup}
 #| include: false
@@ -19,13 +24,14 @@ library(dplyr)
 
 library(readr)
 
-##### input variables #####
-root <- here::here()
-expID <- '20240920FloresGueveraKMNC'
-seed <- 923847
-db <- file.path(root, 'shiny', 'chemo-dash.sqlite')
-outdir <- file.path('~/Downloads', 'stuff')
-###########################
+##### input variables ########
+expID <- "<<experiment>>"    # experiment ID
+file_name <- "<<file>>"      # file name
+seed <- <<seed>>             # random seed (default is NULL)
+db <- "<<db>>"               # database path
+outdir <- "<<outdir>>"       # output directory
+export_csv <- <<export_csv>> # export csv files for each channel
+##############################
 
 # load database
 con <- dbConnect(SQLite(), db)
@@ -41,11 +47,11 @@ chSumm <- tbl(con, "chanSummary") |>
   filter(expID == !!expID)
 
 # export csv files
-if(FALSE)
+if(export_csv)
 {
-for(i in unique(collect(trkRaw)$chanID))
-{
-  treatment <- chSumm |>
+  for(i in unique(collect(trkRaw)$chanID))
+  {
+    treatment <- chSumm |>
     filter(chanID == !!i) |>
     select(treatment) |>
     collect() |>
@@ -60,12 +66,13 @@ for(i in unique(collect(trkRaw)$chanID))
   trkRaw |>
     filter(chanID == !!i) |>
     collect() |>
-    write_csv(file.path(outdir, paste0(expID, 
+    write_csv(file.path(outdir, paste0(file_name, 
                                        '_CH', i, 
                                        '_', toupper(sample),
                                        '_', treatment,
                                        '.csv')))
-}}
+  }
+}
 ```
 
 ## Experiment Summary
