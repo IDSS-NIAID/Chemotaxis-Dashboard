@@ -3,17 +3,17 @@
 \name{ses_angle_migration}
 \alias{ses_angle_migration}
 \title{ses_angle_migration
-Plot the angle of migration over time}
+Plot the net angle of migration}
 \usage{
 ses_angle_migration(dat)
 }
 \arguments{
-\item{dat}{A data frame from the trackSummary table. Must contain columns `sID`, `chanID`, `trackID`, `treatment`, `angle_migration`, and `frames`.}
+\item{dat}{A data frame from the trackSummary table. Must contain columns `chanID`, `sID`, `treatment` and `angle_migration`.}
 }
 \value{
 A ggplot object
 }
 \description{
 ses_angle_migration
-Plot the angle of migration over time
+Plot the net angle of migration
 }

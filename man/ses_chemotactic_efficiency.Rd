@@ -7,7 +7,7 @@
 ses_chemotactic_efficiency(dat)
 }
 \arguments{
-\item{dat}{A data frame from the trackSummary table. Must contain columns `sID`, `chanID`, `trackID`, `treatment`, `ce`, and `frames`.}
+\item{dat}{A data frame from the trackSummary table. Must contain columns `chanID`, `sID`, `treatment` and `ce`.}
 }
 \value{
 A ggplot object

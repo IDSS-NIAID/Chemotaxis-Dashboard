@@ -19,10 +19,18 @@ library(ChemotaxisDashboard)
 
 library(RSQLite)
 library(DBI)
+
 library(dbplyr)
 library(dplyr)
-
 library(readr)
+
+library(ggplot2)
+if(require(cowplot))
+{
+  theme_set(theme_cowplot())
+}else{
+  theme_set(theme_minimal())
+}
 
 ##### input variables ########
 expID <- "<<experiment>>"    # experiment ID
@@ -65,6 +73,7 @@ if(export_csv)
 
   trkRaw |>
     filter(chanID == !!i) |>
+    select(expID, chanID, trackID, frames, x, y) |>
     collect() |>
     write_csv(file.path(outdir, paste0(file_name, 
                                        '_CH', i, 
@@ -77,7 +86,7 @@ if(export_csv)
 
 ## Experiment Summary
 
-```{r}
+```{r SE Tracks}
 #| fig-cap: "Distance traveled for each track in μm, with distance in the direction of the chemoattractant on the y-axis, and distance perpendicular to the chemoattractant on the x-axis. Each pane represents a channel in the assay, and tracks are time coded by color."
 
 # Single Experiment Tracks Plot
@@ -87,7 +96,7 @@ left_join(trkRaw, chSumm, by = join_by(expID, chanID)) |>
   ses_tracks_time()
 ```
 
-```{r}
+```{r SE Velocity}
 #| fig-cap: "Average velocity in μm per minute (y-axis) over time (x-axis) for each channel in the assay. Orange lines represent the velocity in the direction of the chemoattractant, and black lines represent the velocity perpendicular to the chemoattractant. The average over the entire duration of the assy is represented by the dashed lines."
 
 # Single Experiment Velocity Summary Plot
@@ -97,13 +106,32 @@ left_join(trkRaw, chSumm, by = join_by(expID, chanID)) |>
   ses_tracks_v()
 ```
 
-```{r}
-#| fig-cap: ""
-#| eval: false
+```{r SE Angle Migration}
+#| fig-cap: "Net angle of migration in degrees (y-axis) for each channel in the assay (x-axis). The angle is calculated as the angle between the starting and ending points relative to the chemoattractant gradient. Smaller angles indicate movement toward the chemoattractant, angles closer to 90º indicate greater undirected movement perpendicular to the chemoattractant gradient, and values over 90º indicate movement against the chemoattractant gradient."
 
-# Single Experiment Angle Migration Plot
+# Single Experiment Angle of Migration Plot
 left_join(trkSumm, chSumm, by = join_by(expID, chanID)) |>
-  select(sID, chanID, trackID, treatment, angle_migration, frames) |>
+  select(sID, chanID, treatment, angle_migration) |>
   collect() |>
   ses_angle_migration()
+```
+
+```{r SE Chemotactic Efficiency}
+#| fig-cap: "Chemotactic efficiency in percent vertical movement (y-axis) for each channel in the assay (x-axis). Chemotactic efficiency is calculated as the ratio of the distance traveled in the direction of the chemoattractant to the total distance traveled. A value of 100% indicates the cell traveled directly along the chemotaxis gradient, while a value of 0% indicates the cell traveled exactly perpendicular to the gradient."
+
+# Single Experiment Chemotactic Efficiency Plot
+left_join(trkSumm, chSumm, by = join_by(expID, chanID)) |>
+  select(sID, chanID, treatment, ce) |>
+  collect() |>
+  ses_chemotactic_efficiency()
+```
+
+```{r SE Angle of Migration over time}
+#| fig-cap: "Instantaneous angle of migration in degrees (y-axis) over time in minutes (x-axis). The angle is calculated as the angle the cell is traveling relative to the chemoattractant gradient. Smaller angles indicate movement toward the chemoattractant, angles closer to 90º indicate greater undirected movement perpendicular to the chemoattractant gradient, and values greater than 90º indicate movement against the chemoattractant gradient."
+
+# Single Experiment Instantaneous Angle of Migration Plot
+left_join(trkRaw, chSumm, by = join_by(expID, chanID)) |>
+  select(sID, chanID, treatment, theta, frames) |>
+  collect() |>
+  ses_angle_migration_time()
 ```

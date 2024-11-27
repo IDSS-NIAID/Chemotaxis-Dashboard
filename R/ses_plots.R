@@ -98,54 +98,104 @@ ses_tracks_v <- function(dat)
 
 
 #' ses_angle_migration
-#' Plot the angle of migration over time
+#' Plot the net angle of migration
 #' 
-#' @param dat A data frame from the trackSummary table. Must contain columns `sID`, `chanID`, `trackID`, `treatment`, `angle_migration`, and `frames`.
+#' @param dat A data frame from the trackSummary table. Must contain columns `chanID`, `sID`, `treatment` and `angle_migration`.
 #' 
 #' @return A ggplot object
 #' @export
+#' @importFrom dplyr mutate
 #' @importFrom ggplot2 aes geom_boxplot geom_jitter geom_violin ggplot xlab ylab
 ses_angle_migration <- function(dat)
 {
   # take care of those pesky "no visible binding" notes
   if(FALSE)
-    angle_migration <- chanID <- NULL
+    angle_migration <- chanID <- lab <- sID <- treatment <-  NULL
   
   ### angle of migration
   dat |> 
-    ggplot(aes(x=as.character(chanID), y=angle_migration, group=chanID)) +
+    mutate(lab = paste0(chanID, ": ", sID, "\n", treatment)) |>
+
+    ggplot(aes(x=as.character(chanID), y=angle_migration, group=lab)) +
     
-    geom_violin(scale = "width", width = 0.5, trim=FALSE) + 
+    geom_violin(scale = "width", width = 0.5) + 
     geom_jitter(width = 0.1,size = 0.75,alpha=0.3) + 
     geom_boxplot(width = 0.05) +
     
-    ylab("Migration angle (degrees from vertical)") + 
+    ylab("Migration angle\n(degrees from vertical)") + 
     xlab("Channel")
+}
+
+
+#' ses_angle_migration_time
+#' Plot the angle of migration over time
+#'
+#' @param dat A data frame from the trackRaw table. Must contain columns `chanID`, `sID`, `treatment`, `theta`, and `frames`.
+#' 
+#' @return A ggplot object
+#' @export
+#' @importFrom dplyr group_by mutate summarize ungroup
+#' @importFrom ggplot2 aes facet_wrap geom_smooth ggplot xlab ylab
+#' @importFrom stats quantile
+#' @importFrom tidyr pivot_longer
+ses_angle_migration_time <- function(dat)
+{
+  # take care of those pesky "no visible binding" notes
+  if(FALSE)
+    angle <- chanID <- frames <- lab <- minutes <- quantile <- 
+      sID <- theta <- treatment <- `95` <- NULL
+
+  dat |>
+    mutate(theta = abs(theta),
+           lab = paste0(chanID, ": ", sID, ", ", treatment),
+           minutes = frames / 2) |>
+    
+    # calculate quantiles
+    group_by(lab, minutes) |>
+    summarize(mean   = mean(theta),
+              median = median(theta),
+              `95`   = quantile(theta, probs = 0.975)) |>
+    ungroup() |>
+    
+    # pivot longer for plotting
+    pivot_longer(cols = c(mean, median, `95`), names_to = 'quantile', values_to = 'angle') |>
+    mutate(quantile = factor(quantile, levels = c('mean', 'median', '95'))) |>
+    
+    # plot
+    ggplot(aes(x = minutes, y = angle, linetype = quantile)) +
+    geom_smooth(method = 'loess', formula = y ~ x, se = FALSE, linewidth = 0.5, color = 'black') +
+    facet_wrap(~lab) +
+    
+    xlab("Time (minutes)") +
+    ylab("Instantaneous\nAngle of migration")
 }
 
 
 #' ses_chemotactic_efficiency
 #' 
-#' @param dat A data frame from the trackSummary table. Must contain columns `sID`, `chanID`, `trackID`, `treatment`, `ce`, and `frames`.
+#' @param dat A data frame from the trackSummary table. Must contain columns `chanID`, `sID`, `treatment` and `ce`.
 #' 
 #' @return A ggplot object
 #' @export
+#' @importFrom dplyr mutate
 #' @importFrom ggplot2 aes geom_violin geom_jitter geom_boxplot ggplot xlab ylab
 ses_chemotactic_efficiency <- function(dat)
 {
   # take care of those pesky "no visible binding" notes
   if(FALSE)
-    ce <- chanID <- NULL
+    ce <- chanID <- lab <- sID <- treatment <- NULL
   
   ### chemotactic efficiency
   dat |>
-    ggplot(aes(x=as.character(chanID), y=ce, group=chanID)) +
+    mutate(lab = paste0(chanID, ": ", sID, "\n", treatment)) |>
     
-    geom_violin(scale = "width", width = 0.5, trim=FALSE) + 
+    ggplot(aes(x=as.character(chanID), y=ce, group=lab)) +
+    
+    geom_violin(scale = "width", width = 0.5) + 
     geom_jitter(width = 0.1, size = 0.75, alpha=0.3) + 
     geom_boxplot(width = 0.05) +
     
-    ylab("Chemotactic efficiency (% vertical movement)") + 
+    ylab("Chemotactic efficiency\n(% vertical movement)") + 
     xlab("Channel")
 }
 
