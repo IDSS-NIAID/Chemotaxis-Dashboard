@@ -14,7 +14,8 @@ export_ses(
   outdir = getwd(),
   seed = NULL,
   render = TRUE,
-  export_csv = TRUE
+  export_csv = TRUE,
+  qmd = system.file("extdata", "ses_report.qmd", package = "ChemotaxisDashboard")
 )
 }
 \arguments{
@@ -35,6 +36,8 @@ export_ses(
 \item{render}{logical, whether to render the report. When false an unrendered qmd file is saved to the output directory.}
 
 \item{export_csv}{logical, whether to export csv files for each channel in the experiment}
+
+\item{qmd}{character string, path to qmd file for the report (see Details)}
 }
 \description{
 Export reports based on data from a single experiment
@@ -47,4 +50,7 @@ The report file is generated using the `quarto` package and must be a format sup
 The location, `outdir`, must exist and the user must have write permissions to the directory.
 
 If `render` is FALSE, then the report file is saved as an unrendered qmd file, and dependency checks for the rendering step will not be run.
+
+Using an alternate qmd file may cause some of the other parameters to stop working (i.e. `format`, `db`, `file`, `file_ext`, `outdir`, `seed`, `export_csv`).
+See the provided file, `ses_report.qmd` and/or the function definition for `export_ses` for additional details.
 }

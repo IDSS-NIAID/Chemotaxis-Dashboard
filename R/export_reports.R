@@ -10,6 +10,7 @@
 #' @param seed integer, random seed
 #' @param render logical, whether to render the report. When false an unrendered qmd file is saved to the output directory.
 #' @param export_csv logical, whether to export csv files for each channel in the experiment
+#' @param qmd character string, path to qmd file for the report (see Details)
 #' 
 #' @details This function exports reports based on data from a single experiment.
 #' The report files are saved in the output directory and include csv files for each channel in the experiment and a report file of the specified file type.
@@ -18,13 +19,16 @@
 #' 
 #' If `render` is FALSE, then the report file is saved as an unrendered qmd file, and dependency checks for the rendering step will not be run.
 #' 
+#' Using an alternate qmd file may cause some of the other parameters to stop working (i.e. `format`, `db`, `file`, `file_ext`, `outdir`, `seed`, `export_csv`).
+#' See the provided file, `ses_report.qmd` and/or the function definition for `export_ses` for additional details.
+#' 
 #' @return NULL
 #' @export
 #' @importFrom quarto quarto_render
 #' @importFrom stringr str_replace_all
 export_ses <- function(experiment, db, format = "docx", file = experiment,
                        file_ext = "docx", outdir = getwd(), seed = NULL, render = TRUE,
-                       export_csv = TRUE)
+                       export_csv = TRUE, qmd = system.file("extdata", "ses_report.qmd", package = "ChemotaxisDashboard"))
 {
   # if not rendering, these dependencies are not needed
   if(render)
@@ -38,9 +42,9 @@ export_ses <- function(experiment, db, format = "docx", file = experiment,
   }
 
   # read in the sample report and fill in variables
-  report <- system.file("extdata", "ses_report.qmd", package = "ChemotaxisDashboard") |>
-    readLines() |>
-    str_replace_all("<<experiment>>", experiment) |>
+  report <- qmd |>
+    readLines() |> # these variables are assumed to be in the file - if they aren't this should still run,
+    str_replace_all("<<experiment>>", experiment) |> # but these parameters will be ignored
     str_replace_all("<<db>>", db) |>
     str_replace_all("<<format>>", format) |>
     str_replace_all("<<file>>", file) |>

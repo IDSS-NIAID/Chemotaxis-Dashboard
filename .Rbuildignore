@@ -4,6 +4,7 @@
 ^shiny$
 ^data-raw$
 ^.data$
+^.github-issues$
 
 ^LICENSE\.md$
 

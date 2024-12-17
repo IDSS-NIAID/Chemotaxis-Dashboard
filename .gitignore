@@ -5,6 +5,7 @@
 .Rproj.user
 *.RProj
 *.RData
+.github-issues
 
 *.mov
 *.csv
@@ -25,3 +26,5 @@
 .data/
 docs/
 scratch.R
+exportBatch.R
+reports/
