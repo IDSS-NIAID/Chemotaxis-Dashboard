@@ -166,6 +166,7 @@ dbinit <- function(db_path, data = NULL)
 #' @param dat A data.frame to update or add to the database.
 #' @param key_fields Character vector specifying the key fields in the table.
 #' 
+#' @export
 #' @importFrom DBI dbAppendTable dbExecute dbGetQuery dbListTables dbWriteTable
 #' @importFrom dplyr %>% ends_with right_join select
 dbupdate <- function(con, table, dat, key_fields)

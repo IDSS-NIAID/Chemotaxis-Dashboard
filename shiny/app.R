@@ -8,6 +8,7 @@
 #
 
 library(ChemotaxisDashboard)
+library(shiny)
 library(RSQLite)
 library(DBI)
 

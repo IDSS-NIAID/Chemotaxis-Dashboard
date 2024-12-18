@@ -41,23 +41,27 @@ ses_cardsUI <- function(id)
   tagList(
     layout_sidebar(
       sidebar = ses_sidebarUI('ses'),
-      card(full_screen = TRUE, 
+      card(full_screen = TRUE,
            card_header("Tracks over time"), 
            card_body(plotOutput(ns("ses_tracks_time"))),
            card_footer(downloadButton(ns('ses_tracks_time_download'), 'Download figure'))),
-      card(full_screen = TRUE, 
+      card(full_screen = TRUE,
            card_header("Track velocity"), 
            card_body(plotOutput(ns("ses_tracks_v"))),
            card_footer(downloadButton(ns('ses_tracks_v_download'), 'Download figure'))),
-      card(full_screen = TRUE, 
+      card(full_screen = TRUE,
            card_header("Angle of migration"), 
            card_body(plotOutput(ns("ses_angle_migration"))),
            card_footer(downloadButton(ns('ses_angle_migration_download'), 'Download figure'))),
-      card(full_screen = TRUE, 
+      card(full_screen = TRUE,
+           card_header('Instantaneous Angle of Migration'),
+           card_body(plotOutput(ns('ses_instant_aom'))),
+           card_footer(downloadButton(ns('ses_instant_aom_download'), 'Download figure'))),
+       card(full_screen = TRUE,
            card_header("Chemotactic Efficiency"), 
            card_body(plotOutput(ns("ses_ce"))),
            card_footer(downloadButton(ns('ses_ce_download'), 'Download figure'))),
-      card(full_screen = TRUE, 
+      card(full_screen = TRUE,
            card_header("Statistics"), 
            card_body(tableOutput(ns("ses_stats"))),
            card_footer(downloadButton(ns('ses_stats_download'), 'Download statistics'),
@@ -101,7 +105,7 @@ ses_server <- function(id, con, user)
       
       get_dat(con,
               user = user,
-              select = "expID, chanID, trackID, x, y, v_x, v_y, frames",
+              select = "expID, chanID, trackID, x, y, v_x, v_y, theta, frames",
               from = "trackRaw",
               where = paste0("expID='", exp_select()[1], "'")) |>
         
@@ -190,6 +194,27 @@ ses_server <- function(id, con, user)
       },
       content = function(file) {
         ggsave(file, vals$ses_angle_migration)
+      }
+    )
+
+
+    # Instantaneous Angle of Migration
+    output$ses_instant_aom <- renderPlot({
+      if(length(exp_select()) != 1)
+      {
+        (vals$ses_instant_aom <- plot_nothing())
+      }else{
+        (vals$ses_instant_aom <- track_raw() |>
+          ses_angle_migration_time())
+      }
+    })
+
+    output$ses_instant_aom_download <- downloadHandler(
+      filename = function(){
+        paste0("instant_aom_", exp_select()[1], ".png")
+      },
+      content = function(file) {
+        ggsave(file, vals$ses_instant_aom)
       }
     )
     
