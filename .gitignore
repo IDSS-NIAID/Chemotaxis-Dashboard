@@ -5,6 +5,7 @@
 .Rproj.user
 *.RProj
 *.RData
+.github-issues
 
 *.mov
 *.csv
@@ -20,6 +21,9 @@
 *.gif
 *.tiff
 *.gz
+*.docx
+*.sqlite
+*.pptx
 
 tmp/
 data/
