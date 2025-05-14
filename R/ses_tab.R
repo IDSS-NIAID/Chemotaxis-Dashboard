@@ -60,12 +60,12 @@ ses_cardsUI <- function(id)
        card(full_screen = TRUE,
            card_header("Chemotactic Efficiency"), 
            card_body(plotOutput(ns("ses_ce"))),
-           card_footer(downloadButton(ns('ses_ce_download'), 'Download figure'))),
-      card(full_screen = TRUE,
-           card_header("Statistics"), 
-           card_body(tableOutput(ns("ses_stats"))),
-           card_footer(downloadButton(ns('ses_stats_download'), 'Download statistics'),
-                       downloadButton(ns('ses_raw_download'), 'Download raw data')))
+           card_footer(downloadButton(ns('ses_ce_download'), 'Download figure')))#,
+      # card(full_screen = TRUE,
+      #      card_header("Statistics"), 
+      #      card_body(tableOutput(ns("ses_stats"))),
+      #      card_footer(downloadButton(ns('ses_stats_download'), 'Download statistics'),
+      #                  downloadButton(ns('ses_raw_download'), 'Download raw data')))
     )
   )
 }

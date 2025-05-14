@@ -1,6 +1,6 @@
 # process_raw_data.R
 
-library(ChemotaxisDashboard)
+devtools::load_all()
 
 library(stringr)
 library(purrr)
@@ -29,6 +29,7 @@ if(file.exists(db_path) & file.size(db_path) > 0)
 # get all experiments
 all_experiments <- list.files(file.path(root, 'data-raw', 'results_csv')) |>
   grep(pattern = '19000101', value = TRUE, invert = TRUE, fixed = TRUE) |>
+  grep(pattern = 'old', value = TRUE, invert = TRUE, fixed = TRUE) |>
   str_split(pattern = '_') |>
   sapply(`[`, 1) |>
   str_replace('-$', '') |>
@@ -45,7 +46,7 @@ for(i in 1:length(all_experiments))
                                         seed = 923847)
   
   # add access to processed data
-  processed_data$access <- data.frame(user = 'kuhnslab',
+  processed_data$access <- data.frame(user = 'johnsonra',
                                       expID = processed_data$expSummary$expID)
   
   # add new records to the database

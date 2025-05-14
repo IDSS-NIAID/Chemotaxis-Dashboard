@@ -18,10 +18,7 @@ app_ui <- function()
                     nav_panel(title = 'Within-Experiment Summary',
                               ses_cardsUI('ses')),
                     nav_panel(title = 'QC parameters',
-                              qc_cardsUI('qc'))) |>
-    secure_app(tags_top = tags$p(actionButton(inputId = "login_guest", 
-                                              label = "Continue as guest", 
-                                              icon = icon("user"))))
+                              qc_cardsUI('qc')))
 }
 
 
@@ -33,30 +30,46 @@ app_ui <- function()
 #' 
 #' @return Server function for Chemotaxis Dashboard
 #' @export
+#' @importFrom DBI dbConnect dbDisconnect
+#' @importFrom RSQLite SQLite
 #' @importFrom shiny observeEvent reactiveValuesToList
 #' @importFrom shinymanager check_credentials secure_server
-app_server <- function(credentials, con)
+app_server <- function(input, output, session)
 {
-  function(input, output, session) {
+  #################
+  # Configuration #
+  #################
+  
+  config <- config::get(file = 'config.yaml')
+  
+  # if db_path doesn't exist, try parsing it
+  if(!file.exists(config$db_path))
+    config$db_path <- eval(parse(text = config$db_path))
+  
+  # un/load database
+  con <- dbConnect(SQLite(), config$db_path)
+  session$onSessionEnded(function() {
+    dbDisconnect(con)
+  })
+  
+  # get the username
+  user <- Sys.getenv("USER") |>
+    gsub(pattern = "@nih.gov", replacement = "", fixed = TRUE)
     
-    # login as guest (see https://github.com/datastorm-open/shinymanager/issues/169)
-    # this will result in a note from devtools::check(), since we are importing objects that aren't exported by shinymanager
-    observeEvent(input$login_guest, {
-      token <- shinymanager:::.tok$generate("shinyuser")
-      shinymanager:::.tok$add(token, list(user = "shinyuser", role = "guest"))
-      shinymanager:::addAuthToQuery(session, token, "en")
-      session$reload()
-    })
-    
-    # check_credentials returns a function to authenticate users
-    res_auth <- secure_server(
-      check_credentials = check_credentials(credentials)
-    )
-    
-    ces_server("ces", con, reactiveValuesToList(res_auth)$user)
-    
-    ses_server("ses", con, reactiveValuesToList(res_auth)$user)
-    
-    qc_server("qc", con, reactiveValuesToList(res_auth)$user)
-  }
+  if(user %in% c("", "rstudio-connect"))
+    user <- strsplit(strsplit(session$request$HTTP_SHINY_SERVER_CREDENTIALS, '\\', fixed = TRUE)[[1]][3], '"')[[1]][1]
+
+  
+  ###############
+  # Set up tabs #
+  ###############
+  
+  # Cross-experiment summary tab
+  ces_server("ces", con, user)
+  
+  # Single experiment summary tab
+  ses_server("ses", con, user)
+  
+  # QC tab  
+  qc_server("qc", con, user)
 }

@@ -86,7 +86,7 @@ process_experiments <- function(experiment, source_dir, results_dir, seed = NULL
     treatment = map_chr(dat, ~
                           {.x %>%
                               gsub(pattern = '.csv', replacement = '', fixed = TRUE) %>%
-                              grep(.x, pattern = 'fMLF|Basal|Buffer|C5a|SDF|IL.|LTB4',
+                              grep(pattern = 'fMLF|Basal|Buffer|C5a|SDF|IL.|LTB4',
                                    ignore.case = TRUE, value = TRUE)}[1])) %>%
 
     mutate(sample = tolower(sample),   # inconsistent capitalization
