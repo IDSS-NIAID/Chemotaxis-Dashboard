@@ -22,7 +22,16 @@ ces_sidebarUI <- function(id)
                                   list(inputId =       "sID", label = "Sample"),
                                   list(inputId =    "chanID", label = "Channel"),
                                   list(inputId = "treatment", label = "Treatment")),
-                    inline = FALSE)
+                    inline = FALSE),
+    
+    # Add the new slider input for time filtering
+    sliderInput(
+      inputId = ns("ces_time_filter"),
+      label = "Time filter",
+      min = 0,
+      max = 60,
+      value = c(0, 60)
+    )
   )
 }
 
@@ -127,6 +136,8 @@ ces_server <- function(id, con, user)
           left_join(chan_select(), by = join_by(expID, chanID))
       })
       
+      time_filter <- reactive(input$ces_time_filter)
+      
       
       # Summary table
       output$ces_sample_table <- DT::renderDataTable({
@@ -145,7 +156,8 @@ ces_server <- function(id, con, user)
       output$ces_vy <- renderPlot({
         (vals$ces_vy <- chan_raw() |> 
            mutate(v = v_y) |>
-           ces_v('Relative velocity (y - directed)'))
+           ces_v(ylab = 'Relative velocity (y - directed)',
+                 xlim = time_filter()))
       })
       
       output$ces_vy_download <- downloadHandler(
@@ -160,7 +172,8 @@ ces_server <- function(id, con, user)
       output$ces_vx <- renderPlot({
         (vals$ces_vx <- chan_raw() |> 
            mutate(v = v_x) |>
-           ces_v('Relative velocity (x - undirected)'))
+           ces_v('Relative velocity (x - undirected)',
+                 xlim = time_filter()))
       })
       
       output$ces_vx_download <- downloadHandler(

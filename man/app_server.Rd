@@ -5,7 +5,7 @@
 \title{app_server
 Server for Chemotaxis Dashboard}
 \usage{
-app_server(credentials, con)
+app_server(input, output, session)
 }
 \arguments{
 \item{credentials}{data frame with credentials. Should have columns `user` and `password`}

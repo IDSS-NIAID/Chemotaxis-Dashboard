@@ -5,12 +5,14 @@
 \title{ces_v
 Figure for the distribution of summary velocities}
 \usage{
-ces_v(dat, ylab, wrap_by = "none")
+ces_v(dat, ylab, xlim = c(0, 60), wrap_by = "none")
 }
 \arguments{
 \item{dat}{A data frame exported from the `chanRaw` table. Must contain columns `expID`, `chanID`, `sID`, `treatment`, `time` (equal to `frames` / 2), and `v` (either `v_x` or `v_y`)}
 
 \item{ylab}{Character value specifying the y-label of the velocity to plot. Should correspond to either 'x' (undirected) or 'y' (directed) velocities.}
+
+\item{xlim}{Numeric vector of length 2 defining the x limits for the velocity plot.}
 
 \item{wrap_by}{Character value specifying the column to wrap the plot by. Valid options are `none` (default), `expID`, `chanID`, `sID`, `treatment`, `sID/treatment`.}
 }
