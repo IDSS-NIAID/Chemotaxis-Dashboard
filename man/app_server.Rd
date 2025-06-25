@@ -8,9 +8,11 @@ Server for Chemotaxis Dashboard}
 app_server(input, output, session)
 }
 \arguments{
-\item{credentials}{data frame with credentials. Should have columns `user` and `password`}
+\item{input}{Shiny input object}
 
-\item{con}{database connection returned from `DBI::dbConnect`}
+\item{output}{Shiny output object}
+
+\item{session}{Shiny session object}
 }
 \value{
 Server function for Chemotaxis Dashboard

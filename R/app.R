@@ -25,8 +25,9 @@ app_ui <- function()
 #' app_server
 #' Server for Chemotaxis Dashboard
 #' 
-#' @param credentials data frame with credentials. Should have columns `user` and `password`
-#' @param con database connection returned from `DBI::dbConnect`
+#' @param input Shiny input object
+#' @param output Shiny output object
+#' @param session Shiny session object
 #' 
 #' @return Server function for Chemotaxis Dashboard
 #' @export
