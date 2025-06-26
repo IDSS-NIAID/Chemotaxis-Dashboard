@@ -28,3 +28,4 @@ docs/
 scratch.R
 exportBatch.R
 reports/
+..Rcheck/

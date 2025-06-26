@@ -57,6 +57,11 @@ process_experiments <- function(experiment, source_dir, results_dir, seed = NULL
     unlist() |>
     unique()
   
+  if(length(f) == 0)
+  {
+    warning('Skipping ', experiment, ' - no results found.')
+    return(NULL)
+  }
 
   ##### experiment metadata #####
   results_meta <- tibble(
@@ -106,14 +111,7 @@ process_experiments <- function(experiment, source_dir, results_dir, seed = NULL
 
 
   ##### read in raw data #####
-  dat <- map2_df(source_dir, f, ~
-                   {
-                     paste(.x, .y, sep = '/') %>%
-                       read_csv(col_types = 'dddd') %>%
-                       mutate(f = .y)
-                   }) %>%
-
-    bind_rows() %>%
+  dat <- map_df(f, ~ read_csv(file.path(source_dir, .x), col_types = 'dddd') %>% mutate(f = .x)) %>%
 
     left_join(results_meta, by = 'f') %>%
 
