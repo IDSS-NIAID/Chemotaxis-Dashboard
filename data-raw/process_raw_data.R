@@ -45,10 +45,6 @@ for(i in 1:length(all_experiments))
                                         results_dir = file.path(root, 'shiny'),
                                         seed = 923847)
   
-  # add access to processed data
-  processed_data$access <- data.frame(user = 'johnsonra',
-                                      expID = processed_data$expSummary$expID)
-  
   # add new records to the database
   dbinit(db_path, processed_data)
 }

@@ -106,7 +106,6 @@ ces_server <- function(id, con, user)
       chan_select <- select_group_server(id = 'ces_channels', 
                                          data_r = reactive({
                                            get_dat(con, 
-                                                   user = user, 
                                                    select = 'expID, sID, chanID, treatment', 
                                                    from = 'chanSummary')
                                          }),
@@ -126,7 +125,6 @@ ces_server <- function(id, con, user)
         }
         
         get_dat(con,
-                user = user,
                 select = 'expID, chanID, frames, v_x, v_y',
                 from = 'chanRaw',
                 where = where) |>

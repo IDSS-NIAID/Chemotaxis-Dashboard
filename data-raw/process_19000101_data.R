@@ -19,9 +19,6 @@ processed_data <- process_experiments(experiment = '19000101',
 users <- data.frame(user = "shinyuser", # default user
                     password = "12345")
 
-access <- data.frame(user = "shinyuser",
-                     expID = "19000101") # default user has access to test data only
-
 expSummary <- processed_data$expSummary
 
 expStats <- processed_data$expStats
@@ -37,7 +34,6 @@ trackRaw <- processed_data$trackRaw
 
 # export for internal use
 usethis::use_data(users,
-                  access,
                   expSummary,
                   expStats,
                   chanSummary,

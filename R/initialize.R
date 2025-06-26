@@ -6,7 +6,7 @@
 #' @param db_path Character value specifying the path to the file where the database should be initialized.
 #' @param data List of data.frames to initialize or add to the database. Internal test data will be used if `data` is NULL.
 #'
-#' @details The data.frames expected in data are `users`, `access`, `expSummary`, `expStats`, `chanSummary`, `chanRaw`,
+#' @details The data.frames expected in data are `users`, `expSummary`, `expStats`, `chanSummary`, `chanRaw`,
 #' `trackSummary`, and `trackRaw` (as returned by `process_experiments()`).
 #' 
 #' @return Something - use this to sniff for existing DB information?
@@ -30,25 +30,15 @@ dbinit <- function(db_path, data = NULL)
   # users
   # User table for authentication
   # 
-  # @param user (key) Character, username - used in: 
-  #                     `access`
+  # @param user (key) Character, username
   # @param password   Character, password
   dbupdate(con, 'users', data$users, 'user')
   
-  
-  # access
-  # User access table defining which experiments the user can access
-  # 
-  # @param user  (key) Character, maps to `users$user`
-  # @param expID (key) Character, maps to `expSummary$expID`
-  dbupdate(con, 'access', data$access, c('user', 'expID'))
 
-  
   # expSummary
   # Experiment summary table
   # 
   # @param expID     (key) Character, experiment ID - used in: 
-  #                          `access`
   #                          `expStats`
   #                          `chanSummary`
   #                          `chanRaw`
@@ -280,7 +270,6 @@ dbupdate <- function(con, table, dat, key_fields)
 get_test_data <- function()
 {
   list(users        = users,
-       access       = access,
        expSummary   = expSummary,
        expStats     = expStats,
        chanSummary  = chanSummary,

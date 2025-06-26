@@ -2,10 +2,9 @@
 # SQL queries to fetch data from the database
 
 #' get_dat
-#' Get data from the database, recpecting permissions
+#' Get data from the database
 #' 
 #' @param con DBI connection specifying the database to pull from
-#' @param user Character value specifying the username
 #' @param select Character value specifying the columns to pull
 #' @param from Character value defining which table to pull from
 #' @param where Character value that will get put into the WHERE part of the SQL statement
@@ -13,20 +12,8 @@
 #' @return A data.frame with the requested data
 #' @export
 #' @importFrom DBI dbGetQuery
-#' 
-#' @importFrom dplyr %>%
-#' @importFrom dplyr join_by
-#' @importFrom dplyr inner_join
-get_dat <- function(con, user, select = '*', from, where = NULL)
+get_dat <- function(con, select = '*', from, where = NULL)
 {
-  # pesky binding warning
-  if(FALSE)
-    expID <- NULL
-  
-  # add expID if it is missing
-  if(!(grepl('expID', select) | select == '*'))
-    select <- paste('expID,', select)
-  
   # build query
   query <- paste("SELECT", select, "FROM", from)
   
@@ -34,8 +21,7 @@ get_dat <- function(con, user, select = '*', from, where = NULL)
   if(!is.null(where))
     query <- paste(query, 'WHERE', where)
   
-  dbGetQuery(con, paste0("SELECT expID FROM access WHERE user='", user, "'")) %>%
-    inner_join(dbGetQuery(con, query), by = join_by(expID))
+  dbGetQuery(con, query)
 }
 
 
@@ -49,6 +35,7 @@ get_dat <- function(con, user, select = '*', from, where = NULL)
 #' @importFrom DBI dbGetQuery
 #' @importFrom DBI dbListTables
 #' @importFrom DBI dbWriteTable
+#' @importFrom dplyr %>%
 remove_dups <- function(con, tabs = NULL)
 {
   if(is.null(tabs))

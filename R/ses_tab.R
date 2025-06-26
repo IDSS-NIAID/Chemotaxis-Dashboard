@@ -94,7 +94,6 @@ ses_server <- function(id, con, user)
     exp_select <- select_group_server(id = "ses_channels",
                                       data_r = reactive({
                                         get_dat(con,
-                                                user = user,
                                                 select = "expID",
                                                 from = "expSummary")
                                       }),
@@ -104,13 +103,11 @@ ses_server <- function(id, con, user)
     track_raw <- reactive({
       
       get_dat(con,
-              user = user,
               select = "expID, chanID, trackID, x, y, v_x, v_y, theta, frames",
               from = "trackRaw",
               where = paste0("expID='", exp_select()[1], "'")) |>
         
         left_join(get_dat(con,
-                          user = user,
                           select = "expID, sID, chanID, treatment",
                           from = "chanSummary",
                           where = paste0("expID='", exp_select()[1], "'")),
@@ -121,13 +118,11 @@ ses_server <- function(id, con, user)
     track_summ <- reactive({
       
       get_dat(con,
-              user = user,
               select = "expID, chanID, trackID, ce, angle_migration",
               from = "trackSummary",
               where = paste0("expID='", exp_select()[1], "'")) |>
         
         left_join(get_dat(con,
-                          user = user,
                           select = "expID, sID, chanID, treatment",
                           from = "chanSummary",
                           where = paste0("expID='", exp_select()[1], "'")),
@@ -247,7 +242,6 @@ ses_server <- function(id, con, user)
         (vals$ses_stats <- data.frame())
       }else{
         (vals$ses_stats <- get_dat(con,
-                                   user = user,
                                    select = "*",
                                    from = "expStats",
                                    where = paste0("expID='", exp_select()[1], "'")))

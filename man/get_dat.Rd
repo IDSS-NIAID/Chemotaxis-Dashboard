@@ -3,14 +3,12 @@
 \name{get_dat}
 \alias{get_dat}
 \title{get_dat
-Get data from the database, recpecting permissions}
+Get data from the database}
 \usage{
-get_dat(con, user, select = "*", from, where = NULL)
+get_dat(con, select = "*", from, where = NULL)
 }
 \arguments{
 \item{con}{DBI connection specifying the database to pull from}
-
-\item{user}{Character value specifying the username}
 
 \item{select}{Character value specifying the columns to pull}
 
@@ -23,5 +21,5 @@ A data.frame with the requested data
 }
 \description{
 get_dat
-Get data from the database, recpecting permissions
+Get data from the database
 }

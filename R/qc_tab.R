@@ -96,7 +96,6 @@ qc_server <- function(id, con, user)
                             frames = integer(0)))
                             
         get_dat(con,
-                user = user,
                 select = 'expID, trackID, frames',
                 from = 'trackRaw',
                 where = paste0( "expID='", chan_select()$expID,  "' AND ",
@@ -107,7 +106,6 @@ qc_server <- function(id, con, user)
       chan_select <- select_group_server(id = "qc_channels",
                                          data_r = reactive({
                                            get_dat(con,
-                                                   user = user,
                                                    select = 'expID, chanID, sID, treatment',
                                                    from = 'chanSummary') %>%
                                              mutate(expID = factor(expID),
@@ -150,7 +148,6 @@ qc_server <- function(id, con, user)
           (vals$qc_stats <- data.frame())
         }else{
           (vals$qc_stats <- get_dat(con,
-                                     user = user,
                                      select = "non_movers, little_movement, dns, few_frames, pre_start_frames, post_end_frames",
                                      from = "chanSummary",
                                      where = paste0("expID='", chan_select()$expID[1], "'", " AND ",
