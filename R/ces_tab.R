@@ -79,7 +79,7 @@ ces_cardsUI <- function(id)
 #' @rdname ces_tab
 #' 
 #' @param con Active DBI database connection
-#' @param user Username of the user
+#' @param shared_time_filter reactiveVal from the main server function for time filter definition
 #' 
 #' @export
 #' @importFrom datamods select_group_server
@@ -88,7 +88,7 @@ ces_cardsUI <- function(id)
 #' @importFrom ggplot2 ggsave
 #' @importFrom shiny downloadHandler moduleServer reactive reactiveValues renderPlot
 #' @importFrom utils write.csv
-ces_server <- function(id, con, user)
+ces_server <- function(id, con, shared_time_filter)
 {
   # for all those pesky "no visible binding" notes
   if(FALSE)
@@ -134,9 +134,26 @@ ces_server <- function(id, con, user)
           left_join(chan_select(), by = join_by(expID, chanID))
       })
       
+
+      # Filters
       time_filter <- reactive(input$ces_time_filter)
       
+
+      # When filters change in THIS tab, update the shared value
+      observeEvent(input$ces_time_filter, {
+        shared_time_filter(time_filter())
+      })
+
+
+      # When shared values change, update filters in THIS tab
+      observeEvent(shared_time_filter(), {
+        # Check prevents an infinite loop
+        if (!isTRUE(all.equal(time_filter(), shared_time_filter()))) {
+          updateSliderInput(session, "ces_time_filter", value = shared_time_filter())
+        }
+      }, ignoreInit = TRUE)
       
+
       # Summary table
       output$ces_sample_table <- DT::renderDataTable({
         chan_select()

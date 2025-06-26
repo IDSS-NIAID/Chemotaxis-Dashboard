@@ -33,7 +33,7 @@ app_ui <- function()
 #' @export
 #' @importFrom DBI dbConnect dbDisconnect
 #' @importFrom RSQLite SQLite
-#' @importFrom shiny observeEvent reactiveValuesToList
+#' @importFrom shiny observeEvent reactiveVal reactiveValuesToList updateSliderInput
 #' @importFrom shinymanager check_credentials secure_server
 app_server <- function(input, output, session)
 {
@@ -53,24 +53,25 @@ app_server <- function(input, output, session)
     dbDisconnect(con)
   })
   
-  # get the username
-  user <- Sys.getenv("USER") |>
-    gsub(pattern = "@nih.gov", replacement = "", fixed = TRUE)
-    
-  if(user %in% c("", "rstudio-connect"))
-    user <- strsplit(strsplit(session$request$HTTP_SHINY_SERVER_CREDENTIALS, '\\', fixed = TRUE)[[1]][3], '"')[[1]][1]
 
+  ###########
+  # Filters #
+  ###########
+  # In general, we'll create reactiveVals to act as the central "source of truth" across tabs
+
+  shared_time_filter <- reactiveVal(c(0, 60))
   
+
   ###############
   # Set up tabs #
   ###############
   
   # Cross-experiment summary tab
-  ces_server("ces", con, user)
+  ces_server("ces", con, shared_time_filter)
   
   # Single experiment summary tab
-  ses_server("ses", con, user)
+  ses_server("ses", con, shared_time_filter)
   
   # QC tab  
-  qc_server("qc", con, user)
+  qc_server("qc", con, shared_time_filter)
 }

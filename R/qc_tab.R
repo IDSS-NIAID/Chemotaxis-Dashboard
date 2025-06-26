@@ -21,7 +21,14 @@ qc_sidebarUI <- function(id)
                     params = list(list(inputId = "expID",  label = "Experiment"),
                                   list(inputId = "sID",    label = "Sample"),
                                   list(inputId = "chanID", label = "Channel")),
-                    inline = FALSE)
+                    inline = FALSE),
+    sliderInput(
+      inputId = ns("qc_time_filter"),
+      label = "Time filter",
+      min = 0,
+      max = 60,
+      value = c(0, 60)
+    )
     #sliderInput(ns('qc_min_track_len'), 'Minimum Track Length', 3, 60, value = 6), # minimum track length in minutes
     #numericInput(ns('qc_n_cells'), 'Number of cells', value = 100)
   )
@@ -67,26 +74,43 @@ qc_cardsUI <- function(id)
 #' @rdname qc_tab
 #' 
 #' @param con Active DBI database connection
-#' @param user Username of the user
+#' @param shared_time_filter reactiveVal from the main server function for time filter definition
 #'
 #' @export
 #' @importFrom datamods select_group_server
 #'
-#' @importFrom dplyr arrange group_by mutate summarize ungroup
+#' @importFrom dplyr arrange group_by mutate summarize ungroup filter
 #' @importFrom ggplot2 ggsave
 #' @importFrom shiny downloadHandler moduleServer reactive reactiveValues reactiveValuesToList renderPlot
 #' @importFrom tibble rownames_to_column
-qc_server <- function(id, con, user)
+qc_server <- function(id, con, shared_time_filter)
 {
   # for all of those pesky "no visible binding" notes
   if(FALSE)
-    chanID <- count <- expID <- sID <- V1 <- NULL
+    chanID <- count <- expID <- sID <- V1 <- time <- frames <- NULL
   
   moduleServer(
     id,
     function(input, output, session)
     {
       vals <- reactiveValues()
+
+      # Filters
+      time_filter <- reactive(input$qc_time_filter)
+      
+      # When filters change in THIS tab, update the shared value
+      observeEvent(input$qc_time_filter, {
+        shared_time_filter(time_filter())
+      })
+
+      # When shared values change, update filters in THIS tab
+      observeEvent(shared_time_filter(), {
+        # Check prevents an infinite loop
+        if (!isTRUE(all.equal(time_filter(), shared_time_filter()))) {
+          updateSliderInput(session, "qc_time_filter", value = shared_time_filter())
+        }
+      }, ignoreInit = TRUE)
+
       
       # pull raw track information
       trackRaw <- reactive({
@@ -99,7 +123,9 @@ qc_server <- function(id, con, user)
                 select = 'expID, trackID, frames',
                 from = 'trackRaw',
                 where = paste0( "expID='", chan_select()$expID,  "' AND ",
-                               "chanID=", chan_select()$chanID))
+                               "chanID=", chan_select()$chanID)) |>
+          mutate(time = frames / 2) |>
+          filter(time >= time_filter()[1] & time <= time_filter()[2])
         })
       
       # for channel/sample selection
@@ -115,6 +141,8 @@ qc_server <- function(id, con, user)
                                          vars_r = reactive(c('expID', 'sID', 'chanID'))
       )
 
+
+      # Figures
       output$qc_track_len <- renderPlot((vals$track_len <- qc_track_len(trackRaw())))
       output$qc_track_len_download <- downloadHandler(
         filename = function() {
@@ -140,6 +168,7 @@ qc_server <- function(id, con, user)
           ggsave(file, vals$n_cells)
         }
       )
+      
       
       # statistics
       output$qc_stats <- renderTable({

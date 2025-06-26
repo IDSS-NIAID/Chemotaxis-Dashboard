@@ -12,14 +12,14 @@ ces_sidebarUI(id)
 
 ces_cardsUI(id)
 
-ces_server(id, con, user)
+ces_server(id, con, shared_time_filter)
 }
 \arguments{
 \item{id}{Shiny namespace ID}
 
 \item{con}{Active DBI database connection}
 
-\item{user}{Username of the user}
+\item{shared_time_filter}{reactiveVal from the main server function for time filter definition}
 }
 \value{
 A modularized tagList

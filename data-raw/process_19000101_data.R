@@ -5,7 +5,7 @@ library(ChemotaxisDashboard)
 # process test data
 processed_data <- process_experiments(experiment = '19000101',
                                       source_dir = system.file("extdata", package = "ChemotaxisDashboard"),
-                                      results_dir = file.path(system('git rev-parse --show-toplevel', intern = TRUE), 'shiny'),
+                                      results_dir = file.path(here::here(), 'shiny'),
                                       seed = 923847,
                                       ledge_dist = 260,
                                       ledge_upper = 0,

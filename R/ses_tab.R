@@ -19,7 +19,14 @@ ses_sidebarUI <- function(id)
   tagList(
     select_group_ui(id = ns("ses_channels"),
                     params = list(list(inputId = "expID",  label = "Experiment")),
-                    inline = FALSE)
+                    inline = FALSE),
+    sliderInput(
+      inputId = ns("ses_time_filter"),
+      label = "Time filter",
+      min = 0,
+      max = 60,
+      value = c(0, 60)
+    )
   )
 }
 
@@ -77,19 +84,41 @@ ses_cardsUI <- function(id)
 #' @rdname ses_tab 
 #' 
 #' @param con Active DBI database connection
-#' @param user Username of the user
+#' @param shared_time_filter reactiveVal from the main server function for time filter definition
 #'
 #' @export
 #' @importFrom shiny downloadHandler moduleServer reactive reactiveValues renderPlot renderTable
-#' @importFrom dplyr left_join
+#' @importFrom dplyr left_join filter
 #' @importFrom ggplot2 ggsave
 #' @importFrom utils write.csv
-ses_server <- function(id, con, user)
+ses_server <- function(id, con, shared_time_filter)
 {
   moduleServer(id, function(input, output, session)
   {
+    if(FALSE)
+      time <- trackID <- frames <- NULL
+
     vals <- reactiveValues()
-    
+
+    # Filters
+    time_filter <- reactive(input$ses_time_filter)
+
+
+    # When filters change in THIS tab, update the shared value
+    observeEvent(input$ses_time_filter, {
+      shared_time_filter(time_filter())
+    })
+
+
+    # When shared values change, update filters in THIS tab
+    observeEvent(shared_time_filter(), {
+      # Check prevents an infinite loop
+      if (!isTRUE(all.equal(time_filter(), shared_time_filter()))) {
+        updateSliderInput(session, "ses_time_filter", value = shared_time_filter())
+      }
+    }, ignoreInit = TRUE)
+
+
     # Experiment selection
     exp_select <- select_group_server(id = "ses_channels",
                                       data_r = reactive({
@@ -106,6 +135,8 @@ ses_server <- function(id, con, user)
               select = "expID, chanID, trackID, x, y, v_x, v_y, theta, frames",
               from = "trackRaw",
               where = paste0("expID='", exp_select()[1], "'")) |>
+        mutate(time = frames / 2) |>
+        filter(time >= time_filter()[1] & time <= time_filter()[2]) |>
         
         left_join(get_dat(con,
                           select = "expID, sID, chanID, treatment",
@@ -121,6 +152,7 @@ ses_server <- function(id, con, user)
               select = "expID, chanID, trackID, ce, angle_migration",
               from = "trackSummary",
               where = paste0("expID='", exp_select()[1], "'")) |>
+        filter(trackID %in% unique(track_raw()$trackID)) |>
         
         left_join(get_dat(con,
                           select = "expID, sID, chanID, treatment",
