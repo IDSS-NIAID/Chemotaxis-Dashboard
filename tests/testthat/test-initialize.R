@@ -21,7 +21,7 @@ test_that("get_test_data works", {
   expect_true(is.data.frame(get_test_data()$expSummary))
   
   expect_equal(names(get_test_data()), 
-               c('users', 'expSummary', 'expStats', 'chanSummary', 'chanRaw', 'trackSummary', 'trackRaw'))
+               c('expSummary', 'expStats', 'chanSummary', 'chanRaw', 'trackSummary', 'trackRaw'))
 })
   
 

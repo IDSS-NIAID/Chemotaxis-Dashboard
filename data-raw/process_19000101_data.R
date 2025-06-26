@@ -16,9 +16,6 @@ processed_data <- process_experiments(experiment = '19000101',
 # data.frames for RSQLite db tables #
 #####################################
 
-users <- data.frame(user = "shinyuser", # default user
-                    password = "12345")
-
 expSummary <- processed_data$expSummary
 
 expStats <- processed_data$expStats
@@ -33,8 +30,7 @@ trackRaw <- processed_data$trackRaw
 
 
 # export for internal use
-usethis::use_data(users,
-                  expSummary,
+usethis::use_data(expSummary,
                   expStats,
                   chanSummary,
                   chanRaw,

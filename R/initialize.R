@@ -6,7 +6,7 @@
 #' @param db_path Character value specifying the path to the file where the database should be initialized.
 #' @param data List of data.frames to initialize or add to the database. Internal test data will be used if `data` is NULL.
 #'
-#' @details The data.frames expected in data are `users`, `expSummary`, `expStats`, `chanSummary`, `chanRaw`,
+#' @details The data.frames expected in data are `expSummary`, `expStats`, `chanSummary`, `chanRaw`,
 #' `trackSummary`, and `trackRaw` (as returned by `process_experiments()`).
 #' 
 #' @return Something - use this to sniff for existing DB information?
@@ -25,14 +25,6 @@ dbinit <- function(db_path, data = NULL)
 
   # connect
   con <- dbConnect(SQLite(), db_path)
-  
-  
-  # users
-  # User table for authentication
-  # 
-  # @param user (key) Character, username
-  # @param password   Character, password
-  dbupdate(con, 'users', data$users, 'user')
   
 
   # expSummary
@@ -269,8 +261,7 @@ dbupdate <- function(con, table, dat, key_fields)
 #' @export
 get_test_data <- function()
 {
-  list(users        = users,
-       expSummary   = expSummary,
+  list(expSummary   = expSummary,
        expStats     = expStats,
        chanSummary  = chanSummary,
        chanRaw      = chanRaw,

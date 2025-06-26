@@ -53,8 +53,5 @@ dbDisconnect(con)
 
 ##### helpful queries #####
 
-# need to do this once (pick a better password)
-# dbExecute(con, 'INSERT INTO users VALUES ("kuhnslab", "12345")')
-
 # this one is rather odd - need to look into it
 # dbGetQuery(con, "DELETE FROM chanRaw WHERE expID='20161221' AND chanID=4")

@@ -10,20 +10,15 @@ library(dplyr)
 ###########################
 
 root <- here::here()
+db_path <- file.path(root, 'shiny', 'chemo-dash.sqlite')
 
-# if running in a temporary path, `root` will be empty -> stick the db in the current working directory
-if(length(root) != 1)
-{
-  db_path <- 'chemo-dash.sqlite'
-}else{
-  db_path <- file.path(root, 'shiny', 'chemo-dash.sqlite')
-}
+# if running in a temporary path, `shiny` will not exist -> make sure it does
+if(!dir.exists('shiny'))
+  dir.create('shiny')
 
 # check if a database has been set up with test data
 if(!file.exists(db_path))
-{
   dbinit(db_path)
-}
 
 # connect to database
 con <- dbConnect(SQLite(), db_path)
