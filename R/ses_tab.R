@@ -67,12 +67,7 @@ ses_cardsUI <- function(id)
        card(full_screen = TRUE,
            card_header("Chemotactic Efficiency"), 
            card_body(plotOutput(ns("ses_ce"))),
-           card_footer(downloadButton(ns('ses_ce_download'), 'Download figure')))#,
-      # card(full_screen = TRUE,
-      #      card_header("Statistics"), 
-      #      card_body(tableOutput(ns("ses_stats"))),
-      #      card_footer(downloadButton(ns('ses_stats_download'), 'Download statistics'),
-      #                  downloadButton(ns('ses_raw_download'), 'Download raw data')))
+           card_footer(downloadButton(ns('ses_ce_download'), 'Download figure')))
     )
   )
 }
@@ -123,8 +118,8 @@ ses_server <- function(id, con, shared_time_filter)
     exp_select <- select_group_server(id = "ses_channels",
                                       data_r = reactive({
                                         get_dat(con,
-                                                select = "expID",
-                                                from = "expSummary")
+                                                select = "DISTINCT expID",
+                                                from = "chanRaw")
                                       }),
                                       vars_r = 'expID')
 
@@ -263,38 +258,6 @@ ses_server <- function(id, con, shared_time_filter)
       },
       content = function(file) {
         ggsave(file, vals$ses_ce)
-      }
-    )
-    
-    
-    # Statistics
-    output$ses_stats <- renderTable({
-      if(length(exp_select()) != 1)
-      {
-        (vals$ses_stats <- data.frame())
-      }else{
-        (vals$ses_stats <- get_dat(con,
-                                   select = "*",
-                                   from = "expStats",
-                                   where = paste0("expID='", exp_select()[1], "'")))
-      }
-    })
-    
-    output$ses_stats_download <- downloadHandler(
-      filename = function() {
-        paste0("stats_", exp_select()[1], ".csv")
-      },
-      content = function(file) {
-        write.csv(vals$ses_stats, file, row.names = FALSE)
-      }
-    )
-    
-    output$ses_raw_download <- downloadHandler(
-      filename = function() {
-        paste0("raw_tracks", exp_select()[1], ".csv")
-      },
-      content = function(file) {
-        write.csv(track_raw(), file, row.names = FALSE)
       }
     )
   })
