@@ -43,8 +43,8 @@ remove_dups <- function(con, tabs = NULL)
   
   for(t in tabs)
   {
-    dbGetQuery(con, paste("SELECT * FROM", t)) %>% 
-      unique() %>% 
+    dbGetQuery(con, paste("SELECT * FROM", t)) |>
+      unique() |>
       dbWriteTable(conn = con, name = t, overwrite = TRUE)
   }
 }

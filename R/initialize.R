@@ -150,7 +150,7 @@ dbinit <- function(db_path, data = NULL)
 #' 
 #' @export
 #' @importFrom DBI dbAppendTable dbExecute dbGetQuery dbListTables dbWriteTable
-#' @importFrom dplyr %>% ends_with right_join select
+#' @importFrom dplyr ends_with right_join select
 dbupdate <- function(con, table, dat, key_fields)
 {
   # for all those pesky "no visible binding" notes
@@ -163,7 +163,7 @@ dbupdate <- function(con, table, dat, key_fields)
   
   # if the table doesn't exist, create it using dat and return
   if(!table %in% dbListTables(con))
-    dbWriteTable(con, table, dat) %>%
+    dbWriteTable(con, table, dat) |>
       invisible()
 
 
@@ -175,13 +175,13 @@ dbupdate <- function(con, table, dat, key_fields)
   if(length(non_key_fields) == 0)
   {
     # get the key fields from the database
-    tmp <- dbGetQuery(con, paste("SELECT * FROM", table)) %>%
-      mutate(indb = TRUE) %>%                               # flag these as already in the database
+    tmp <- dbGetQuery(con, paste("SELECT * FROM", table)) |>
+      mutate(indb = TRUE) |>                               # flag these as already in the database
       
-      right_join(dat, by = key_fields) %>%                  # join the new data to the database
+      right_join(dat, by = key_fields) |>                  # join the new data to the database
       
-      mutate(indb = ifelse(is.na(indb), FALSE, indb)) %>%   # flag these as not in the database
-      filter(!indb) %>%                                     # only keep the rows that are not in the database
+      mutate(indb = ifelse(is.na(indb), FALSE, indb)) |>   # flag these as not in the database
+      filter(!indb) |>                                     # only keep the rows that are not in the database
       select(-indb)
     
     # if there are new rows, append to the database
@@ -197,7 +197,7 @@ dbupdate <- function(con, table, dat, key_fields)
   # if we do have non-key fields, look to see what can be updated vs what needs to be appended
   }else{
     # if the table exists, check for new data and rows that need updating
-    tmp <- dbGetQuery(con, paste("SELECT * FROM", table)) %>%
+    tmp <- dbGetQuery(con, paste("SELECT * FROM", table)) |>
       right_join(dat, by = key_fields)
     
     
@@ -223,9 +223,9 @@ dbupdate <- function(con, table, dat, key_fields)
     # append new rows
     if(any(apnd))
     {
-      tmp[apnd,] %>%
+      tmp[apnd,] |>
         select(-ends_with('.x'),
-               -ends_with('.y')) %>%
+               -ends_with('.y')) |>
         dbAppendTable(conn = con, name = table)
     }
     

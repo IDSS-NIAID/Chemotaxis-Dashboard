@@ -38,7 +38,7 @@
 #' #                                             '~/chemodash_out')"`
 #' @export
 #' 
-#' @importFrom dplyr %>% bind_rows left_join mutate select tibble
+#' @importFrom dplyr bind_rows left_join mutate select tibble
 #' @importFrom purrr map map_chr map_int map_df map2_chr map2_df
 #' @importFrom readr read_csv
 #' @importFrom stringr str_replace
@@ -53,7 +53,7 @@ process_experiments <- function(experiment, source_dir, results_dir, seed = NULL
 
   # source files for processing
   f <- list.files(source_dir)
-  f <- map(experiment, ~ grep(.x, f, value = TRUE)) %>%
+  f <- map(experiment, ~ grep(.x, f, value = TRUE)) |>
     unlist() |>
     unique()
   
@@ -69,35 +69,35 @@ process_experiments <- function(experiment, source_dir, results_dir, seed = NULL
 
     dat = strsplit(f, '_', fixed = TRUE),
 
-    date = {map_chr(dat, `[`, 1) %>%
-        substr(1, 8) %>%
+    date = {map_chr(dat, `[`, 1) |>
+        substr(1, 8) |>
         as.Date(format = '%Y%m%d')},
     
     experiment = map_chr(dat, `[`, 1) |>
       str_replace('-$', ''),
     
     channel = map_int(dat, ~
-                        {grep(.x, pattern = 'CH[1-6]', value = TRUE) %>%
-                            substr(3, 3) %>%
+                        {grep(.x, pattern = 'CH[1-6]', value = TRUE) |>
+                            substr(3, 3) |>
                             as.integer()}),
 
     sample = map_chr(dat, ~
-                       {.x[.x != ''][-1] %>%
-                           gsub(pattern = '.csv', replacement = '', fixed = TRUE) %>%
-                           grep(pattern = '^[0-9]$', invert = TRUE, value = TRUE) %>% # drop any single digit numbers
-                           grep(pattern = 'CH[1-6]', invert = TRUE, value = TRUE) %>% # drop channel
+                       {.x[.x != ''][-1] |>
+                           gsub(pattern = '.csv', replacement = '', fixed = TRUE) |>
+                           grep(pattern = '^[0-9]', invert = TRUE, value = TRUE) |> # drop any single digit numbers
+                           grep(pattern = 'CH[1-6]', invert = TRUE, value = TRUE) |> # drop channel
                            grep(pattern = 'fMLF|Basal|Buffer|C5a|SDF|IL.|LTB4', ignore.case = TRUE, invert = TRUE, value = TRUE)}[1]), # drop attractant
                            
     treatment = map_chr(dat, ~
-                          {.x %>%
-                              gsub(pattern = '.csv', replacement = '', fixed = TRUE) %>%
+                          {.x |>
+                              gsub(pattern = '.csv', replacement = '', fixed = TRUE) |>
                               grep(pattern = 'fMLF|Basal|Buffer|C5a|SDF|IL.|LTB4',
-                                   ignore.case = TRUE, value = TRUE)}[1])) %>%
+                                   ignore.case = TRUE, value = TRUE)}[1])) |>
 
     mutate(sample = tolower(sample),   # inconsistent capitalization
            key = paste(experiment, channel),
            dup = duplicated(key),
-           experiment = paste0(experiment, ifelse(dup, 'a',''))) %>%
+           experiment = paste0(experiment, ifelse(dup, 'a',''))) |>
 
     dplyr::select(-dat, -key)
   
@@ -111,15 +111,15 @@ process_experiments <- function(experiment, source_dir, results_dir, seed = NULL
 
 
   ##### read in raw data #####
-  dat <- map_df(f, ~ read_csv(file.path(source_dir, .x), col_types = 'dddd') %>% mutate(f = .x)) %>%
+  dat <- map_df(f, ~ read_csv(file.path(source_dir, .x), col_types = 'dddd') |> mutate(f = .x)) |>
 
-    left_join(results_meta, by = 'f') %>%
+    left_join(results_meta, by = 'f') |>
 
     filter(!is.na(X) & !is.na(Y))
 
   
   ##### pre-process data for these experiments #####
-  retval <- unique(dat$experiment) %>%
+  retval <- unique(dat$experiment) |>
     map(~ one_experiment(dat_sub = filter(dat, experiment == .x),
                          experiment = .x,
                          results_dir = results_dir,
@@ -150,7 +150,7 @@ process_experiments <- function(experiment, source_dir, results_dir, seed = NULL
 #' @return A list of data.frames containing summaries and raw data from the data in dat_sub.
 #' @export
 #' @import rlang
-#' @importFrom magrittr %>%
+#' @importFrom magrittr |>
 #' 
 #' @importFrom dplyr arrange case_when distinct filter group_by left_join mutate n_distinct reframe rename select starts_with summarize ungroup
 #' @importFrom tidyr pivot_longer
@@ -190,21 +190,21 @@ one_experiment <- function(dat_sub, experiment, results_dir, seed = NULL, ledge_
   # Prep dat_sub for summarization #
   ##################################
   
-  dat_sub <- dat_sub %>%
+  dat_sub <- dat_sub |>
     
     unique() |> # remove duplicates - don't want them to be flagged as a key_violation below
     
     # should already be sorted, but just to be sure...
-    arrange(experiment, channel, Track, Frame) %>%
+    arrange(experiment, channel, Track, Frame) |>
     
     # look for cells that are in two places at once (this compares row i with row i+1)
     mutate(key_violation = c(Frame[-n()] == Frame[-1], FALSE) &
-             c(Track[-n()] == Track[-1], FALSE)) %>%
+             c(Track[-n()] == Track[-1], FALSE)) |>
   
     filter(!key_violation &                                      # matches the row after this
-           !c(FALSE, key_violation[-length(key_violation)])) %>% # matches the row previous to this
+           !c(FALSE, key_violation[-length(key_violation)])) |> # matches the row previous to this
   
-    group_by(channel, Track) %>%
+    group_by(channel, Track) |>
     mutate(
       # this is the frame where the cell first crosses the upper ledge
       cross_at = case_when(    Y[1] >= ledge_upper  ~ Frame[1],
@@ -370,7 +370,7 @@ one_experiment <- function(dat_sub, experiment, results_dir, seed = NULL, ledge_
       # (finish_at and cross_at are in Frames, so divide by 2 for time in minutes)
       surv_time = unique(ifelse(observe_start, finish_at - cross_at, NA) / 2), # drop left censored tracks
       surv_event = unique(observe_finish)
-    ) %>%
+    ) |>
     ungroup() |>
     
     mutate(
@@ -427,7 +427,7 @@ one_experiment <- function(dat_sub, experiment, results_dir, seed = NULL, ledge_
   # Channel-level summarization #
   ###############################
   
-  channel_summ <- group_by(dat_sub, f, date, experiment, channel, sample, treatment) %>%
+  channel_summ <- group_by(dat_sub, f, date, experiment, channel, sample, treatment) |>
     
     summarize(
       # calculate smooth functions of x, y and theta over time
@@ -466,7 +466,7 @@ one_experiment <- function(dat_sub, experiment, results_dir, seed = NULL, ledge_
                           max() |>
                           floor())
     ) |>
-    ungroup() %>%
+    ungroup() |>
     dplyr::select(-tab) |>
     
     mutate(,
@@ -488,11 +488,11 @@ one_experiment <- function(dat_sub, experiment, results_dir, seed = NULL, ledge_
       y = map2(y, frames, function(y, f) y(f)),
       
       #directed vs undirected statistics for each channel
-    ) %>%
+    ) |>
     
     # add summary of track statistics (proportion finished, chemotactic efficiency, angle of migration, instantaneous angle, and velocity)
     left_join({
-      group_by(track_summ, channel) %>%
+      group_by(track_summ, channel) |>
         summarize(tot_finished = sum(observe_finish),
 
                   ce_median    = median(ce, na.rm = TRUE),
@@ -549,10 +549,10 @@ one_experiment <- function(dat_sub, experiment, results_dir, seed = NULL, ledge_
   samps <- unique(channel_summ$sample)
   
   ### within_grp: Within-group statistics (within same sample, same treatment)
-  within_grp <- group_by(dat_sub, date, experiment, sample, treatment) %>%
+  within_grp <- group_by(dat_sub, date, experiment, sample, treatment) |>
     
     # check to see how many channels we have in each group  
-    mutate(nchannels = length(unique(na.omit(channel)))) %>%
+    mutate(nchannels = length(unique(na.omit(channel)))) |>
     
     # drop any groups that only have one channel (nothing to compare)
     dplyr::filter(nchannels > 1,
@@ -562,7 +562,7 @@ one_experiment <- function(dat_sub, experiment, results_dir, seed = NULL, ledge_
   # if we have different within-group statistics to calculate...
   if(nrow(within_grp) > 0)
   {
-    within_grp <- within_grp %>%
+    within_grp <- within_grp |>
       
       # create one row per two-way comparison
       reframe(channel_a = combn(unique(na.omit(channel)), 2)[1,],
@@ -589,10 +589,10 @@ one_experiment <- function(dat_sub, experiment, results_dir, seed = NULL, ledge_
 
   
   ### btw_trt: Between-treatment statistics (same sample, different treatment)
-  btw_trt <- group_by(dat_sub, date, experiment, sample) %>%
+  btw_trt <- group_by(dat_sub, date, experiment, sample) |>
     
     # check to see how many channels we have in each group  
-    mutate(ntrts = length(unique(na.omit(treatment)))) %>%
+    mutate(ntrts = length(unique(na.omit(treatment)))) |>
     
     # drop any groups that only have one channel (nothing to compare)
     dplyr::filter(ntrts > 1,
@@ -601,7 +601,7 @@ one_experiment <- function(dat_sub, experiment, results_dir, seed = NULL, ledge_
   # if we have different between-treatment statistics to calculate...
   if(nrow(btw_trt) > 0)
   {
-    btw_trt <- btw_trt %>%
+    btw_trt <- btw_trt |>
       
       # create one row per two-way comparison
       reframe(trt_a = paste(combn(unique(na.omit(treatment)), 2)[1,]),
@@ -628,10 +628,10 @@ one_experiment <- function(dat_sub, experiment, results_dir, seed = NULL, ledge_
   
   
   ### btw_samp: Between-sample comparison statistics (same treatment, different sample)
-  btw_samp <- group_by(dat_sub, date, experiment, treatment) %>%
+  btw_samp <- group_by(dat_sub, date, experiment, treatment) |>
     
     # check to see how many channels we have in each group  
-    mutate(nsamps = length(unique(na.omit(sample)))) %>%
+    mutate(nsamps = length(unique(na.omit(sample)))) |>
     
     dplyr::filter(nsamps > 1,        # drop any groups that only have one channel (nothing to compare)
                   !is.na(treatment)) # drop any groups with NA treatment
@@ -639,7 +639,7 @@ one_experiment <- function(dat_sub, experiment, results_dir, seed = NULL, ledge_
   # if we have different between-treatment statistics to calculate...
   if(nrow(btw_samp) > 0)
   {
-    btw_samp <- btw_samp %>%
+    btw_samp <- btw_samp |>
       
       # create one row per two-way comparison
       reframe(a = paste(combn(unique(na.omit(sample)), 2)[1,]),
@@ -690,7 +690,7 @@ one_experiment <- function(dat_sub, experiment, results_dir, seed = NULL, ledge_
                                                        chanID = channel_summ$channel[.x],
                                                        x      = channel_summ$x[[.x]],
                                                        y      = channel_summ$y[[.x]],
-                                                       frames = channel_summ$frames[[.x]] %>% as.integer(),
+                                                       frames = channel_summ$frames[[.x]] |> as.integer(),
                                                        v_x    = channel_summ$v_x[[.x]],
                                                        v_y    = channel_summ$v_y[[.x]],
                                                        v      = channel_summ$v[[.x]],
@@ -698,7 +698,7 @@ one_experiment <- function(dat_sub, experiment, results_dir, seed = NULL, ledge_
        
        trackSummary = tibble(expID           = experiment,
                              chanID          = track_summ$channel,
-                             trackID         = track_summ$Track %>% as.integer(),
+                             trackID         = track_summ$Track |> as.integer(),
                              ce              = track_summ$ce,
                              angle_migration = track_summ$angle_migration,
                              av_theta        = track_summ$av_theta,
@@ -710,7 +710,7 @@ one_experiment <- function(dat_sub, experiment, results_dir, seed = NULL, ledge_
        
        trackRaw = map_df(1:nrow(track_summ), ~ tibble(expID   = experiment,
                                                       chanID  = track_summ$channel[.x],
-                                                      trackID = track_summ$Track[.x] %>% as.integer()) |>
+                                                      trackID = track_summ$Track[.x] |> as.integer()) |>
                            
                            left_join(select(dat_sub, experiment, channel, Track, X, Y), # add X,Y position data back in (pixel coordinates)
                                      by = c('expID' = 'experiment', 'chanID' = 'channel', 'trackID' = 'Track')) |>
@@ -718,7 +718,7 @@ one_experiment <- function(dat_sub, experiment, results_dir, seed = NULL, ledge_
                            
                            mutate(x       = track_summ$x[[.x]],
                                   y       = track_summ$y[[.x]],
-                                  frames  = track_summ$frames[[.x]] %>% as.integer(),
+                                  frames  = track_summ$frames[[.x]] |> as.integer(),
                                   time    = frames / 2,
                                   v_x     = track_summ$v_x[[.x]],
                                   v_y     = track_summ$v_y[[.x]],

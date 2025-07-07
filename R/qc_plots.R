@@ -20,13 +20,13 @@ qc_track_len <- function(dat)
   if(nrow(dat) == 0)
     return(plot_nothing('Please pick a subset to plot'))
   
-  group_by(dat, trackID) %>%
+  group_by(dat, trackID) |>
     summarize(min_time = min(frames) / 2,
-              max_time = max(frames) / 2) %>%
-    ungroup() %>%
+              max_time = max(frames) / 2) |>
+    ungroup() |>
     
-    arrange(min_time) %>%
-    mutate(track_ordered = 1:length(min_time)) %>%
+    arrange(min_time) |>
+    mutate(track_ordered = 1:length(min_time)) |>
     
     ggplot(aes(x = min_time, xend = max_time, y = track_ordered, yend = track_ordered)) +
     geom_segment() +
@@ -51,9 +51,9 @@ qc_n_cells <- function(dat)
   if(nrow(dat) == 0)
     return(plot_nothing('Please pick a subset to plot'))
   
-  tmp <- group_by(dat, frames) %>%
-    summarize(n_tracks = length(unique(trackID))) %>%
-    ungroup() %>%
+  tmp <- group_by(dat, frames) |>
+    summarize(n_tracks = length(unique(trackID))) |>
+    ungroup() |>
     
     mutate(time = frames / 2)
   

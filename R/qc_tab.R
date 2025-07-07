@@ -133,7 +133,7 @@ qc_server <- function(id, con, shared_time_filter)
                                          data_r = reactive({
                                            get_dat(con,
                                                    select = 'expID, chanID, sID, treatment',
-                                                   from = 'chanSummary') %>%
+                                                   from = 'chanSummary') |>
                                              mutate(expID = factor(expID),
                                                     chanID = factor(chanID),
                                                     sID = factor(sID))
@@ -181,7 +181,7 @@ qc_server <- function(id, con, shared_time_filter)
                                      from = "chanSummary",
                                      where = paste0("expID='", chan_select()$expID[1], "'", " AND ",
                                                     "chanID='", chan_select()$chanID[1], "'")
-                                    )  |> 
+                                    )  |>
              select(-expID) |>
              t() |> 
              as.data.frame() |> 
