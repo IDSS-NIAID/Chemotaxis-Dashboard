@@ -61,7 +61,8 @@ app_server <- function(input, output, session)
 
   shared_time_filter <- reactiveVal(c(0, 60))
   shared_angle_filter <- reactiveVal(c(0, 90))
-  
+  shared_track_len <- reactiveVal(1)
+  shared_track_len_n <- reactiveVal(3)
 
   ###############
   # Set up tabs #
@@ -71,8 +72,10 @@ app_server <- function(input, output, session)
   ces_server("ces", con, shared_time_filter)
   
   # Single experiment summary tab
-  ses_server("ses", con, shared_time_filter, shared_angle_filter)
+  ses_server("ses", con, shared_time_filter, shared_angle_filter,
+             shared_track_len, shared_track_len_n)
   
   # QC tab  
-  qc_server("qc", con, shared_time_filter, shared_angle_filter)
+  qc_server("qc", con, shared_time_filter, shared_angle_filter,
+            shared_track_len, shared_track_len_n)
 }

@@ -35,7 +35,9 @@ qc_sidebarUI <- function(id)
       min = 0,
       max = 90,
       value = c(0, 90)
-    )
+    ),
+    numericInput(ns('qc_track_len'), 'Minimum Track Length (μm)', value = 1),
+    numericInput(ns('qc_track_len_n'), 'Minimum Track Length (n)', value = 3)
     #sliderInput(ns('qc_min_track_len'), 'Minimum Track Length', 3, 60, value = 6), # minimum track length in minutes
     #numericInput(ns('qc_n_cells'), 'Number of cells', value = 100)
   )
@@ -83,6 +85,8 @@ qc_cardsUI <- function(id)
 #' @param con Active DBI database connection
 #' @param shared_time_filter reactiveVal from the main server function for time filter definition
 #' @param shared_angle_filter reactiveVal from the main server function for angle filter definition
+#' @param shared_track_len reactiveVal from the main server function for track length definition
+#' @param shared_track_len_n reactiveVal from the main server function for track length filter for total number of frames
 #'
 #' @export
 #' @importFrom datamods select_group_server
@@ -91,7 +95,8 @@ qc_cardsUI <- function(id)
 #' @importFrom ggplot2 ggsave
 #' @importFrom shiny downloadHandler moduleServer reactive reactiveValues reactiveValuesToList renderPlot
 #' @importFrom tibble rownames_to_column
-qc_server <- function(id, con, shared_time_filter, shared_angle_filter)
+qc_server <- function(id, con, shared_time_filter, shared_angle_filter, shared_track_len,
+                      shared_track_len_n)
 {
   # for all of those pesky "no visible binding" notes
   if(FALSE)
@@ -106,7 +111,9 @@ qc_server <- function(id, con, shared_time_filter, shared_angle_filter)
       # Filters
       time_filter <- reactive(input$qc_time_filter)
       angle_filter <- reactive(input$qc_angle_filter)
-      
+      track_len <- reactive(input$qc_track_len)
+      track_len_n <- reactive(input$qc_track_len_n)
+
       # When filters change in THIS tab, update the shared value
       observeEvent(input$qc_time_filter, {
         shared_time_filter(time_filter())
@@ -115,6 +122,14 @@ qc_server <- function(id, con, shared_time_filter, shared_angle_filter)
       observeEvent(input$qc_angle_filter, {
         shared_angle_filter(angle_filter())
       })
+      
+      observeEvent(input$qc_track_len, {
+        shared_track_len(track_len())
+      })
+
+    observeEvent(input$qc_track_len_n, {
+      shared_track_len_n(track_len_n())
+    })
 
       # When shared values change, update filters in THIS tab
       observeEvent(shared_time_filter(), {
@@ -130,7 +145,20 @@ qc_server <- function(id, con, shared_time_filter, shared_angle_filter)
           updateSliderInput(session, "qc_angle_filter", value = shared_angle_filter())
         }
       }, ignoreInit = TRUE)
+      
+      observeEvent(shared_track_len(), {
+        # Check prevents an infinite loop
+        if (!isTRUE(all.equal(track_len(), shared_track_len()))) {
+          updateNumericInput(session, "qc_track_len", value = shared_track_len())
+        }
+      }, ignoreInit = TRUE)
 
+    observeEvent(shared_track_len_n(), {
+      # Check prevents an infinite loop
+      if (!isTRUE(all.equal(track_len_n(), shared_track_len_n()))) {
+        updateNumericInput(session, "qc_track_len_n", value = shared_track_len_n())
+      }
+    }, ignoreInit = TRUE)
       
       # pull raw track information
       trackRaw <- reactive({
