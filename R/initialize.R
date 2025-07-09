@@ -6,7 +6,7 @@
 #' @param db_path Character value specifying the path to the file where the database should be initialized.
 #' @param data List of data.frames to initialize or add to the database. Internal test data will be used if `data` is NULL.
 #'
-#' @details The data.frames expected in data are `expSummary`, `expStats`, `chanSummary`, `chanRaw`,
+#' @details The data.frames expected in data are `expStats`, `chanSummary`, `chanRaw`,
 #' `trackSummary`, and `trackRaw` (as returned by `process_experiments()`).
 #' 
 #' @return Something - use this to sniff for existing DB information?
@@ -27,16 +27,7 @@ dbinit <- function(db_path, data = NULL)
   con <- dbConnect(SQLite(), db_path)
   
 
-  # expSummary
-  # Experiment summary table
-  # 
-  # @param expID     (key) Character, experiment ID - used in: 
-  #                          `expStats`
-  #                          `chanSummary`
-  #                          `chanRaw`
-  #                          `trackSummary`
-  #                          `trackRaw`
-  dbupdate(con, 'expSummary', data$expSummary, 'expID')
+  
 
   
   # expStats
@@ -58,7 +49,7 @@ dbinit <- function(db_path, data = NULL)
   #                           `chanRaw`
   #                           `trackRaw`
   #                           `trackSummary`
-  # @param sID              Character, sample ID - used in:
+  # @param sID              Character, sample ID
   # @param treatment        Character, treatment applied to this channel
   # @param tot_finished     Integer, Total number of cells that reached the bottom ledge
   # @param prop_finished    Double, proportion of cells that reached the bottom ledge
@@ -261,8 +252,7 @@ dbupdate <- function(con, table, dat, key_fields)
 #' @export
 get_test_data <- function()
 {
-  list(expSummary   = expSummary,
-       expStats     = expStats,
+  list(expStats     = expStats,
        chanSummary  = chanSummary,
        chanRaw      = chanRaw,
        trackSummary = trackSummary,

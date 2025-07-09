@@ -128,8 +128,7 @@ process_experiments <- function(experiment, source_dir, results_dir, seed = NULL
                          ledge_upper = ledge_upper,
                          ledge_lower = ledge_lower))
 
-  list(expSummary   = map_df(retval, ~ .x$expSummary),
-       expStats     = map_df(retval, ~ .x$expStats),
+  list(expStats     = map_df(retval, ~ .x$expStats),
        chanSummary  = map_df(retval, ~ .x$chanSummary),
        chanRaw      = map_df(retval, ~ .x$chanRaw),
        trackSummary = map_df(retval, ~ .x$trackSummary),
@@ -668,11 +667,7 @@ one_experiment <- function(dat_sub, experiment, results_dir, seed = NULL, ledge_
   ##### Return Results #####
   
   # compare this output with the comments in `initialize.R`
-  list(expSummary = tibble(expID = experiment),
-       
-       expStats = exp_summ,
-       
-       chanSummary = select(channel_summ, 
+  list(chanSummary = select(channel_summ, 
                             experiment, channel, sample, treatment, 
                             tot_finished, prop_finished, n_cells,
                             ce_median, ce_mean, ce_sd,
