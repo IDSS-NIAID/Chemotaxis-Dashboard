@@ -17,11 +17,11 @@ ses_tracks_time <- function(dat)
   if(FALSE)
     chanID <- frames <- lab <- minutes <- sID <- trackID <- treatment <- x <- y <- NULL
   
-  dat %>%
+  dat |>
     arrange(chanID, trackID, frames) |> 
     
     mutate(lab = paste0(chanID, ": ", sID, ", ", treatment),
-           minutes = frames / 2) %>%
+           minutes = frames / 2) |>
     
     ggplot(aes(x = x, y = y, group = trackID, color = minutes)) +
     geom_path() + #connects observations in the order in which they appear in the dataset
