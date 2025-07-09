@@ -60,6 +60,7 @@ app_server <- function(input, output, session)
   # In general, we'll create reactiveVals to act as the central "source of truth" across tabs
 
   shared_time_filter <- reactiveVal(c(0, 60))
+  shared_angle_filter <- reactiveVal(c(0, 90))
   
 
   ###############
@@ -70,8 +71,8 @@ app_server <- function(input, output, session)
   ces_server("ces", con, shared_time_filter)
   
   # Single experiment summary tab
-  ses_server("ses", con, shared_time_filter)
+  ses_server("ses", con, shared_time_filter, shared_angle_filter)
   
   # QC tab  
-  qc_server("qc", con, shared_time_filter)
+  qc_server("qc", con, shared_time_filter, shared_angle_filter)
 }

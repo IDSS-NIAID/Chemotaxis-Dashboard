@@ -26,6 +26,13 @@ ses_sidebarUI <- function(id)
       min = 0,
       max = 60,
       value = c(0, 60)
+    ),
+    sliderInput(
+      inputId = ns("ses_angle_filter"),
+      label = "Angle of migration filter",
+      min = 0,
+      max = 90,
+      value = c(0, 90)
     )
   )
 }
@@ -80,13 +87,14 @@ ses_cardsUI <- function(id)
 #' 
 #' @param con Active DBI database connection
 #' @param shared_time_filter reactiveVal from the main server function for time filter definition
+#' @param shared_angle_filter reactiveVal from the main server function for angle filter definition
 #'
 #' @export
 #' @importFrom shiny downloadHandler moduleServer reactive reactiveValues renderPlot renderTable
 #' @importFrom dplyr left_join filter
 #' @importFrom ggplot2 ggsave
 #' @importFrom utils write.csv
-ses_server <- function(id, con, shared_time_filter)
+ses_server <- function(id, con, shared_time_filter, shared_angle_filter)
 {
   moduleServer(id, function(input, output, session)
   {
@@ -97,11 +105,16 @@ ses_server <- function(id, con, shared_time_filter)
 
     # Filters
     time_filter <- reactive(input$ses_time_filter)
+    angle_filter <- reactive(input$ses_angle_filter)
 
 
     # When filters change in THIS tab, update the shared value
     observeEvent(input$ses_time_filter, {
       shared_time_filter(time_filter())
+    })
+    
+    observeEvent(input$ses_angle_filter, {
+      shared_angle_filter(angle_filter())
     })
 
 
@@ -110,6 +123,13 @@ ses_server <- function(id, con, shared_time_filter)
       # Check prevents an infinite loop
       if (!isTRUE(all.equal(time_filter(), shared_time_filter()))) {
         updateSliderInput(session, "ses_time_filter", value = shared_time_filter())
+      }
+    }, ignoreInit = TRUE)
+    
+    observeEvent(shared_angle_filter(), {
+      # Check prevents an infinite loop
+      if (!isTRUE(all.equal(angle_filter(), shared_angle_filter()))) {
+        updateSliderInput(session, "ses_angle_filter", value = shared_angle_filter())
       }
     }, ignoreInit = TRUE)
 
@@ -148,6 +168,7 @@ ses_server <- function(id, con, shared_time_filter)
               from = "trackSummary",
               where = paste0("expID='", exp_select()[1], "'")) |>
         filter(trackID %in% unique(track_raw()$trackID)) |>
+        filter(angle_migration >= angle_filter()[1] & angle_migration <= angle_filter()[2]) |>
         
         left_join(get_dat(con,
                           select = "expID, sID, chanID, treatment",
