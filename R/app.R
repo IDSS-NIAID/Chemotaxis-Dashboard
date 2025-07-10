@@ -70,6 +70,8 @@ app_server <- function(input, output, session)
   # Cross-experiment summary tab
   ces_server("ces", con,
              shared_time_filter,
+             shared_angle_filter,
+             shared_track_len, shared_track_n,
              shared_ce_filter)
   
   # Single experiment summary tab

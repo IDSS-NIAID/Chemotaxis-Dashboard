@@ -32,6 +32,15 @@ ces_sidebarUI <- function(id)
       max = 60,
       value = c(0, 60)
     ),
+    sliderInput(
+      inputId = ns("ces_angle_filter"),
+      label = "Angle of migration filter",
+      min = 0,
+      max = 90,
+      value = c(0, 90)
+    ),
+    numericInput(ns('ces_track_len'), 'Minimum Track Length (μm)', value = 1),
+    numericInput(ns('ces_track_n'), 'Minimum Track Length (n)', value = 3),
     numericInput(
       inputId = ns("ces_ce_filter"),
       label = "min Chemotactic Efficiency",
@@ -88,6 +97,9 @@ ces_cardsUI <- function(id)
 #' 
 #' @param con Active DBI database connection
 #' @param shared_time_filter reactiveVal from the main server function for time filter definition
+#' @param shared_angle_filter reactiveVal from the main server function for angle filter definition
+#' @param shared_track_len reactiveVal from the main server function for physical track length filter in μm
+#' @param shared_track_n reactiveVal from the main server function for track length filter for total number of frames
 #' @param shared_ce_filter reactiveVal from the main server function for filtering on minimum chemotactic efficiency
 #' 
 #' @export
@@ -97,7 +109,8 @@ ces_cardsUI <- function(id)
 #' @importFrom ggplot2 ggsave
 #' @importFrom shiny downloadHandler moduleServer reactive reactiveValues renderPlot
 #' @importFrom utils write.csv
-ces_server <- function(id, con, shared_time_filter, shared_ce_filter)
+ces_server <- function(id, con, shared_time_filter, shared_angle_filter, shared_track_len, 
+                       shared_track_n, shared_ce_filter)
 {
   # for all those pesky "no visible binding" notes
   if(FALSE)
@@ -146,12 +159,27 @@ ces_server <- function(id, con, shared_time_filter, shared_ce_filter)
 
       # Filters
       time_filter <- reactive(input$ces_time_filter)
+      angle_filter <- reactive(input$ces_angle_filter)
+      track_len <- reactive(input$ces_track_len)
+      track_n <- reactive(input$ces_track_n)
       ce_filter <- reactive(input$ces_ce_filter)
       
 
       # When filters change in THIS tab, update the shared value
       observeEvent(input$ces_time_filter, {
         shared_time_filter(time_filter())
+      })
+      
+      observeEvent(input$ces_angle_filter, {
+        shared_angle_filter(angle_filter())
+      })
+      
+      observeEvent(input$ces_track_len, {
+        shared_track_len(track_len())
+      })
+      
+      observeEvent(input$ces_track_n, {
+        shared_track_n(track_n())
       })
 
       observeEvent(input$ces_ce_filter, {
@@ -164,6 +192,27 @@ ces_server <- function(id, con, shared_time_filter, shared_ce_filter)
         # Check prevents an infinite loop
         if (!isTRUE(all.equal(time_filter(), shared_time_filter()))) {
           updateSliderInput(session, "ces_time_filter", value = shared_time_filter())
+        }
+      }, ignoreInit = TRUE)
+      
+      observeEvent(shared_angle_filter(), {
+        # Check prevents an infinite loop
+        if (!isTRUE(all.equal(angle_filter(), shared_angle_filter()))) {
+          updateSliderInput(session, "ces_angle_filter", value = shared_angle_filter())
+        }
+      }, ignoreInit = TRUE)
+      
+      observeEvent(shared_track_len(), {
+        # Check prevents an infinite loop
+        if (!isTRUE(all.equal(track_len(), shared_track_len()))) {
+          updateNumericInput(session, "ces_track_len", value = shared_track_len())
+        }
+      }, ignoreInit = TRUE)
+      
+      observeEvent(shared_track_n(), {
+        # Check prevents an infinite loop
+        if (!isTRUE(all.equal(track_n(), shared_track_n()))) {
+          updateNumericInput(session, "ces_track_n", value = shared_track_n())
         }
       }, ignoreInit = TRUE)
       
