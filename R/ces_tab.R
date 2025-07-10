@@ -32,12 +32,12 @@ ces_sidebarUI <- function(id)
       max = 60,
       value = c(0, 60)
     ),
-    sliderInput(
+    numericInput(
       inputId = ns("ces_angle_filter"),
-      label = "Angle of migration filter",
+      label = "min Angle of Migration",
       min = 0,
       max = 90,
-      value = c(0, 90)
+      value = 0
     ),
     numericInput(ns('ces_track_len'), 'Minimum Track Length (μm)', value = 1),
     numericInput(ns('ces_track_n'), 'Minimum Track Length (n)', value = 3),
@@ -198,7 +198,7 @@ ces_server <- function(id, con, shared_time_filter, shared_angle_filter, shared_
       observeEvent(shared_angle_filter(), {
         # Check prevents an infinite loop
         if (!isTRUE(all.equal(angle_filter(), shared_angle_filter()))) {
-          updateSliderInput(session, "ces_angle_filter", value = shared_angle_filter())
+          updateNumericInput(session, "ces_angle_filter", value = shared_angle_filter())
         }
       }, ignoreInit = TRUE)
       

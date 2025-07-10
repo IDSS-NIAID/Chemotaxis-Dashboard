@@ -27,12 +27,12 @@ ses_sidebarUI <- function(id)
       max = 60,
       value = c(0, 60)
     ),
-    sliderInput(
+    numericInput(
       inputId = ns("ses_angle_filter"),
-      label = "Angle of migration filter",
+      label = "min Angle of Migration",
       min = 0,
       max = 90,
-      value = c(0, 90)
+      value = 0
     ),
     numericInput(ns('ses_track_len'), 'Minimum Track Length (μm)', value = 1),
     numericInput(ns('ses_track_n'), 'Minimum Track Length (n)', value = 3),
@@ -155,11 +155,11 @@ ses_server <- function(id, con, shared_time_filter, shared_angle_filter, shared_
     }, ignoreInit = TRUE)
     
     observeEvent(shared_angle_filter(), {
-      # Check prevents an infinite loop
-      if (!isTRUE(all.equal(angle_filter(), shared_angle_filter()))) {
-        updateSliderInput(session, "ses_angle_filter", value = shared_angle_filter())
-      }
-    }, ignoreInit = TRUE)
+        # Check prevents an infinite loop
+        if (!isTRUE(all.equal(angle_filter(), shared_angle_filter()))) {
+          updateNumericInput(session, "ses_angle_filter", value = shared_angle_filter())
+        }
+      }, ignoreInit = TRUE)
     
     observeEvent(shared_track_len(), {
       # Check prevents an infinite loop
@@ -217,7 +217,7 @@ ses_server <- function(id, con, shared_time_filter, shared_angle_filter, shared_
               from = "trackSummary",
               where = paste0("expID='", exp_select()[1], "'")) |>
         filter(trackID %in% unique(track_raw()$trackID)) |>
-        filter(angle_migration >= angle_filter()[1] & angle_migration <= angle_filter()[2]) |>
+        filter(angle_migration >= angle_filter()) |>
         
         left_join(get_dat(con,
                           select = "expID, sID, chanID, treatment",

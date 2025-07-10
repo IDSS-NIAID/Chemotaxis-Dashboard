@@ -29,12 +29,12 @@ qc_sidebarUI <- function(id)
       max = 60,
       value = c(0, 60)
     ),
-    sliderInput(
+    numericInput(
       inputId = ns("qc_angle_filter"),
-      label = "Angle of migration filter",
+      label = "min Angle of Migration",
       min = 0,
       max = 90,
-      value = c(0, 90)
+      value = 0
     ),
     numericInput(ns('qc_track_len'), 'Minimum Track Length (μm)', value = 1),
     numericInput(ns('qc_track_n'), 'Minimum Track Length (n)', value = 3),
@@ -155,7 +155,7 @@ qc_server <- function(id, con, shared_time_filter, shared_angle_filter, shared_t
       observeEvent(shared_angle_filter(), {
         # Check prevents an infinite loop
         if (!isTRUE(all.equal(angle_filter(), shared_angle_filter()))) {
-          updateSliderInput(session, "qc_angle_filter", value = shared_angle_filter())
+          updateNumericInput(session, "qc_angle_filter", value = shared_angle_filter())
         }
       }, ignoreInit = TRUE)
       

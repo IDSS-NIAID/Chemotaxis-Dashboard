@@ -58,7 +58,7 @@ app_server <- function(input, output, session)
   # In general, we'll create reactiveVals to act as the central "source of truth" across tabs
 
   shared_time_filter <- reactiveVal(c(0, 60))
-  shared_angle_filter <- reactiveVal(c(0, 90))
+  shared_angle_filter <- reactiveVal(0)
   shared_track_len <- reactiveVal(1)
   shared_track_n <- reactiveVal(3)
   shared_ce_filter <- reactiveVal(0)
