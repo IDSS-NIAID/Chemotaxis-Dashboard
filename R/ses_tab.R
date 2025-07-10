@@ -35,7 +35,7 @@ ses_sidebarUI <- function(id)
       value = c(0, 90)
     ),
     numericInput(ns('ses_track_len'), 'Minimum Track Length (μm)', value = 1),
-    numericInput(ns('ses_track_len_n'), 'Minimum Track Length (n)', value = 3)
+    numericInput(ns('ses_track_n'), 'Minimum Track Length (n)', value = 3)
   )
 }
 
@@ -90,8 +90,8 @@ ses_cardsUI <- function(id)
 #' @param con Active DBI database connection
 #' @param shared_time_filter reactiveVal from the main server function for time filter definition
 #' @param shared_angle_filter reactiveVal from the main server function for angle filter definition
-#' @param shared_track_len reactiveVal from the main server function for track length filter in μm
-#' @param shared_track_len_n reactiveVal from the main server function for track length filter for total number of frames
+#' @param shared_track_len reactiveVal from the main server function for physical track length filter in μm
+#' @param shared_track_n reactiveVal from the main server function for track length filter for total number of frames
 #'
 #' @export
 #' @importFrom shiny downloadHandler moduleServer reactive reactiveValues renderPlot renderTable
@@ -99,7 +99,7 @@ ses_cardsUI <- function(id)
 #' @importFrom ggplot2 ggsave
 #' @importFrom utils write.csv
 ses_server <- function(id, con, shared_time_filter, shared_angle_filter, shared_track_len,
-                       shared_track_len_n)
+                       shared_track_n)
 {
   moduleServer(id, function(input, output, session)
   {
@@ -112,7 +112,7 @@ ses_server <- function(id, con, shared_time_filter, shared_angle_filter, shared_
     time_filter <- reactive(input$ses_time_filter)
     angle_filter <- reactive(input$ses_angle_filter)
     track_len <- reactive(input$ses_track_len)
-    track_len_n <- reactive(input$ses_track_len_n)
+    track_n <- reactive(input$ses_track_n)
 
 
     # When filters change in THIS tab, update the shared value
@@ -125,11 +125,11 @@ ses_server <- function(id, con, shared_time_filter, shared_angle_filter, shared_
     })
     
     observeEvent(input$ses_track_len, {
-      shared_track_len(track_len_n())
+      shared_track_len(track_len())
     })
 
-    observeEvent(input$ses_track_len_n, {
-      shared_track_len_n(track_len_n())
+    observeEvent(input$ses_track_n, {
+      shared_track_n(track_n())
     })
 
 
@@ -155,10 +155,10 @@ ses_server <- function(id, con, shared_time_filter, shared_angle_filter, shared_
       }
     }, ignoreInit = TRUE)
 
-    observeEvent(shared_track_len_n(), {
+    observeEvent(shared_track_n(), {
       # Check prevents an infinite loop
-      if (!isTRUE(all.equal(track_len_n(), shared_track_len_n()))) {
-        updateNumericInput(session, "ses_track_len_n", value = shared_track_len_n())
+      if (!isTRUE(all.equal(track_n(), shared_track_n()))) {
+        updateNumericInput(session, "ses_track_n", value = shared_track_n())
       }
     }, ignoreInit = TRUE)
 
