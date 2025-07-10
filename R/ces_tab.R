@@ -24,14 +24,22 @@ ces_sidebarUI <- function(id)
                                   list(inputId = "treatment", label = "Treatment")),
                     inline = FALSE),
     
-    # Add the new slider input for time filtering
+    # Add the new user input for filtering
     sliderInput(
       inputId = ns("ces_time_filter"),
       label = "Time filter",
       min = 0,
       max = 60,
       value = c(0, 60)
+    ),
+    numericInput(
+      inputId = ns("ces_ce_filter"),
+      label = "min Chemotactic Efficiency",
+      min = -100,
+      max = 100,
+      value = 0
     )
+
   )
 }
 
@@ -80,6 +88,7 @@ ces_cardsUI <- function(id)
 #' 
 #' @param con Active DBI database connection
 #' @param shared_time_filter reactiveVal from the main server function for time filter definition
+#' @param shared_ce_filter reactiveVal from the main server function for filtering on minimum chemotactic efficiency
 #' 
 #' @export
 #' @importFrom datamods select_group_server
@@ -88,7 +97,7 @@ ces_cardsUI <- function(id)
 #' @importFrom ggplot2 ggsave
 #' @importFrom shiny downloadHandler moduleServer reactive reactiveValues renderPlot
 #' @importFrom utils write.csv
-ces_server <- function(id, con, shared_time_filter)
+ces_server <- function(id, con, shared_time_filter, shared_ce_filter)
 {
   # for all those pesky "no visible binding" notes
   if(FALSE)
@@ -137,11 +146,16 @@ ces_server <- function(id, con, shared_time_filter)
 
       # Filters
       time_filter <- reactive(input$ces_time_filter)
+      ce_filter <- reactive(input$ces_ce_filter)
       
 
       # When filters change in THIS tab, update the shared value
       observeEvent(input$ces_time_filter, {
         shared_time_filter(time_filter())
+      })
+
+      observeEvent(input$ces_ce_filter, {
+        shared_ce_filter(ce_filter())
       })
 
 
@@ -153,6 +167,13 @@ ces_server <- function(id, con, shared_time_filter)
         }
       }, ignoreInit = TRUE)
       
+      observeEvent(shared_ce_filter(), {
+        # Check prevents an infinite loop
+        if (!isTRUE(all.equal(ce_filter(), shared_ce_filter()))) {
+          updateNumericInput(session, "ces_ce_filter", value = shared_ce_filter())
+        }
+      }, ignoreInit = TRUE)
+
 
       # Summary table
       output$ces_sample_table <- DT::renderDataTable({

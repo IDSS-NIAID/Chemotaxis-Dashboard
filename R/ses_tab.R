@@ -35,7 +35,14 @@ ses_sidebarUI <- function(id)
       value = c(0, 90)
     ),
     numericInput(ns('ses_track_len'), 'Minimum Track Length (μm)', value = 1),
-    numericInput(ns('ses_track_n'), 'Minimum Track Length (n)', value = 3)
+    numericInput(ns('ses_track_n'), 'Minimum Track Length (n)', value = 3),
+    numericInput(
+      inputId = ns("ses_ce_filter"),
+      label = "min Chemotactic Efficiency",
+      min = -100,
+      max = 100,
+      value = 0
+    )
   )
 }
 
@@ -92,6 +99,7 @@ ses_cardsUI <- function(id)
 #' @param shared_angle_filter reactiveVal from the main server function for angle filter definition
 #' @param shared_track_len reactiveVal from the main server function for physical track length filter in μm
 #' @param shared_track_n reactiveVal from the main server function for track length filter for total number of frames
+#' @param shared_ce_filter reactiveVal from the main server function for filtering on minimum chemotactic efficiency
 #'
 #' @export
 #' @importFrom shiny downloadHandler moduleServer reactive reactiveValues renderPlot renderTable
@@ -99,7 +107,7 @@ ses_cardsUI <- function(id)
 #' @importFrom ggplot2 ggsave
 #' @importFrom utils write.csv
 ses_server <- function(id, con, shared_time_filter, shared_angle_filter, shared_track_len,
-                       shared_track_n)
+                       shared_track_n, shared_ce_filter)
 {
   moduleServer(id, function(input, output, session)
   {
@@ -113,6 +121,7 @@ ses_server <- function(id, con, shared_time_filter, shared_angle_filter, shared_
     angle_filter <- reactive(input$ses_angle_filter)
     track_len <- reactive(input$ses_track_len)
     track_n <- reactive(input$ses_track_n)
+    ce_filter <- reactive(input$ses_ce_filter)
 
 
     # When filters change in THIS tab, update the shared value
@@ -130,6 +139,10 @@ ses_server <- function(id, con, shared_time_filter, shared_angle_filter, shared_
 
     observeEvent(input$ses_track_n, {
       shared_track_n(track_n())
+    })
+    
+    observeEvent(input$ses_ce_filter, {
+      shared_ce_filter(ce_filter())
     })
 
 
@@ -159,6 +172,13 @@ ses_server <- function(id, con, shared_time_filter, shared_angle_filter, shared_
       # Check prevents an infinite loop
       if (!isTRUE(all.equal(track_n(), shared_track_n()))) {
         updateNumericInput(session, "ses_track_n", value = shared_track_n())
+      }
+    }, ignoreInit = TRUE)
+    
+    observeEvent(shared_ce_filter(), {
+      # Check prevents an infinite loop
+      if (!isTRUE(all.equal(ce_filter(), shared_ce_filter()))) {
+        updateNumericInput(session, "ses_ce_filter", value = shared_ce_filter())
       }
     }, ignoreInit = TRUE)
 
