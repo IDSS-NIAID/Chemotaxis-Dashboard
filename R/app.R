@@ -9,7 +9,6 @@
 #' @export
 #' @importFrom bslib page_navbar nav_panel sidebar
 #' @importFrom shiny actionButton icon tags
-#' @importFrom shinymanager secure_app
 app_ui <- function()
 {
   ui <- page_navbar(title = 'Chemotaxis Dashboard',
@@ -34,7 +33,6 @@ app_ui <- function()
 #' @importFrom DBI dbConnect dbDisconnect
 #' @importFrom RSQLite SQLite
 #' @importFrom shiny observeEvent reactiveVal reactiveValuesToList updateSliderInput
-#' @importFrom shinymanager check_credentials secure_server
 app_server <- function(input, output, session)
 {
   #################

@@ -23,7 +23,6 @@ Imports:
   rlang,
   RSQLite,
   shiny,
-  shinymanager,
   stringr,
   tibble,
   tidyr
