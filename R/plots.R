@@ -13,7 +13,7 @@ plot_nothing <- function(message = 'Please pick a subset to plot')
   if(FALSE)
     x <- y <- label <- NULL
   
-  tibble(x = 1, y = 1, label = message) |>
+  retval <- tibble(x = 1, y = 1, label = message) |>
     ggplot(aes(x = x, y = y, label = label)) +
     geom_text() +
     ylab('') +
@@ -21,6 +21,6 @@ plot_nothing <- function(message = 'Please pick a subset to plot')
     theme(axis.title = element_blank(),
           axis.text = element_blank(),
           axis.ticks = element_blank(),
-          axis.line = element_blank()) |>
-    return()
+          axis.line = element_blank())
+  return(retval)
 }
