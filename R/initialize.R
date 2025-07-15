@@ -51,6 +51,8 @@ dbinit <- function(db_path, data = NULL)
   #                           `trackSummary`
   # @param sID              Character, sample ID
   # @param treatment        Character, treatment applied to this channel
+
+  ### these will be calculated on the fly ###
   # @param tot_finished     Integer, Total number of cells that reached the bottom ledge
   # @param prop_finished    Double, proportion of cells that reached the bottom ledge
   # @param n_cells          Integer, estimated number of cells in the channel
@@ -72,6 +74,7 @@ dbinit <- function(db_path, data = NULL)
   # @param few_frames       Integer, number of tracks removed because they have 3 or fewer frames
   # @param pre_start_frames Integer, number of frames removed prior to a track crossing the upper threshold
   # @param post_end_frames  Integer, number of frames removed after a track crosses the bottom threshold
+
   dbupdate(con, 'chanSummary', data$chanSummary, c('expID', 'chanID'))
   
   

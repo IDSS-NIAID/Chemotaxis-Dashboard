@@ -55,7 +55,7 @@ summarize_tracks <- function(trackRaw) {
       distance_traveled = map2_dbl(x, y, ~ sum( sqrt( (.x[-1]-.x[-length(.x)])^2+(.y[-1]-.y[-length(.y)])^2 ) )),
       
       # chemotactic efficiency for each track is the change in y (delta_y) divided by the total distance (distance_traveled) 
-      ce = delta_y / distance_traveled,
+      ce = delta_y / distance_traveled * 100,
       
       # Angle of migration
       # We need the total change in x direction to calculate the angle of migration
@@ -77,7 +77,7 @@ summarize_tracks <- function(trackRaw) {
     ) |>
   
     #deleting columns with intermediate variables (used for calculation but not needed in end file)
-    select(-delta_y, -delta_x, -distance_traveled)
+    select(-delta_y, -delta_x)
 
   track_summ
 }

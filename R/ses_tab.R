@@ -29,7 +29,7 @@ ses_sidebarUI <- function(id)
     ),
     numericInput(
       inputId = ns("ses_angle_filter"),
-      label = "min Angle of Migration",
+      label = "min Angle of Migration (%)",
       min = 0,
       max = 90,
       value = 0
@@ -38,7 +38,7 @@ ses_sidebarUI <- function(id)
     numericInput(ns('ses_track_n'), 'Minimum Track Length (n)', value = 3),
     numericInput(
       inputId = ns("ses_ce_filter"),
-      label = "min Chemotactic Efficiency",
+      label = "min Chemotactic Efficiency (%)",
       min = -100,
       max = 100,
       value = 0
@@ -193,7 +193,8 @@ ses_server <- function(id, con, shared_time_filter, shared_angle_filter, shared_
                                       vars_r = 'expID')
 
     
-    track_raw <- reactive({
+    # this has all raw track data plus drop
+    track_raw_all <- reactive({
       
       get_dat(con,
               select = "expID, chanID, trackID, x, y, v_x, v_y, theta, frames",
@@ -206,24 +207,32 @@ ses_server <- function(id, con, shared_time_filter, shared_angle_filter, shared_
                           select = "expID, sID, chanID, treatment",
                           from = "chanSummary",
                           where = paste0("expID='", exp_select()[1], "'")),
-                  by = c("expID", "chanID"))
+                  by = c("expID", "chanID")) |>
+        
+        mutate(drop = time < time_filter()[1] | time > time_filter()[2])
+                      
     })
     
     
+    # this has summary track information plus filtering metadata
     track_summ <- reactive({
-      
-      get_dat(con,
-              select = "expID, chanID, trackID, ce, angle_migration",
-              from = "trackSummary",
-              where = paste0("expID='", exp_select()[1], "'")) |>
-        filter(trackID %in% unique(track_raw()$trackID)) |>
-        filter(angle_migration >= angle_filter()) |>
-        
-        left_join(get_dat(con,
-                          select = "expID, sID, chanID, treatment",
-                          from = "chanSummary",
-                          where = paste0("expID='", exp_select()[1], "'")),
-                  by = c("expID", "chanID"))
+      track_raw_all() |>
+        filter(!drop) |>
+        summarize_tracks() |>
+        mutate(drop = angle_migration < angle_filter() |
+                      distance_traveled < track_len() |
+                      n_frames < track_n() |
+                      ce < ce_filter())
+    })
+
+
+    # this is the version for plotting, after filtering for tracks that should be dropped
+    track_raw <- reactive({
+      track_raw_all() |>
+          left_join(track_summ() |> 
+                    select(chanID, trackID, drop) |> 
+                    rename(drop_summ = drop)) |>
+          filter(!drop & !drop_summ)
     })
 
     
@@ -276,6 +285,7 @@ ses_server <- function(id, con, shared_time_filter, shared_angle_filter, shared_
         (vals$ses_angle_migration <- plot_nothing())
       }else{
         (vals$ses_angle_migration <- track_summ() |>
+          filter(!drop) |>
           ses_angle_migration())
       }
     })
@@ -318,6 +328,7 @@ ses_server <- function(id, con, shared_time_filter, shared_angle_filter, shared_
         (vals$ses_ce <- plot_nothing())
       }else{
         (vals$ses_ce <- track_summ() |>
+          filter(!drop) |>
           ses_chemotactic_efficiency())
       }
     })
