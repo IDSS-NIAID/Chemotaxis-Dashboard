@@ -31,23 +31,23 @@ ces_sidebarUI <- function(id)
       min = 0,
       max = 60,
       value = c(0, 60)
-    ),
-    numericInput(
-      inputId = ns("ces_angle_filter"),
-      label = "min Angle of Migration",
-      min = 0,
-      max = 90,
-      value = 0
-    ),
-    numericInput(ns('ces_track_len'), 'Minimum Track Length (μm)', value = 1),
-    numericInput(ns('ces_track_n'), 'Minimum Track Length (n)', value = 3),
-    numericInput(
-      inputId = ns("ces_ce_filter"),
-      label = "min Chemotactic Efficiency",
-      min = -100,
-      max = 100,
-      value = 0
     )
+    #numericInput(
+    #  inputId = ns("ces_angle_filter"),
+    #  label = "min Angle of Migration",
+    #  min = 0,
+    #  max = 90,
+    #  value = 0
+    #),
+    #numericInput(ns('ces_track_len'), 'Minimum Track Length (μm)', value = 1),
+    #numericInput(ns('ces_track_n'), 'Minimum Track Length (n)', value = 3),
+    #numericInput(
+    #  inputId = ns("ces_ce_filter"),
+    #  label = "min Chemotactic Efficiency",
+    #  min = -100,
+    #  max = 100,
+    #  value = 0
+    #)
 
   )
 }
@@ -159,10 +159,10 @@ ces_server <- function(id, con, shared_time_filter, shared_angle_filter, shared_
 
       # Filters
       time_filter <- reactive(input$ces_time_filter)
-      angle_filter <- reactive(input$ces_angle_filter)
-      track_len <- reactive(input$ces_track_len)
-      track_n <- reactive(input$ces_track_n)
-      ce_filter <- reactive(input$ces_ce_filter)
+      #angle_filter <- reactive(input$ces_angle_filter)
+      #track_len <- reactive(input$ces_track_len)
+      #track_n <- reactive(input$ces_track_n)
+      #ce_filter <- reactive(input$ces_ce_filter)
       
 
       # When filters change in THIS tab, update the shared value
@@ -170,21 +170,21 @@ ces_server <- function(id, con, shared_time_filter, shared_angle_filter, shared_
         shared_time_filter(time_filter())
       })
       
-      observeEvent(input$ces_angle_filter, {
-        shared_angle_filter(angle_filter())
-      })
+      #observeEvent(input$ces_angle_filter, {
+      #  shared_angle_filter(angle_filter())
+      #})
       
-      observeEvent(input$ces_track_len, {
-        shared_track_len(track_len())
-      })
+      #observeEvent(input$ces_track_len, {
+      #  shared_track_len(track_len())
+      #})
       
-      observeEvent(input$ces_track_n, {
-        shared_track_n(track_n())
-      })
+      #observeEvent(input$ces_track_n, {
+      #  shared_track_n(track_n())
+      #})
 
-      observeEvent(input$ces_ce_filter, {
-        shared_ce_filter(ce_filter())
-      })
+      #observeEvent(input$ces_ce_filter, {
+      #  shared_ce_filter(ce_filter())
+      #})
 
 
       # When shared values change, update filters in THIS tab
@@ -195,33 +195,33 @@ ces_server <- function(id, con, shared_time_filter, shared_angle_filter, shared_
         }
       }, ignoreInit = TRUE)
       
-      observeEvent(shared_angle_filter(), {
-        # Check prevents an infinite loop
-        if (!isTRUE(all.equal(angle_filter(), shared_angle_filter()))) {
-          updateNumericInput(session, "ces_angle_filter", value = shared_angle_filter())
-        }
-      }, ignoreInit = TRUE)
+      #observeEvent(shared_angle_filter(), {
+      #  # Check prevents an infinite loop
+      #  if (!isTRUE(all.equal(angle_filter(), shared_angle_filter()))) {
+      #    updateNumericInput(session, "ces_angle_filter", value = shared_angle_filter())
+      #  }
+      #}, ignoreInit = TRUE)
       
-      observeEvent(shared_track_len(), {
-        # Check prevents an infinite loop
-        if (!isTRUE(all.equal(track_len(), shared_track_len()))) {
-          updateNumericInput(session, "ces_track_len", value = shared_track_len())
-        }
-      }, ignoreInit = TRUE)
+      #observeEvent(shared_track_len(), {
+      #  # Check prevents an infinite loop
+      #  if (!isTRUE(all.equal(track_len(), shared_track_len()))) {
+      #    updateNumericInput(session, "ces_track_len", value = shared_track_len())
+      #  }
+      #}, ignoreInit = TRUE)
       
-      observeEvent(shared_track_n(), {
-        # Check prevents an infinite loop
-        if (!isTRUE(all.equal(track_n(), shared_track_n()))) {
-          updateNumericInput(session, "ces_track_n", value = shared_track_n())
-        }
-      }, ignoreInit = TRUE)
+      #observeEvent(shared_track_n(), {
+      #  # Check prevents an infinite loop
+      #  if (!isTRUE(all.equal(track_n(), shared_track_n()))) {
+      #    updateNumericInput(session, "ces_track_n", value = shared_track_n())
+      #  }
+      #}, ignoreInit = TRUE)
       
-      observeEvent(shared_ce_filter(), {
-        # Check prevents an infinite loop
-        if (!isTRUE(all.equal(ce_filter(), shared_ce_filter()))) {
-          updateNumericInput(session, "ces_ce_filter", value = shared_ce_filter())
-        }
-      }, ignoreInit = TRUE)
+      #observeEvent(shared_ce_filter(), {
+      #  # Check prevents an infinite loop
+      #  if (!isTRUE(all.equal(ce_filter(), shared_ce_filter()))) {
+      #    updateNumericInput(session, "ces_ce_filter", value = shared_ce_filter())
+      #  }
+      #}, ignoreInit = TRUE)
 
 
       # Summary table
