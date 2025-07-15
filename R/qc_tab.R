@@ -75,11 +75,7 @@ qc_cardsUI <- function(id)
       card(full_screen = TRUE, 
            card_header("# Tracks (cells) over time"), 
            card_body(plotOutput(ns("qc_n_cells"))),
-           card_footer(downloadButton(ns('qc_n_cells_download'), 'Download figure'))),
-      card(full_screen = TRUE, 
-           card_header("Statistics"), 
-           card_body(tableOutput(ns("qc_stats"))),
-           card_footer(downloadButton(ns('qc_stats_download'), 'Download statistics'))))
+           card_footer(downloadButton(ns('qc_n_cells_download'), 'Download figure'))))
   )
 }
 
@@ -180,21 +176,6 @@ qc_server <- function(id, con, shared_time_filter, shared_angle_filter, shared_t
         }
       }, ignoreInit = TRUE)
       
-      # pull raw track information
-      trackRaw <- reactive({
-        if(length(chan_select()$expID) != 1)
-          return(data.frame(expID = character(0),
-                            trackID = integer(0),
-                            frames = integer(0)))
-                            
-        get_dat(con,
-                select = 'expID, trackID, frames',
-                from = 'trackRaw',
-                where = paste0( "expID='", chan_select()$expID,  "' AND ",
-                               "chanID=", chan_select()$chanID)) |>
-          mutate(time = frames / 2) |>
-          filter(time >= time_filter()[1] & time <= time_filter()[2])
-        })
       
       # for channel/sample selection
       chan_select <- select_group_server(id = "qc_channels",
@@ -210,8 +191,68 @@ qc_server <- function(id, con, shared_time_filter, shared_angle_filter, shared_t
       )
 
 
+      # this has all raw track data plus drop
+      track_raw_all <- reactive({
+        if(length(chan_select()$expID) != 1)
+          return(data.frame(expID = character(0),
+                            trackID = integer(0),
+                            frames = integer(0),
+                            drop = logical(0)))
+                            
+        get_dat(con,
+                select = 'expID, chanID, trackID, x, y, v_x, v_y, theta, frames',
+                from = 'trackRaw',
+                where = paste0( "expID='", chan_select()$expID,  "' AND ",
+                               "chanID=", chan_select()$chanID)) |>
+          
+          mutate(time = frames / 2,
+                 drop = time < time_filter()[1] | time > time_filter()[2]) |>
+          
+          left_join(get_dat(con,
+                            select = "expID, sID, chanID, treatment",
+                            from = "chanSummary",
+                            where = paste0("expID='", chan_select()$expID, "' AND ",
+                                           "chanID=", chan_select()$chanID)),
+                    by = c("expID", "chanID"))          
+        })
+      
+      
+      # this has summary track information plus filtering metadata
+      track_summ <- reactive({
+        if(nrow(track_raw_all()) == 0)
+          return(data.frame(expID = character(0),
+                            trackID = integer(0),
+                            frames = integer(0),
+                            drop = logical(0)))
+        
+        track_raw_all() |>
+          filter(!drop) |>
+          summarize_tracks() |>
+          mutate(drop = angle_migration < angle_filter() |
+                        distance_traveled < track_len() |
+                        n_frames < track_n() |
+                        ce < ce_filter())
+      })
+
+
+      # this is the version for plotting, after filtering for tracks that should be dropped
+      track_raw <- reactive({
+        if(nrow(track_summ()) == 0)
+          return(data.frame(expID = character(0),
+                            trackID = integer(0),
+                            frames = integer(0),
+                            drop = logical(0)))
+
+        track_raw_all() |>
+            left_join(track_summ() |> 
+                      select(chanID, trackID, drop) |> 
+                      rename(drop_summ = drop)) |>
+            filter(!drop & !drop_summ)
+      })
+
+
       # Figures
-      output$qc_track_len <- renderPlot((vals$track_len <- qc_track_len(trackRaw())))
+      output$qc_track_len <- renderPlot((vals$track_len <- qc_track_len(track_raw())))
       output$qc_track_len_download <- downloadHandler(
         filename = function() {
           if(length(chan_select()$expID) != 1)
@@ -224,7 +265,7 @@ qc_server <- function(id, con, shared_time_filter, shared_angle_filter, shared_t
         }
       )
       
-      output$qc_n_cells <- renderPlot((vals$n_cells <- qc_n_cells(trackRaw())))
+      output$qc_n_cells <- renderPlot((vals$n_cells <- qc_n_cells(track_raw())))
       output$qc_n_cells_download <- downloadHandler(
         filename = function() {
           if(length(chan_select()$expID) != 1)
@@ -236,46 +277,6 @@ qc_server <- function(id, con, shared_time_filter, shared_angle_filter, shared_t
           ggsave(file, vals$n_cells)
         }
       )
-      
-      
-      # statistics
-      output$qc_stats <- renderTable({
-        if(dim(chan_select())[1] != 1)
-        {
-          (vals$qc_stats <- data.frame())
-        }else{
-          (vals$qc_stats <- get_dat(con,
-                                     select = "non_movers, little_movement, dns, few_frames, pre_start_frames, post_end_frames",
-                                     from = "chanSummary",
-                                     where = paste0("expID='", chan_select()$expID[1], "'", " AND ",
-                                                    "chanID='", chan_select()$chanID[1], "'")
-                                    )  |>
-             select(-expID) |>
-             t() |> 
-             as.data.frame() |> 
-             rename(count = V1) |>
-             rownames_to_column("Filtered") |>
-             mutate(count = as.integer(count),
-                    Filtered = case_when(Filtered == "non_movers"       ~ "Track didn't change position",
-                                         Filtered == "little_movement"  ~ "Track moved only a little",
-                                         Filtered == "dns"              ~ "Track never crossed the upper ledge",
-                                         Filtered == "few_frames"       ~ "Track had < 4 frames",
-                                         Filtered == "pre_start_frames" ~ "# frames before crossing upper ledge",
-                                         Filtered == "post_end_frames"  ~ "# frames after crossing lower ledge",
-                                         TRUE ~ Filtered))
-           )
-        }
-      })
-      
-      output$qc_stats_download <- downloadHandler(
-        filename = function() {
-          paste0("qc_stats_", paste(chan_select()[1,], collapse = '_'), ".csv")
-        },
-        content = function(file) {
-          write.csv(vals$qc_stats, file, row.names = FALSE)
-        }
-      )
-      
     }
   )
 }

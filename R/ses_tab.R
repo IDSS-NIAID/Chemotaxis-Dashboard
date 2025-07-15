@@ -201,7 +201,6 @@ ses_server <- function(id, con, shared_time_filter, shared_angle_filter, shared_
               from = "trackRaw",
               where = paste0("expID='", exp_select()[1], "'")) |>
         mutate(time = frames / 2) |>
-        filter(time >= time_filter()[1] & time <= time_filter()[2]) |>
         
         left_join(get_dat(con,
                           select = "expID, sID, chanID, treatment",
