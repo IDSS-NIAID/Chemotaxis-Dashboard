@@ -8,10 +8,15 @@
 #' @return A data frame with summarized track information.
 #' @export
 #'
-#' @importFrom dplyr %>% group_by summarize mutate select left_join
+#' @importFrom dplyr group_by summarize mutate select left_join
 #' @importFrom purrr map2 map2_dbl
 #' @importFrom stats sd
 summarize_tracks <- function(trackRaw) {
+  # for those pesky no visible binding notes
+  if(FALSE)
+    chanID <- trackID <- sID <- treatment <- frames <- x <- y <- theta <- v_x <- v_y <-
+      delta_y <- delta_x <- distance_traveled <- v <- NULL
+
   track_summ <- trackRaw |>
     group_by(chanID, trackID, sID, treatment) |>
     summarize(

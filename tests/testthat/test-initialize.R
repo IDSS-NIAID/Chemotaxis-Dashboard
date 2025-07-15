@@ -8,7 +8,7 @@ test_that("dbinit works", {
   # try reading from the database
   con <- dbConnect(RSQLite::SQLite(), 'chemo-dash.sqlite')
 
-  expect_true("expSummary" %in% dbListTables(con))
+  expect_true("chanSummary" %in% dbListTables(con))
   
   dbDisconnect(con)
 })
@@ -18,10 +18,8 @@ test_that("get_test_data works", {
   
   expect_type(get_test_data(), 'list')
   
-  expect_true(is.data.frame(get_test_data()$expSummary))
-  
   expect_equal(names(get_test_data()), 
-               c('expSummary', 'expStats', 'chanSummary', 'chanRaw', 'trackSummary', 'trackRaw'))
+               c('expStats', 'chanSummary', 'chanRaw', 'trackSummary', 'trackRaw'))
 })
   
 

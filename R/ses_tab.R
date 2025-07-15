@@ -102,13 +102,17 @@ ses_cardsUI <- function(id)
 #' @param shared_ce_filter reactiveVal from the main server function for filtering on minimum chemotactic efficiency
 #'
 #' @export
-#' @importFrom shiny downloadHandler moduleServer reactive reactiveValues renderPlot renderTable
+#' @importFrom shiny downloadHandler moduleServer reactive reactiveValues renderPlot renderTable updateNumericInput
 #' @importFrom dplyr left_join filter
 #' @importFrom ggplot2 ggsave
 #' @importFrom utils write.csv
 ses_server <- function(id, con, shared_time_filter, shared_angle_filter, shared_track_len,
                        shared_track_n, shared_ce_filter)
 {
+  # for all those pesky no visible binding notes
+  if(FALSE)
+    angle_migration <- distance_traveled <- n_frames <- ce <- chanID <- drop_summ <- NULL
+
   moduleServer(id, function(input, output, session)
   {
     if(FALSE)

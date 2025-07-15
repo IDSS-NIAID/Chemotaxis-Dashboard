@@ -11,6 +11,10 @@
 #'
 #' @importFrom dplyr %>% group_by summarize pull
 observe_thresh <- function(trackRaw, thresh) {
+  # take care of those pesky no visible binding notes
+  if(FALSE)
+    expID <- chanID <- trackID <- y <- obs_thresh <- n_obs_thresh <- NULL
+  
   trackRaw |>
     group_by(expID, chanID, trackID) |>
     summarize(obs_thresh = any(y >= thresh) & any(y < thresh)) |>
@@ -30,6 +34,11 @@ observe_thresh <- function(trackRaw, thresh) {
 #'
 #' @importFrom dplyr %>% mutate filter
 filter_thresh <- function(trackRaw, thresh, invert = FALSE, drop = FALSE) {
+
+  # take care of those pesky no visible binding notes
+  if(FALSE)
+    y <- NULL
+  
   if (invert) {
     trackRaw <- trackRaw |> mutate(drop = y > thresh)
   } else {

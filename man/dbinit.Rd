@@ -20,6 +20,6 @@ dbinit
 Set up database and infrastructure needed to run the Chemotaxis-Dashboard. If the database already exists and data is not empty, this will append the information in data to the database.
 }
 \details{
-The data.frames expected in data are `expSummary`, `expStats`, `chanSummary`, `chanRaw`,
+The data.frames expected in data are `expStats`, `chanSummary`, `chanRaw`,
 `trackSummary`, and `trackRaw` (as returned by `process_experiments()`).
 }

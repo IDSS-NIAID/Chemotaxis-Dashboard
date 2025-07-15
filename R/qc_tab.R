@@ -97,14 +97,15 @@ qc_cardsUI <- function(id)
 #'
 #' @importFrom dplyr arrange group_by mutate summarize ungroup filter
 #' @importFrom ggplot2 ggsave
-#' @importFrom shiny downloadHandler moduleServer reactive reactiveValues reactiveValuesToList renderPlot
+#' @importFrom shiny downloadHandler moduleServer reactive reactiveValues reactiveValuesToList renderPlot updateNumericInput
 #' @importFrom tibble rownames_to_column
 qc_server <- function(id, con, shared_time_filter, shared_angle_filter, shared_track_len,
                       shared_track_n, shared_ce_filter)
 {
   # for all those pesky "no visible binding" notes
   if(FALSE)
-    chanID <- count <- expID <- sID <- V1 <- time <- frames <- NULL
+    chanID <- count <- expID <- sID <- V1 <- time <- frames <- drop_summ <-
+      angle_migration <- distance_traveled <- n_frames <- ce <- trackID <- NULL
   
   moduleServer(
     id,

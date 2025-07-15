@@ -1,6 +1,6 @@
 Package: ChemotaxisDashboard
 Title: Chemotaxis dashboard
-Version: 0.2.1
+Version: 0.3.0
 Authors@R: c(person('Randy', 'Johnson', email = 'Randall.Johnson@nih.gov',
                     role = c('cre','aut')))
 Description: Dashboard for exploring chemotaxis data.
@@ -16,7 +16,6 @@ Imports:
   DT,
   ggplot2,
   grDevices,
-  magrittr,
   purrr,
   quarto,
   readr,

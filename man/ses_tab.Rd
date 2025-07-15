@@ -12,7 +12,15 @@ ses_sidebarUI(id)
 
 ses_cardsUI(id)
 
-ses_server(id, con, shared_time_filter)
+ses_server(
+  id,
+  con,
+  shared_time_filter,
+  shared_angle_filter,
+  shared_track_len,
+  shared_track_n,
+  shared_ce_filter
+)
 }
 \arguments{
 \item{id}{Shiny namespace ID}
@@ -20,6 +28,14 @@ ses_server(id, con, shared_time_filter)
 \item{con}{Active DBI database connection}
 
 \item{shared_time_filter}{reactiveVal from the main server function for time filter definition}
+
+\item{shared_angle_filter}{reactiveVal from the main server function for angle filter definition}
+
+\item{shared_track_len}{reactiveVal from the main server function for physical track length filter in μm}
+
+\item{shared_track_n}{reactiveVal from the main server function for track length filter for total number of frames}
+
+\item{shared_ce_filter}{reactiveVal from the main server function for filtering on minimum chemotactic efficiency}
 }
 \value{
 A modularized tagList
