@@ -13,26 +13,36 @@
 #' @importFrom stats sd
 summarize_tracks <- function(trackRaw) {
   track_summ <- trackRaw |>
-    group_by(channel, Track) |>
+    group_by(chanID, trackID, sID, treatment) |>
     summarize(
       # calculate smooth functions of x, y, and theta over time
-      x     = map2(list(Frame), list(x), ~
+      x     = map2(list(frames), list(x), ~
                      {
-                        tmp <- smooth.spline(.x, .y)
-                        splinefun(tmp$x, tmp$y)
+                       if(length(.x) < 4)
+                        return(splinefun(.x, .y))
+                       
+                       tmp <- smooth.spline(.x, .y)
+                       splinefun(tmp$x, tmp$y)
                      }),
-      y     = map2(list(Frame), list(y), ~
+      y     = map2(list(frames), list(y), ~
                      {
+                       if(length(.x) < 4)
+                        return(splinefun(.x, .y))
+                       
                        tmp <- smooth.spline(.x, .y)
                        splinefun(tmp$x, tmp$y)
                      }),
       sd_theta = sd(theta),
-      theta = map2(list(Frame), list(theta), ~
+      theta = map2(list(frames), list(theta), ~
                      {
+                       if(length(.x) < 4)
+                        return(splinefun(.x, .y))
+                       
                        tmp <- smooth.spline(.x, .y)
                        splinefun(tmp$x, tmp$y)
                      }),
-      frames = map(list(Frame), ~ unique(.x))
+      frames = map(list(frames), ~ unique(.x)),
+      n_frames = n()
     ) %>%
     ungroup() |>
     
