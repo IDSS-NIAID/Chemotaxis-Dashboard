@@ -9,7 +9,6 @@ process_experiments(
   experiment,
   source_dir,
   results_dir,
-  seed = NULL,
   ledge_dist = 260,
   ledge_upper = 100,
   ledge_lower = 500
@@ -21,8 +20,6 @@ process_experiments(
 \item{source_dir}{Path to directory containing raw csv tracks files}
 
 \item{results_dir}{Path to processed data directory}
-
-\item{seed}{Random seed to use}
 
 \item{ledge_dist}{Numeric, distance between top and bottom ledges of the microscope image in micrometers (default is 260)}
 

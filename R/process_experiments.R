@@ -11,7 +11,6 @@
 #' @param experiment Date of the experiment to run. Argument should be of the form: `experiment="\%Y\%m\%d"`.
 #' @param source_dir Path to directory containing raw csv tracks files
 #' @param results_dir Path to processed data directory
-#' @param seed Random seed to use
 #' @param ledge_dist Numeric, distance between top and bottom ledges of the microscope image in micrometers (default is 260)
 #' @param ledge_upper Numeric, location of the upper ledge in the raw Y coordinate system (default is 100)
 #' @param ledge_lower Numeric, location of the lower ledge in the raw Y coordinate system (default is 500)
@@ -42,7 +41,8 @@
 #' @importFrom purrr map map_chr map_int map_df map2_chr map2_df
 #' @importFrom readr read_csv
 #' @importFrom stringr str_replace
-process_experiments <- function(experiment, source_dir, results_dir, seed = NULL,
+#' @importFrom tidyr unnest
+process_experiments <- function(experiment, source_dir, results_dir,
                                 ledge_dist = 260, ledge_upper = 100, ledge_lower = 500)
 {
   # for all those pesky "no visible binding" notes
@@ -123,15 +123,11 @@ process_experiments <- function(experiment, source_dir, results_dir, seed = NULL
     map(~ one_experiment(dat_sub = filter(dat, experiment == .x),
                          experiment = .x,
                          results_dir = results_dir,
-                         seed = seed,
                          ledge_dist = ledge_dist,
                          ledge_upper = ledge_upper,
                          ledge_lower = ledge_lower))
 
-  list(expStats     = map_df(retval, ~ .x$expStats),
-       chanSummary  = map_df(retval, ~ .x$chanSummary),
-       chanRaw      = map_df(retval, ~ .x$chanRaw),
-       trackSummary = map_df(retval, ~ .x$trackSummary),
+  list(chanSummary  = map_df(retval, ~ .x$chanSummary),
        trackRaw     = map_df(retval, ~ .x$trackRaw))
 }
 
@@ -141,7 +137,6 @@ process_experiments <- function(experiment, source_dir, results_dir, seed = NULL
 #' @param dat_sub data frame (tibble) containing the subset of data for a single experiment
 #' @param experiment Date of the experiment to run. Argument should be of the form: `experiment="\%Y\%m\%d"`.
 #' @param results_dir path to directory for saving data
-#' @param seed seed for random number generation
 #' @param ledge_dist Numeric, distance between top and bottom ledge of the microscope image in micrometers (default is 260)
 #' @param ledge_upper Numeric, location of the upper ledge in the raw Y coordinate system (default is 100). This should be the first ledge crossed.
 #' @param ledge_lower Numeric, location of the lower ledge in the raw Y coordinate system (default is 500). This should be the second ledge crossed.
@@ -155,7 +150,7 @@ process_experiments <- function(experiment, source_dir, results_dir, seed = NULL
 #' @importFrom purrr map map_dbl map2 map2_dbl map2_lgl pmap
 #' @importFrom stats lm median quantile sd smooth.spline splinefun na.omit
 #' @importFrom utils combn
-one_experiment <- function(dat_sub, experiment, results_dir, seed = NULL, ledge_dist = 260, ledge_upper = 100, ledge_lower = 500)
+one_experiment <- function(dat_sub, experiment, results_dir, ledge_dist = 260, ledge_upper = 100, ledge_lower = 500)
 {
   # for all those pesky "no visible binding" notes
   if(FALSE)
@@ -169,13 +164,6 @@ one_experiment <- function(dat_sub, experiment, results_dir, seed = NULL, ledge_
     Xo <- f <- non_mover <- pre_start <- post_end <- pass_filters <- raw_distance <- all_pre_start <- NULL
     observe_finish <- observe_start <- tab <- n_cells <- no_start <- n_finished <- NULL
   }
-  
-  if(!is.null(seed))
-    set.seed(seed)
-  
-  # make sure file structure inside of `results_dir` is correct
-  # if(!file.exists(file.path(results_dir, 'images', experiment)))
-  #   dir.create(file.path(results_dir, 'images', experiment), recursive = TRUE)
   
   # make sure we aren't getting more than 6 channels (indicates we have a day with multiple experiments that we missed)
   if(n_distinct(dat_sub$f) > 6)
@@ -275,13 +263,7 @@ one_experiment <- function(dat_sub, experiment, results_dir, seed = NULL, ledge_
            # theta is the average of d1 and d2
            theta = map2_dbl(d1, d2, ~ mean(c(.x, .y), na.rm = TRUE)) / pi * 180) |>
     dplyr::select(-d1, -d2) |>
-    ungroup() |>
-    
-    # add few tracks to drop criteria
-    mutate(few_frames = pass_filters <= 3,                                                     # drop tracks with fewer than 3 frames
-           little_movement = raw_distance < 10,                                                # drop tracks with less than 10 μm of movement
-           drop = few_frames | little_movement | drop)
-  
+    ungroup()
 
   ### count dropped records ###
   
@@ -293,14 +275,6 @@ one_experiment <- function(dat_sub, experiment, results_dir, seed = NULL, ledge_
     dplyr::summarize(non_movers = sum(non_mover)) |>
     ungroup()
   
-  # tracks with very little movement (< 10 μm) - don't include tracks with few frames
-  little_movement <- filter(dat_sub, !few_frames) |>
-    dplyr::select(channel, Track, little_movement) |>
-    dplyr::distinct() |>
-    group_by(channel) |>
-    dplyr::summarize(little_movement = sum(little_movement)) |>
-    ungroup()
-  
   # tracks that never started
   dns <- dat_sub |>
     dplyr::select(channel, Track, pre_start) |>
@@ -310,14 +284,6 @@ one_experiment <- function(dat_sub, experiment, results_dir, seed = NULL, ledge_
     ungroup() |>
     group_by(channel) |>
     dplyr::summarize(dns = sum(all_pre_start)) |>
-    ungroup()
-  
-  # tracks that have few observations
-  few_frames <- dat_sub |>
-    dplyr::select(channel, Track, few_frames) |>
-    dplyr::distinct() |>
-    group_by(channel) |>
-    summarize(few_frames = sum(few_frames)) |>
     ungroup()
   
   # frames before the start
@@ -335,388 +301,95 @@ one_experiment <- function(dat_sub, experiment, results_dir, seed = NULL, ledge_
   ### drop records ###
   dat_sub <- dat_sub |>
     dplyr::filter(!drop) |>
-    dplyr::select(-key_violation, -drop, -non_mover, -pre_start, -no_start, -post_end, -few_frames, -little_movement, -raw_distance)
+    dplyr::select(-key_violation, -drop, -non_mover, -pre_start, -no_start, -post_end, -raw_distance)
 
-  
-  #############################
-  # Track-level summarization #
-  #############################
 
-  track_summ <- dat_sub |>
-    group_by(channel, Track, observe_finish) |>
+  ############
+  # Velocity #
+  ############
+
+  track_smooth <- dat_sub |>
+    group_by(experiment, channel, Track, sample, treatment) |>
     summarize(
       # calculate smooth functions of x, y, and theta over time
       x     = map2(list(Frame), list(x), ~
                      {
-                        tmp <- smooth.spline(.x, .y)
-                        splinefun(tmp$x, tmp$y)
+                       if(length(.x) < 4)
+                        return(splinefun(.x, .y))
+                       
+                       tmp <- smooth.spline(.x, .y)
+                       splinefun(tmp$x, tmp$y)
                      }),
       y     = map2(list(Frame), list(y), ~
                      {
+                       if(length(.x) < 4)
+                        return(splinefun(.x, .y))
+                       
                        tmp <- smooth.spline(.x, .y)
                        splinefun(tmp$x, tmp$y)
                      }),
-      sd_theta = sd(theta),
       theta = map2(list(Frame), list(theta), ~
                      {
+                       if(length(.x) < 4)
+                        return(splinefun(.x, .y))
+                       
                        tmp <- smooth.spline(.x, .y)
                        splinefun(tmp$x, tmp$y)
                      }),
-      frames = map(list(Frame), ~ unique(.x)),
-      
-      # calculate survival time
-      # (finish_at and cross_at are in Frames, so divide by 2 for time in minutes)
-      surv_time = unique(ifelse(observe_start, finish_at - cross_at, NA) / 2), # drop left censored tracks
-      surv_event = unique(observe_finish)
-    ) |>
+      Frame = map(list(Frame), ~ unique(.x))) |>
     ungroup() |>
-    
     mutate(
       # calculate velocity over time (multiply by 2 to calculate velocity in micrometers  per minute - frames are every 30 seconds)
-      v_x = map2(x, frames, function(x, f) x(f, deriv = 1) * 2),
-      v_y = map2(y, frames, function(y, f) y(f, deriv = 1) * 2),
+      v_x = map2(x, Frame, function(x, f) x(f, deriv = 1) * 2),
+      v_y = map2(y, Frame, function(y, f) y(f, deriv = 1) * 2),
       v = map2(v_x, v_y, ~ sqrt(.x^2 + .y^2) * sign(.y)), # going down = positive velocity, going up = negative velocity
       
-      # convert functions of x, y, and theta back to values
-      x     = map2(    x, frames, function(    x, f)     x(f)),
-      y     = map2(    y, frames, function(    y, f)     y(f)),
-      theta = map2(theta, frames, function(theta, f) theta(f)),
+      # convert functions of x, y, and theta back to values (smoothed)
+      x     = map2(    x, Frame, function(    x, f)     x(f)),
+      y     = map2(    y, Frame, function(    y, f)     y(f)),
+      theta = map2(theta, Frame, function(theta, f) theta(f))) |>
     
-      # Chemotactic efficiency
-      # calculate net change in y direction - return a value for each track (this could be negative if the cell travels in the wrong direction)
-      delta_y = map_dbl(y, ~ .x[length(.x)] - .x[1]),
-
-      # calculate the total distance traveled using the distance formula
-      distance_traveled = map2_dbl(x, y, ~ sum( sqrt( (.x[-1]-.x[-length(.x)])^2+(.y[-1]-.y[-length(.y)])^2 ) )),
-      
-      # chemotactic efficiency for each track is the change in y (delta_y) divided by the total distance (distance_traveled) 
-      ce = delta_y / distance_traveled,
-      
-      # Angle of migration
-      # We need the total change in x direction to calculate the angle of migration
-      delta_x = map_dbl(x, ~ abs(.x[length(.x)] - .x[1])),
-      
-      # this finds the angle of migration between the start and end point, converts from radians to degrees
-      # zero degrees would represent a net movement straight in the vertical direction. angle is measured from this vertical line of 0 degrees
-      angle_migration = 180*(abs(atan(delta_x/delta_y)))/pi,
-
-      # average instantaneous angle of migration (theta)
-      av_theta = map_dbl(theta, ~ mean(.x)),
-      
-      #peak velocity
-      max_v = map_dbl(v, ~ max(.x)),
-      
-      #average velocity and standard deviation
-      av_velocity = map_dbl(v, ~ mean(.x)),
-      sd_velocity = map_dbl(v, ~ sd(.x))
-    ) |>
-  
-    #deleting columns with intermediate variables (used for calculation but not needed in end file)
-    select(-delta_y, -delta_x, -distance_traveled) |>
-    
-    # record the number of frames dropped from each track
-    left_join(pre_start_frames, by = c("channel", "Track")) |>
-    left_join(post_end_frames, by = c("channel", "Track")) |>
-    mutate(pre_start_frames = ifelse(is.na(pre_start_frames), 0, pre_start_frames),
-           post_end_frames  = ifelse(is.na( post_end_frames), 0,  post_end_frames))
-  
-  
-  ###############################
-  # Channel-level summarization #
-  ###############################
-  
-  channel_summ <- group_by(dat_sub, f, date, experiment, channel, sample, treatment) |>
-    
-    summarize(
-      # calculate smooth functions of x, y and theta over time
-      x = map2(list(Frame), list(x), ~ 
-                 {
-                   tmp <- smooth.spline(.x, .y)
-                   splinefun(tmp$x, tmp$y)
-                 }),
-      y = map2(list(Frame), list(y), ~ 
-                 {
-                   tmp <- smooth.spline(.x, .y)
-                   splinefun(tmp$x, tmp$y)
-                 }),
-      sd_theta = map2(list(Frame), list(theta), ~ 
-                     {
-                       tmp <- tibble(frames = unique(.x),
-                                     sd_theta = map_dbl(frames, function(f) sd(.y[.x == f], na.rm = TRUE))) |>
-                         na.omit()
-                       
-                       if(nrow(tmp) < 4)
-                         return(NULL)
-                       
-                       tmp <- smooth.spline(tmp$frames, tmp$sd_theta)
-                       splinefun(tmp$x, tmp$y)
-                     }),
-      theta = map2(list(Frame), list(theta), ~ 
-                     {
-                       tmp <- smooth.spline(.x, .y)
-                       splinefun(tmp$x, tmp$y)
-                     }),
-      frames = map(list(Frame), ~ unique(.x)),
-      
-      # calculate total number of tracks in each channel (as the max of the smoothed number of tracks for each frame)
-      tab = map(list(Frame), ~ table(.x)),
-      n_cells = map_int(tab, ~ smooth.spline(as.numeric(names(.x)), .x)$y |>
-                          max() |>
-                          floor())
-    ) |>
-    ungroup() |>
-    dplyr::select(-tab) |>
-    
-    mutate(,
-      # calculate velocity over time
-      v_x = map2(x, frames, function(x, f) x(f, deriv = 1)),
-      v_y = map2(y, frames, function(y, f) y(f, deriv = 1)),
-      v = map2(v_x, v_y, ~ sqrt(.x^2 + .y^2) * sign(.y)), # going down = positive velocity, going up = negative velocity
-
-      # calculate angle of migration and variability over time
-      sd_theta = map2(sd_theta, frames, function(sd_theta, f)
-                      {
-                         if(is.null(sd_theta))
-                           return(NULL) 
-                         sd_theta(f)}),
-      theta    = map2(   theta, frames, function(   theta, f)    theta(f)),
-      
-      # convert functions of x, y and theta back to values
-      x = map2(x, frames, function(x, f) x(f)),
-      y = map2(y, frames, function(y, f) y(f)),
-      
-      #directed vs undirected statistics for each channel
-    ) |>
-    
-    # add summary of track statistics (proportion finished, chemotactic efficiency, angle of migration, instantaneous angle, and velocity)
-    left_join({
-      group_by(track_summ, channel) |>
-        summarize(tot_finished = sum(observe_finish),
-
-                  ce_median    = median(ce, na.rm = TRUE),
-                  ce_mean      =   mean(ce, na.rm = TRUE),
-                  ce_sd        =     sd(ce, na.rm = TRUE),
-
-                  angle_median = median(angle_migration, na.rm = TRUE),
-                  angle_mean   =   mean(angle_migration, na.rm = TRUE),
-                  angle_sd     =     sd(angle_migration, na.rm = TRUE),
-                  
-                  theta_median = median(av_theta, na.rm = TRUE),
-                  theta_mean   =   mean(av_theta, na.rm = TRUE),
-                  theta_sd     =     sd(av_theta, na.rm = TRUE),
-
-                  max_v_median = median(max_v, na.rm = TRUE),
-                  max_v_mean   =   mean(max_v, na.rm = TRUE),
-                  max_v_sd     =     sd(max_v, na.rm = TRUE)
-        )}, by = "channel") |>
-    
-    # add proportion of cells finished
-    mutate(n_cells = ifelse(n_cells < tot_finished,  # estimate can be a little off when we have a lot of tracks (all of them) that finished
-                            tot_finished,
-                            n_cells),
-           prop_finished = tot_finished / n_cells) |>
-    
-    # add numbers of tracks and frames filtered for various reasons
-    left_join(non_movers, by = "channel") |>
-    left_join(little_movement, by = "channel") |>
-    left_join(dns, by = "channel") |>
-    left_join(few_frames, by = "channel") |>
-    left_join({group_by(pre_start_frames, channel) |>
-                  summarize(pre_start_frames = sum(pre_start_frames))}, by = c("channel")) |>
-    left_join({group_by(post_end_frames, channel) |>
-                  summarize(post_end_frames = sum(post_end_frames))}, by = c("channel")) |>
-    
-    mutate(non_movers = ifelse(is.na(non_movers), 0, non_movers),
-           little_movement = ifelse(is.na(little_movement), 0, little_movement),
-           dns = ifelse(is.na(dns), 0, dns),
-           few_frames = ifelse(is.na(few_frames), 0, few_frames),
-           pre_start_frames = ifelse(is.na(pre_start_frames), 0, pre_start_frames),
-           post_end_frames = ifelse(is.na(post_end_frames), 0, post_end_frames))
-  
-  ##############################
-  # Experiment-level summaries #
-  ##############################
-  
-  exp_summ <- tibble(expID = character(),
-                     comparison = character(),
-                     test = character(),
-                     stat = numeric(),
-                     p = numeric())
-  
-  trts <- paste(unique(channel_summ$treatment))
-  samps <- unique(channel_summ$sample)
-  
-  ### within_grp: Within-group statistics (within same sample, same treatment)
-  within_grp <- group_by(dat_sub, date, experiment, sample, treatment) |>
-    
-    # check to see how many channels we have in each group  
-    mutate(nchannels = length(unique(na.omit(channel)))) |>
-    
-    # drop any groups that only have one channel (nothing to compare)
-    dplyr::filter(nchannels > 1,
-                  !is.na(treatment),
-                  !is.na(sample))
-  
-  # if we have different within-group statistics to calculate...
-  if(nrow(within_grp) > 0)
-  {
-    within_grp <- within_grp |>
-      
-      # create one row per two-way comparison
-      reframe(channel_a = combn(unique(na.omit(channel)), 2)[1,],
-              channel_b = combn(unique(na.omit(channel)), 2)[2,],
-              a_vs_b = list(''))
-    
-    # make comparisons for all pairs
-    for(i in 1:nrow(within_grp))
-    {
-      ### difference of proportion finished ###
-      within_grp$a_vs_b[[i]] <- compare_prop_finish(channel_summ,
-                                                    comp_grp = 'channel',
-                                                    trt = within_grp$treatment[i],
-                                                    samp = within_grp$sample[i])
-    }
-    
-    exp_summ <- bind_rows(exp_summ,
-                          tibble(expID      = within_grp$experiment,
-                                 comparison = with(within_grp, paste0('Within ', sample, ', ', treatment, ": ", channel_a, ' vs ', channel_b)),
-                                 test       = 'prop.test (FC)',
-                                 stat       = map_dbl(within_grp$a_vs_b, ~ .x[['fc']]),
-                                 p          = map_dbl(within_grp$a_vs_b, ~ .x[['prop_test_p']])))
-  }
+    unnest(c(x, y, theta, Frame, v_x, v_y, v))
 
   
-  ### btw_trt: Between-treatment statistics (same sample, different treatment)
-  btw_trt <- group_by(dat_sub, date, experiment, sample) |>
-    
-    # check to see how many channels we have in each group  
-    mutate(ntrts = length(unique(na.omit(treatment)))) |>
-    
-    # drop any groups that only have one channel (nothing to compare)
-    dplyr::filter(ntrts > 1,
-                  !is.na(sample))
+  ##########################
+  # Channel-level metadata #
+  ##########################
   
-  # if we have different between-treatment statistics to calculate...
-  if(nrow(btw_trt) > 0)
-  {
-    btw_trt <- btw_trt |>
-      
-      # create one row per two-way comparison
-      reframe(trt_a = paste(combn(unique(na.omit(treatment)), 2)[1,]),
-              trt_b = paste(combn(unique(na.omit(treatment)), 2)[2,]),
-              a_vs_b = list(''))
-    
-    # make comparisons for all pairs
-    for(i in 1:nrow(btw_trt))
-    {
-      ### difference of proportion finished ###
-      btw_trt$a_vs_b[[i]] <- compare_prop_finish(channel_summ,
-                                                 comp_grp = 'treatment',
-                                                 trt = c(btw_trt$trt_a[i], btw_trt$trt_b[i]),
-                                                 samp = btw_trt$sample[i])
-    }
-    
-   exp_summ <- bind_rows(exp_summ,
-                          tibble(expID      = btw_trt$experiment,
-                                 comparison = with(btw_trt, paste0('Within ', sample, ": ", trt_a, ' vs ', trt_b)),
-                                 test       = 'prop.test (FC)',
-                                 stat       = map_dbl(btw_trt$a_vs_b, ~ .x[['fc']]),
-                                 p          = map_dbl(btw_trt$a_vs_b, ~ .x[['prop_test_p']])))
-  }
+  channel_summ <- select(dat_sub, date, experiment, channel, sample, treatment,
+                         cross_at, finish_at, observe_start, observe_finish) |>
+    unique()
   
-  
-  ### btw_samp: Between-sample comparison statistics (same treatment, different sample)
-  btw_samp <- group_by(dat_sub, date, experiment, treatment) |>
-    
-    # check to see how many channels we have in each group  
-    mutate(nsamps = length(unique(na.omit(sample)))) |>
-    
-    dplyr::filter(nsamps > 1,        # drop any groups that only have one channel (nothing to compare)
-                  !is.na(treatment)) # drop any groups with NA treatment
-  
-  # if we have different between-treatment statistics to calculate...
-  if(nrow(btw_samp) > 0)
-  {
-    btw_samp <- btw_samp |>
-      
-      # create one row per two-way comparison
-      reframe(a = paste(combn(unique(na.omit(sample)), 2)[1,]),
-              b = paste(combn(unique(na.omit(sample)), 2)[2,]),
-              a_vs_b = list(''))
-    
-    # make comparisons for all pairs
-    for(i in 1:nrow(btw_samp))
-    {
-      ### difference of proportion finished ###
-      btw_samp$a_vs_b[[i]] <- compare_prop_finish(channel_summ,
-                                                  comp_grp = 'sample',
-                                                  trt = btw_samp$treatment[i],
-                                                  samp = c(btw_samp$a[i], btw_samp$b[i]))
-    }
-  
-    exp_summ <- bind_rows(exp_summ,
-                          tibble(expID      = btw_samp$experiment,
-                                 comparison = with(btw_samp, paste0('Within ', treatment, ": ", a, ' vs ', b)),
-                                 test       = 'prop.test (FC)',
-                                 stat       = map_dbl(btw_samp$a_vs_b, ~ .x[['fc']]),
-                                 p          = map_dbl(btw_samp$a_vs_b, ~ .x[['prop_test_p']])))
-  }
-  
-  
+
   ##### Return Results #####
   
   # compare this output with the comments in `initialize.R`
-  list(chanSummary = select(channel_summ, 
-                            experiment, channel, sample, treatment, 
-                            tot_finished, prop_finished, n_cells,
-                            ce_median, ce_mean, ce_sd,
-                            angle_median, angle_mean, angle_sd,
-                            theta_median, theta_mean, theta_sd,
-                            max_v_median, max_v_mean, max_v_sd,
-                            non_movers, little_movement, dns,
-                            few_frames, pre_start_frames, post_end_frames) |>
-                            # dvud, dvud_p
+  list(chanSummary = channel_summ |>
          rename(expID  = experiment, 
                 chanID = channel,
                 sID    = sample),
        
-       chanRaw = map_df(1:nrow(channel_summ), ~ tibble(expID  = channel_summ$experiment[.x],
-                                                       chanID = channel_summ$channel[.x],
-                                                       x      = channel_summ$x[[.x]],
-                                                       y      = channel_summ$y[[.x]],
-                                                       frames = channel_summ$frames[[.x]] |> as.integer(),
-                                                       v_x    = channel_summ$v_x[[.x]],
-                                                       v_y    = channel_summ$v_y[[.x]],
-                                                       v      = channel_summ$v[[.x]],
-                                                       theta   = channel_summ$theta[[.x]])),
-       
-       trackSummary = tibble(expID           = experiment,
-                             chanID          = track_summ$channel,
-                             trackID         = track_summ$Track |> as.integer(),
-                             ce              = track_summ$ce,
-                             angle_migration = track_summ$angle_migration,
-                             av_theta        = track_summ$av_theta,
-                             sd_theta        = track_summ$sd_theta,
-                             max_v           = track_summ$max_v,
-                             av_velocity     = track_summ$av_velocity,
-                             finished        = track_summ$observe_finish, # same as surv_event
-                             surv            = track_summ$surv_time),
-       
-       trackRaw = map_df(1:nrow(track_summ), ~ tibble(expID   = experiment,
-                                                      chanID  = track_summ$channel[.x],
-                                                      trackID = track_summ$Track[.x] |> as.integer()) |>
-                           
-                           left_join(select(dat_sub, experiment, channel, Track, X, Y), # add X,Y position data back in (pixel coordinates)
-                                     by = c('expID' = 'experiment', 'chanID' = 'channel', 'trackID' = 'Track')) |>
-                           rename(x_px = X, y_px = Y) |>
-                           
-                           mutate(x       = track_summ$x[[.x]],
-                                  y       = track_summ$y[[.x]],
-                                  frames  = track_summ$frames[[.x]] |> as.integer(),
-                                  time    = frames / 2,
-                                  v_x     = track_summ$v_x[[.x]],
-                                  v_y     = track_summ$v_y[[.x]],
-                                  v       = track_summ$v[[.x]],
-                                  theta   = track_summ$theta[[.x]]))
+       trackRaw = dat_sub |>
+         select(experiment, channel, Track, Frame, X, Y) |>
+         rename(x_px = X, y_px = Y) |>
+         left_join(track_smooth, by = join_by(experiment, channel, Track, Frame)) |>
+         rename(expID = experiment,
+                chanID = channel,
+                trackID = Track,
+                frames = Frame) |>
+         mutate(time = frames / 2) |>
+         select(expID, 
+                chanID,
+                trackID,
+                x_px,
+                y_px,
+                x,
+                y,
+                frames,
+                time,
+                v_x,
+                v_y,
+                v,
+                theta)
        )
 }

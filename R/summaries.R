@@ -48,7 +48,7 @@ summarize_tracks <- function(trackRaw) {
                      }),
       frames = map(list(frames), ~ unique(.x)),
       n_frames = n()
-    ) %>%
+    ) |>
     ungroup() |>
     
     mutate(

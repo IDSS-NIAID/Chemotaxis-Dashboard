@@ -6,7 +6,6 @@ library(ChemotaxisDashboard)
 processed_data <- process_experiments(experiment = '19000101',
                                       source_dir = system.file("extdata", package = "ChemotaxisDashboard"),
                                       results_dir = file.path(here::here(), 'shiny'),
-                                      seed = 923847,
                                       ledge_dist = 260,
                                       ledge_upper = 0,
                                       ledge_lower = 1)
@@ -16,24 +15,12 @@ processed_data <- process_experiments(experiment = '19000101',
 # data.frames for RSQLite db tables #
 #####################################
 
-expSummary <- processed_data$expSummary
-
-expStats <- processed_data$expStats
-
 chanSummary <- processed_data$chanSummary
-
-chanRaw <- processed_data$chanRaw
-
-trackSummary <- processed_data$trackSummary
 
 trackRaw <- processed_data$trackRaw
 
 
 # export for internal use
-usethis::use_data(expSummary,
-                  expStats,
-                  chanSummary,
-                  chanRaw,
-                  trackSummary,
+usethis::use_data(chanSummary,
                   trackRaw,
                   internal = TRUE, overwrite = TRUE)

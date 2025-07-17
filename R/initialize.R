@@ -5,6 +5,7 @@
 #' 
 #' @param db_path Character value specifying the path to the file where the database should be initialized.
 #' @param data List of data.frames to initialize or add to the database. Internal test data will be used if `data` is NULL.
+#' @param con A database connection (optional) if one is already open
 #'
 #' @details The data.frames expected in data are `expStats`, `chanSummary`, `chanRaw`,
 #' `trackSummary`, and `trackRaw` (as returned by `process_experiments()`).
@@ -14,7 +15,7 @@
 #' 
 #' @importFrom DBI dbConnect dbDisconnect
 #' @importFrom RSQLite SQLite
-dbinit <- function(db_path, data = NULL)
+dbinit <- function(db_path = NULL, data = NULL, con = NULL)
 {
   # for testing:
   # db_path <- file.path(system('git rev-parse --show-toplevel', intern = TRUE), '.data', 'chemo-dash.sqlite')
@@ -24,23 +25,15 @@ dbinit <- function(db_path, data = NULL)
     data <- get_test_data()
 
   # connect
-  con <- dbConnect(SQLite(), db_path)
+  if(is.null(con))
+  {
+    con <- dbConnect(SQLite(), db_path)
+    disconnect <- TRUE
+  }else{
+    disconnect <- FALSE
+  }
   
 
-  
-
-  
-  # expStats
-  # Table of summary statistics for each experiment
-  # 
-  # @param expID      (key) Character, maps to `expSummary$expID`
-  # @param comparison (key) Character, description of the comparison (e.g. Within normals: Buffer vs fMLF8)
-  # @param test       (key) Character, test used for the statistical comparison
-  # @param stat             Double, test statistic
-  # @param p                Double, p-value for `stat`
-  dbupdate(con, 'expStats', data$expStats, c('expID', 'comparison', 'test'))
-
-  
   # chanSummary
   # Channel summary table
   # 
@@ -75,11 +68,15 @@ dbinit <- function(db_path, data = NULL)
   # @param pre_start_frames Integer, number of frames removed prior to a track crossing the upper threshold
   # @param post_end_frames  Integer, number of frames removed after a track crosses the bottom threshold
 
-  dbupdate(con, 'chanSummary', data$chanSummary, c('expID', 'chanID'))
+  dbupdate(con,
+           table = 'chanSummary',
+           dat = data$chanSummary,
+           key_fields = c('expID', 'chanID'))
   
   
   # chanRaw
   # Table of smoothed trajectories over all tracks in a channel
+  # Deprecated: these will actually be calculated on the fly
   # 
   # @param expID  (key) Character, maps to `expSummary$expID`
   # @param chanID (key) Integer, maps to `chanSummary$chanID`
@@ -90,24 +87,6 @@ dbinit <- function(db_path, data = NULL)
   # @param v_y          Double, velocity in the y direction (directed)
   # @param v            Double, total velocity
   # @param theta        Double, smoothed angle of migration at each frame
-  dbupdate(con, 'chanRaw', data$chanRaw, c('expID', 'chanID', 'frames'))
-
-  
-  # trackSummary
-  # Track summary table
-  # 
-  # @param expID     (key) Character, maps to `expSummary$expID`
-  # @param chanID    (key) Integer, maps to `chanSummary$chanID`
-  # @param trackID   (key) Integer, track ID - used in:
-  #                          `trackRaw`
-  # @param ce              Double, chemotactic efficiency
-  # @param angle_migration Double, angle of migration (net)
-  # @param av_theta        Double, mean instantaneous angle of migration
-  # @param max_v           Double, maximum velocity in μm per minute
-  # @param av_velocity     Double, mean velocity in μm per minute
-  # @param finished        Logical, TRUE when the cell passed the bottom ledge
-  # @param surv            Double, survival time in minutes (not helpful right now due to split tracks)
-  dbupdate(con, 'trackSummary', data$trackSummary, c('expID', 'chanID', 'trackID'))
 
   
   # trackRaw
@@ -126,11 +105,17 @@ dbinit <- function(db_path, data = NULL)
   # @param v_y           Double, velocity in the y direction (directed) in micrometers per minute
   # @param v             Double, total velocity
   # @param theta         Double, instantaneous angle of migration
-  dbupdate(con, 'trackRaw', data$trackRaw, c('expID', 'chanID', 'trackID', 'frames'))
+  dbupdate(con,
+           table = 'trackRaw',
+           dat = data$trackRaw,
+           key_fields = c('expID', 'chanID', 'trackID', 'frames'))
 
   
   # clean up
-  dbDisconnect(con)
+  if(disconnect)
+    dbDisconnect(con)
+  
+  invisible()
 }
 
 
@@ -157,9 +142,10 @@ dbupdate <- function(con, table, dat, key_fields)
   
   # if the table doesn't exist, create it using dat and return
   if(!table %in% dbListTables(con))
-    dbWriteTable(con, table, dat) |>
-      invisible()
-
+  {
+    dbWriteTable(con, table, dat)
+    return(invisible())
+  }
 
   # get non-key fields
   non_key_fields <- names(dat)[!names(dat) %in% key_fields]
@@ -191,7 +177,8 @@ dbupdate <- function(con, table, dat, key_fields)
   # if we do have non-key fields, look to see what can be updated vs what needs to be appended
   }else{
     # if the table exists, check for new data and rows that need updating
-    tmp <- dbGetQuery(con, paste("SELECT * FROM", table)) |>
+    tmp <- dbGetQuery(con, paste0("SELECT * FROM ", table, 
+                                  " WHERE expID IN ('", paste(unique(dat$expID), collapse = "', '"), "')")) |>
       right_join(dat, by = key_fields)
     
     
@@ -239,7 +226,7 @@ dbupdate <- function(con, table, dat, key_fields)
       {
         dbExecute(con, paste("UPDATE", table,
                              "SET", paste(paste0(non_key_fields, '=', tmp[i, non_key_fields]), collapse = ', '),
-                             "WHERE", paste(paste0(key_fields, '=', tmp[i, key_fields]))))
+                             "WHERE", paste(paste0(key_fields, '=', tmp[i, key_fields]), collapse = ' AND ')))
       }
     }
     
@@ -255,9 +242,6 @@ dbupdate <- function(con, table, dat, key_fields)
 #' @export
 get_test_data <- function()
 {
-  list(expStats     = expStats,
-       chanSummary  = chanSummary,
-       chanRaw      = chanRaw,
-       trackSummary = trackSummary,
+  list(chanSummary  = chanSummary,
        trackRaw     = trackRaw)
 }

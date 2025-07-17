@@ -19,7 +19,7 @@ test_that("get_test_data works", {
   expect_type(get_test_data(), 'list')
   
   expect_equal(names(get_test_data()), 
-               c('expStats', 'chanSummary', 'chanRaw', 'trackSummary', 'trackRaw'))
+               c('chanSummary', 'trackRaw'))
 })
   
 

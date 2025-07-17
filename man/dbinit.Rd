@@ -5,12 +5,14 @@
 \title{dbinit
 Set up database and infrastructure needed to run the Chemotaxis-Dashboard. If the database already exists and data is not empty, this will append the information in data to the database.}
 \usage{
-dbinit(db_path, data = NULL)
+dbinit(db_path = NULL, data = NULL, con = NULL)
 }
 \arguments{
 \item{db_path}{Character value specifying the path to the file where the database should be initialized.}
 
 \item{data}{List of data.frames to initialize or add to the database. Internal test data will be used if `data` is NULL.}
+
+\item{con}{A database connection (optional) if one is already open}
 }
 \value{
 Something - use this to sniff for existing DB information?
