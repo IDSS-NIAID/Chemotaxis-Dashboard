@@ -8,7 +8,7 @@ Plot the net angle of migration}
 ses_angle_migration(dat)
 }
 \arguments{
-\item{dat}{A data frame from the trackSummary table. Must contain columns `chanID`, `sID`, `treatment` and `angle_migration`.}
+\item{dat}{A data frame returned from `summarize_tracks`. Must contain columns `chanID`, `sID`, `treatment` and `angle_migration`.}
 }
 \value{
 A ggplot object

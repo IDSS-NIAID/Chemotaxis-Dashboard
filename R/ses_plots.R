@@ -100,7 +100,7 @@ ses_tracks_v <- function(dat)
 #' ses_angle_migration
 #' Plot the net angle of migration
 #' 
-#' @param dat A data frame from the trackSummary table. Must contain columns `chanID`, `sID`, `treatment` and `angle_migration`.
+#' @param dat A data frame returned from `summarize_tracks`. Must contain columns `chanID`, `sID`, `treatment` and `angle_migration`.
 #' 
 #' @return A ggplot object
 #' @export
@@ -173,7 +173,7 @@ ses_angle_migration_time <- function(dat)
 
 #' ses_chemotactic_efficiency
 #' 
-#' @param dat A data frame from the trackSummary table. Must contain columns `chanID`, `sID`, `treatment` and `ce`.
+#' @param dat A data frame from `summarize_tracks`. Must contain columns `chanID`, `sID`, `treatment` and `ce`.
 #' 
 #' @return A ggplot object
 #' @export

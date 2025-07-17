@@ -15,6 +15,8 @@ Running it outside of `export_ses` will not work without modifying the file -->
 ```{r setup}
 #| include: false
 
+stop('This report has been deprecated with the removal of trackSummary and chanRaw from the database.')
+
 library(ChemotaxisDashboard)
 
 library(RSQLite)
