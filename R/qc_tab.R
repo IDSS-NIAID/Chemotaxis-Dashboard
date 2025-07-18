@@ -70,7 +70,7 @@ qc_cardsUI <- function(id)
       sidebar = sidebar(qc_sidebarUI('qc')),
       card(full_screen = TRUE, 
            card_header("Track length distribution"), 
-           card_body(plotOutput(ns("qc_track_len"))),
+           card_body(plotOutput(ns("qc_track_len_plt"))),
            card_footer(downloadButton(ns('qc_track_len_download'), 'Download figure'))),
       card(full_screen = TRUE, 
            card_header("# Tracks (cells) over time"), 
@@ -186,7 +186,8 @@ qc_server <- function(id, con, shared_time_filter, shared_angle_filter, shared_t
                                                    from = 'chanSummary') |>
                                              mutate(expID = factor(expID),
                                                     chanID = factor(chanID),
-                                                    sID = factor(sID))
+                                                    sID = factor(sID)) |>
+                                             unique()
                                          }),
                                          vars_r = reactive(c('expID', 'sID', 'chanID'))
       )
@@ -201,7 +202,7 @@ qc_server <- function(id, con, shared_time_filter, shared_angle_filter, shared_t
                             drop = logical(0)))
                             
         get_dat(con,
-                select = 'expID, chanID, trackID, x, y, v_x, v_y, theta, frames',
+                select = 'expID, chanID, trackID, x, y, v_x, v_y, v, theta, frames',
                 from = 'trackRaw',
                 where = paste0( "expID='", chan_select()$expID,  "' AND ",
                                "chanID=", chan_select()$chanID)) |>
@@ -215,7 +216,7 @@ qc_server <- function(id, con, shared_time_filter, shared_angle_filter, shared_t
                             where = paste0("expID='", chan_select()$expID, "' AND ",
                                            "chanID=", chan_select()$chanID)),
                     by = c("expID", "chanID"))          
-        })
+      })
       
       
       # this has summary track information plus filtering metadata
@@ -253,7 +254,7 @@ qc_server <- function(id, con, shared_time_filter, shared_angle_filter, shared_t
 
 
       # Figures
-      output$qc_track_len <- renderPlot((vals$track_len <- qc_track_len(track_raw())))
+      output$qc_track_len_plt <- renderPlot((vals$track_len <- qc_track_len(track_raw())))
       output$qc_track_len_download <- downloadHandler(
         filename = function() {
           if(length(chan_select()$expID) != 1)

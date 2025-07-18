@@ -74,17 +74,17 @@ ces_cardsUI <- function(id)
       card(full_screen = TRUE, 
            card_header("Selected Samples"), 
            card_body(DT::dataTableOutput(ns("ces_sample_table"))),
-      card_footer(downloadButton(ns('ces_sample_table_download'), 'Download table'))),
-      layout_columns(
-        card(full_screen = TRUE, 
-             card_header("Directed cell velocity over time (y)"), 
-             card_body(plotOutput(ns("ces_vy"))),
-        card_footer(downloadButton(ns('ces_vy_download'), 'Download figure'))),
-        card(full_screen = TRUE, 
-             card_header("Undirected cell velocity over time (x)"), 
-             card_body(plotOutput(ns("ces_vx"))),
-        card_footer(downloadButton(ns('ces_vx_download'), 'Download figure')))
-      )
+      card_footer(downloadButton(ns('ces_sample_table_download'), 'Download table')))#,
+      #layout_columns(
+      #  card(full_screen = TRUE, 
+      #       card_header("Directed cell velocity over time (y)"), 
+      #       card_body(plotOutput(ns("ces_vy"))),
+      #  card_footer(downloadButton(ns('ces_vy_download'), 'Download figure'))),
+      #  card(full_screen = TRUE, 
+      #       card_header("Undirected cell velocity over time (x)"), 
+      #       card_body(plotOutput(ns("ces_vx"))),
+      #  card_footer(downloadButton(ns('ces_vx_download'), 'Download figure')))
+      #)
     )
   )
 }
@@ -135,26 +135,26 @@ ces_server <- function(id, con, shared_time_filter, shared_angle_filter, shared_
       
       
       # pull raw channel information
-      chan_raw <- reactive({
-        
-        if(length(chan_select()$expID) > 0)
-        {
-          where <- paste(paste0( "expID IN (", paste0('"', chan_select()$ expID, '"', collapse = ", "), ")"),
-                         "AND",
-                         paste0("chanID IN (", paste(      chan_select()$chanID,      collapse = ", "), ")"))
-        }else{
-          where <- NULL
-        }
-        
-        get_dat(con,
-                select = 'expID, chanID, frames, v_x, v_y',
-                from = 'chanRaw',
-                where = where) |>
-          
-          mutate(time = frames / 2) |>
-          
-          left_join(chan_select(), by = join_by(expID, chanID))
-      })
+      #chan_raw <- reactive({
+      #  
+      #  if(length(chan_select()$expID) > 0)
+      #  {
+      #    where <- paste(paste0( "expID IN (", paste0('"', chan_select()$ expID, '"', collapse = ", "), ")"),
+      #                   "AND",
+      #                   paste0("chanID IN (", paste(      chan_select()$chanID,      collapse = ", "), ")"))
+      #  }else{
+      #    where <- NULL
+      #  }
+      #  
+      #  get_dat(con,
+      #          select = 'expID, chanID, frames, v_x, v_y',
+      #          from = 'chanRaw',
+      #          where = where) |>
+      #    
+      #    mutate(time = frames / 2) |>
+      #    
+      #    left_join(chan_select(), by = join_by(expID, chanID))
+      #})
       
 
       # Filters
@@ -238,35 +238,35 @@ ces_server <- function(id, con, shared_time_filter, shared_angle_filter, shared_
       
       
       # directed velocity plot
-      output$ces_vy <- renderPlot({
-        (vals$ces_vy <- chan_raw() |> 
-           mutate(v = v_y) |>
-           ces_v(ylab = 'Relative velocity (y - directed)',
-                 xlim = time_filter()))
-      })
+      #output$ces_vy <- renderPlot({
+      #  (vals$ces_vy <- chan_raw() |> 
+      #     mutate(v = v_y) |>
+      #     ces_v(ylab = 'Relative velocity (y - directed)',
+      #           xlim = time_filter()))
+      #})
       
-      output$ces_vy_download <- downloadHandler(
-        filename = function() {
-          paste0('ces_vy_', Sys.Date(), '.png')},
-        content = function(file) {
-          ggsave(file, vals$ces_vy)}
-      )
+      #output$ces_vy_download <- downloadHandler(
+      #  filename = function() {
+      #    paste0('ces_vy_', Sys.Date(), '.png')},
+      #  content = function(file) {
+      #    ggsave(file, vals$ces_vy)}
+      #)
       
       
       # undirected velocity plot
-      output$ces_vx <- renderPlot({
-        (vals$ces_vx <- chan_raw() |> 
-           mutate(v = v_x) |>
-           ces_v('Relative velocity (x - undirected)',
-                 xlim = time_filter()))
-      })
+      #output$ces_vx <- renderPlot({
+      #  (vals$ces_vx <- chan_raw() |> 
+      #     mutate(v = v_x) |>
+      #     ces_v('Relative velocity (x - undirected)',
+      #           xlim = time_filter()))
+      #})
       
-      output$ces_vx_download <- downloadHandler(
-        filename = function() {
-          paste0('ces_vx_', Sys.Date(), '.png')},
-        content = function(file) {
-          ggsave(file, vals$ces_vx)}
-      )
+      #output$ces_vx_download <- downloadHandler(
+      #  filename = function() {
+      #    paste0('ces_vx_', Sys.Date(), '.png')},
+      #  content = function(file) {
+      #    ggsave(file, vals$ces_vx)}
+      #)
     }
   )
 }

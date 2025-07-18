@@ -102,7 +102,7 @@ ses_cardsUI <- function(id)
 #' @param shared_ce_filter reactiveVal from the main server function for filtering on minimum chemotactic efficiency
 #'
 #' @export
-#' @importFrom shiny downloadHandler moduleServer reactive reactiveValues renderPlot renderTable updateNumericInput
+#' @importFrom shiny downloadHandler moduleServer reactive reactiveValues renderPlot renderTable req updateNumericInput
 #' @importFrom dplyr left_join filter
 #' @importFrom ggplot2 ggsave
 #' @importFrom utils write.csv
@@ -192,7 +192,7 @@ ses_server <- function(id, con, shared_time_filter, shared_angle_filter, shared_
                                       data_r = reactive({
                                         get_dat(con,
                                                 select = "DISTINCT expID",
-                                                from = "chanRaw")
+                                                from = "chanSummary")
                                       }),
                                       vars_r = 'expID')
 
@@ -201,7 +201,7 @@ ses_server <- function(id, con, shared_time_filter, shared_angle_filter, shared_
     track_raw_all <- reactive({
       
       get_dat(con,
-              select = "expID, chanID, trackID, x, y, v_x, v_y, theta, frames",
+              select = "expID, chanID, trackID, x, y, v_x, v_y, v, theta, frames",
               from = "trackRaw",
               where = paste0("expID='", exp_select()[1], "'")) |>
         mutate(time = frames / 2) |>
@@ -220,9 +220,9 @@ ses_server <- function(id, con, shared_time_filter, shared_angle_filter, shared_
     # this has summary track information plus filtering metadata
     track_summ <- reactive({
       track_raw_all() |>
-        filter(!drop) |>
+        filter(!drop) |>                                    # drop frames not passing time filter
         summarize_tracks() |>
-        mutate(drop = angle_migration < angle_filter() |
+        mutate(drop = angle_migration < angle_filter() |    # drop tracks not passing these filters 
                       distance_traveled < track_len() |
                       n_frames < track_n() |
                       ce < ce_filter())
@@ -233,8 +233,9 @@ ses_server <- function(id, con, shared_time_filter, shared_angle_filter, shared_
     track_raw <- reactive({
       track_raw_all() |>
           left_join(track_summ() |> 
-                    select(chanID, trackID, drop) |> 
-                    rename(drop_summ = drop)) |>
+                      select(chanID, trackID, drop) |> 
+                      rename(drop_summ = drop),
+                    by = join_by(chanID, trackID)) |>
           filter(!drop & !drop_summ)
     })
 
