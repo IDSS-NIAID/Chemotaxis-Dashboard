@@ -2,13 +2,22 @@
 % Please edit documentation in R/upload_tab.R
 \name{upload_tab}
 \alias{upload_tab}
+\alias{upload_ui}
+\alias{upload_server}
 \title{upload_tab}
 \usage{
-upload_tab()
+upload_ui(id)
+
+upload_server(id, con)
+}
+\arguments{
+\item{id}{The shiny namespace ID.}
+
+\item{con}{A database connection.}
 }
 \value{
 A tabPanel
 }
 \description{
-\code{upload_tab} UI for the upload tab.
+\code{process_uploaded_data} server-side logic for processing uploaded data.
 }

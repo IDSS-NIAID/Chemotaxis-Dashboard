@@ -1,10 +1,13 @@
-#' @title upload_tab
+#' upload_tab
 #'
+#' @name upload_tab
+#' 
 #' @param id Shiny namespace ID
 #' 
 #' @return A tabPanel
 #'
 #' @export
+#' @importFrom shiny actionButton fileInput h3 mainPanel NS numericInput p sidebarLayout sidebarPanel tableOutput tabPanel
 upload_ui <- function(id)
 {
   ns <- NS(id)
@@ -40,8 +43,10 @@ upload_ui <- function(id)
   )
 }
 
-#' @title process_uploaded_data
+#' process_uploaded_data
 #'
+#' @name upload_tab
+#' 
 #' @description
 #' \code{process_uploaded_data} server-side logic for processing uploaded data.
 #'
@@ -49,6 +54,7 @@ upload_ui <- function(id)
 #' @param con A database connection.
 #'
 #' @export
+#' @importFrom shiny moduleServer observeEvent reactive renderTable req showNotification
 upload_server <- function(id, con)
 {
   moduleServer(
@@ -93,8 +99,6 @@ upload_server <- function(id, con)
         dat_to_import <- processed_data()
         
         tryCatch({
-          print(str(dat_to_import))
-          
           dbupdate(con,
                    table = 'chanSummary',
                    dat = dat_to_import$chanSummary,

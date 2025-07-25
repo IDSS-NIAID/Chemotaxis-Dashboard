@@ -242,14 +242,10 @@ one_experiment <- function(dat_sub, experiment, results_dir, ledge_dist = 260, l
   # for all those pesky "no visible binding" notes
   if(FALSE)
   {
-    angle_mean <- angle_median <- angle_migration <- angle_sd <- av_theta <- ce <- ce_mean <- ce_median <- ce_sd <- NULL
-    channel <- channel_a <- cross_at <- d <- d1 <- d2 <- delta_x <- delta_y <- directed_v_undirected <- distance_traveled <- NULL
-    dvud <- dvud_p <- experiment <- finish_at <- finished <- Frame <- frames <- grp <- key_violation <- l <- max_y <- NULL
-    max_v <- max_v_mean <- max_v_median <- max_v_sd <- minutes <- nchannels <- nsamps <- ntrts <- prop_finished <- sd_theta <- NULL
-    theta <- theta_median <- theta_mean <- theta_sd <- tot_finished <- Track <- treatment <- v <- v_x <- v_y <- NULL
-    X <- x <- Y <- y <- y_max <- y_min <- NULL
-    Xo <- f <- non_mover <- pre_start <- post_end <- pass_filters <- raw_distance <- all_pre_start <- NULL
-    observe_finish <- observe_start <- tab <- n_cells <- no_start <- n_finished <- NULL
+    channel <-  Track <-  Frame <-  key_violation <-  Y <-  cross_at <-  X <-  Xo <-  x <-  y <-  f <-  
+      y_max <-  y_min <-  finish_at <-  treatment <-  non_mover <-  pre_start <-  no_start <-  post_end <-  
+      d1 <-  d2 <-  all_pre_start <-  raw_distance <-  theta <-  v_x <-  v_y <-  v <-  observe_start <- 
+      observe_finish <-  frames <-  expID <-  chanID <-  trackID <-  x_px <-  y_px <-  time <- NULL
   }
   
   # make sure we aren't getting more than 6 channels (indicates we have a day with multiple experiments that we missed)

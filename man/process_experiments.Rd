@@ -34,23 +34,3 @@ A list of data.frames...
 preprocess_experiments 
 This will read in results from the convolutional model and preprocess for the dashboard
 }
-\details{
-Work performed in `compare_two_functions`, called by this function, uses the `doParallel` package.
-Using multiple cores will speed this step up significantly. To do so, you will need to make a cluster and 
-register it with `doParallel` as follows: 
-
-`my.cluster <- parallel::makeCluster(n.cores, type = "PSOCK")`
-`doParallel::registerDoParallel(cl = my.cluster)`
-
-where `n.cores` is the number of cores you with to allocate to the task.
-A good starting point is `parallel::detectCores() - 1`.
-
-If this is not done, the code will execute serially.
-}
-\examples{
-# Here is an example line for the swarm file:
-# `module load R; R -e \
-#   "ChemotaxisDashboard::process_experiments('20070308', \
-#                                             '~/chemodash_raw', \
-#                                             '~/chemodash_out')"`
-}

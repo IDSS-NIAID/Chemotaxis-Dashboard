@@ -14,7 +14,7 @@ summarize_tracks <- function(trackRaw) {
   # for those pesky no visible binding notes
   if(FALSE)
     chanID <- trackID <- sID <- treatment <- frames <- x <- y <- theta <- v_x <- v_y <-
-      delta_y <- delta_x <- distance_traveled <- v <- NULL
+      delta_y <- delta_x <- distance_traveled <- v <- n_frames <- NULL
 
   track_summ <- trackRaw |>
     group_by(chanID, trackID, sID, treatment) |>
