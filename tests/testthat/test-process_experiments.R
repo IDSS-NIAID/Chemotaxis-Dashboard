@@ -54,7 +54,6 @@ test_that("process_experiments returns expected results", {
 processed_data <- process_experiments(experiment = '19000101',
                                       source_dir = system.file("extdata", package = "ChemotaxisDashboard"),
                                       results_dir = file.path(root, 'shiny'),
-                                      seed = 923847,
                                       ledge_dist = 260,
                                       ledge_upper = 0,
                                       ledge_lower = 1)

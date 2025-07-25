@@ -2,7 +2,7 @@
 # Functions included: 
 #  preprocess_experiments()
 #  one_experiment()
-#  compare_two_functions()
+#  process_uploaded_data()
 
 
 #' preprocess_experiments 
@@ -15,26 +15,8 @@
 #' @param ledge_upper Numeric, location of the upper ledge in the raw Y coordinate system (default is 100)
 #' @param ledge_lower Numeric, location of the lower ledge in the raw Y coordinate system (default is 500)
 #' 
-#' @details Work performed in `compare_two_functions`, called by this function, uses the `doParallel` package.
-#' Using multiple cores will speed this step up significantly. To do so, you will need to make a cluster and 
-#' register it with `doParallel` as follows: 
-#' 
-#' `my.cluster <- parallel::makeCluster(n.cores, type = "PSOCK")`
-#' `doParallel::registerDoParallel(cl = my.cluster)`
-#' 
-#' where `n.cores` is the number of cores you with to allocate to the task.
-#' A good starting point is `parallel::detectCores() - 1`.
-#' 
-#' If this is not done, the code will execute serially.
-#' 
 #' @return A list of data.frames...
 #' 
-#' @examples 
-#' # Here is an example line for the swarm file:
-#' # `module load R; R -e \
-#' #   "ChemotaxisDashboard::process_experiments('20070308', \
-#' #                                             '~/chemodash_raw', \
-#' #                                             '~/chemodash_out')"`
 #' @export
 #' 
 #' @importFrom dplyr bind_rows left_join mutate select tibble
@@ -112,6 +94,111 @@ process_experiments <- function(experiment, source_dir, results_dir,
 
   ##### read in raw data #####
   dat <- map_df(f, ~ read_csv(file.path(source_dir, .x), col_types = 'dddd') |> mutate(f = .x)) |>
+
+    left_join(results_meta, by = 'f') |>
+
+    filter(!is.na(X) & !is.na(Y))
+
+  
+  ##### pre-process data for these experiments #####
+  retval <- unique(dat$experiment) |>
+    map(~ one_experiment(dat_sub = filter(dat, experiment == .x),
+                         experiment = .x,
+                         results_dir = results_dir,
+                         ledge_dist = ledge_dist,
+                         ledge_upper = ledge_upper,
+                         ledge_lower = ledge_lower))
+
+  list(chanSummary  = map_df(retval, ~ .x$chanSummary),
+       trackRaw     = map_df(retval, ~ .x$trackRaw))
+}
+
+
+
+#' process_uploaded_data 
+#' This will read in results from the convolutional model and preprocess for the dashboard (uploaded through the upload tab)
+#' 
+#' @param uploaded_files A data.frame from the fileInput with the names and datapaths of the uploaded files.
+#' @param ledge_dist Numeric, distance between top and bottom ledges of the microscope image in micrometers (default is 260)
+#' @param ledge_upper Numeric, location of the upper ledge in the raw Y coordinate system (default is 100)
+#' @param ledge_lower Numeric, location of the lower ledge in the raw Y coordinate system (default is 500)
+#' 
+#' @return A list of data.frames...
+#' 
+#' @export
+#' 
+#' @importFrom dplyr bind_rows left_join mutate select tibble
+#' @importFrom purrr map map_chr map_int map_df map2_chr map2_df
+#' @importFrom readr read_csv
+#' @importFrom stringr str_replace
+#' @importFrom tidyr unnest
+process_uploaded_data <- function(uploaded_files, ledge_dist = 260, ledge_upper = 100, ledge_lower = 500)
+{
+  # for all those pesky "no visible binding" notes
+  if(FALSE)
+    channel <- dup <- key <- X <- Y <- NULL
+  
+  options(dplyr.summarise.inform = FALSE)
+
+  # source files for processing
+  f <- uploaded_files$name
+  
+  if(length(f) == 0)
+  {
+    warning('No files uploaded.')
+    return(NULL)
+  }
+
+  ##### experiment metadata #####
+  results_meta <- tibble(
+    f = f,
+    datapath = uploaded_files$datapath,
+
+    dat = strsplit(f, '_', fixed = TRUE),
+
+    date = {map_chr(dat, `[`, 1) |>
+        substr(1, 8) |>
+        as.Date(format = '%Y%m%d')},
+    
+    experiment = map_chr(dat, `[`, 1) |>
+      str_replace('-$', ''),
+    
+    channel = map_int(dat, ~
+                        {grep(.x, pattern = 'CH[1-6]', value = TRUE) |>
+                            substr(3, 3) |>
+                            as.integer()}),
+
+    sample = map_chr(dat, ~
+                       {.x[.x != ''][-1] |>
+                           gsub(pattern = '.csv', replacement = '', fixed = TRUE) |>
+                           grep(pattern = '^[0-9]', invert = TRUE, value = TRUE) |> # drop any single digit numbers
+                           grep(pattern = 'CH[1-6]', invert = TRUE, value = TRUE) |> # drop channel
+                           grep(pattern = 'fMLF|Basal|Buffer|C5a|SDF|IL.|LTB4', ignore.case = TRUE, invert = TRUE, value = TRUE)}[1]), # drop attractant
+                           
+    treatment = map_chr(dat, ~
+                          {.x |>
+                              gsub(pattern = '.csv', replacement = '', fixed = TRUE) |>
+                              grep(pattern = 'fMLF|Basal|Buffer|C5a|SDF|IL.|LTB4',
+                                   ignore.case = TRUE, value = TRUE)}[1])) |>
+
+    mutate(sample = tolower(sample),   # inconsistent capitalization
+           key = paste(experiment, channel),
+           dup = duplicated(key),
+           experiment = paste0(experiment, ifelse(dup, 'a',''))) |>
+
+    dplyr::select(-dat, -key)
+  
+  # note any experiments that were run on the same day
+  if(any(results_meta$dup))
+  {
+    experiment <- c(experiment, unique(results_meta$experiment[results_meta$dup]))
+  }
+  
+  results_meta <- dplyr::select(results_meta, -dup)
+
+
+  ##### read in raw data #####
+  dat <- map_df(1:nrow(results_meta), ~ read_csv(results_meta$datapath[.x], col_types = 'dddd') |> mutate(f = results_meta$f[.x])) |>
 
     left_join(results_meta, by = 'f') |>
 
