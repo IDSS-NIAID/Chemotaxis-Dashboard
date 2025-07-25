@@ -1,0 +1,16 @@
+^.*\.Rproj$
+^\.Rproj\.user$
+
+^shiny$
+^.data$
+^.github-issues$
+^.git$
+
+^LICENSE\.md$
+
+scratch.R
+^data-raw/
+docs/
+^test_apps
+
+^.*\.pptx$

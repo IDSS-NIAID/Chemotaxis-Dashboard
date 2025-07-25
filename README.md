@@ -1,4 +1,4 @@
-# Chemotaxis-Dashboard
+## Chemotaxis-Dashboard
 
 Welcome to the Chemotaxis-Dashboard repository on GitHub!
 
@@ -8,17 +8,14 @@ The chemotaxis dashboard facilitates exploration of summary statistics for each 
 
 The rest of this README contains lower-level notes and information on the repository itself. For additional information, checkout [this vignette](https://abcsfrederick.github.io/Chemotaxis-Dashboard/poster.html), or you can try out the shiny app with some simulated data on [shinyapps.io](https://mckalliprn.shinyapps.io/demo_app/?_ga=2.247871367.1296701277.1659379204-1106696516.1659379204).
 
-## Utilities
+### Setup
 
-We have a number of R scripts included in the `utils/` directory, and we are working on documenting them here. Check back soon for additional details.
+To setup and install your own copy of the Chemotaxis Dashboard:
 
-* Preprocessing raw tracks and calculation of summary statistics
-  * `preprocess.R` 
-  * `one_experiment.R`
-* Preprocess data in batches on our HPC cluster
-  * `make_swarm.R`
-  * `mergeData.R`
-* Identifying specific images to use for each cell for cell shape analysis
-  * `findGoodFrames.R`
-* Clustering of cell tracks
-  * `clustering_code.R`
+* Install the Chemotaxis-Dashboard package with:
+
+```
+devtools::install_github("abcsfrederick/Chemotaxis-Dashboard", ref= "chemo-dash2")
+```
+
+* Run `Chemotaxis-Dashboard::initialize()` - This only needs to be run once and will set up the database and other parts that the shiny app will look for.

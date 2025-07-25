@@ -1,0 +1,2 @@
+default:
+  db_path: 'chemo-dash.sqlite'
