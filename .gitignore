@@ -30,3 +30,4 @@ exportBatch.R
 reports/
 ..Rcheck/
 test_apps/
+data-raw/results_csv

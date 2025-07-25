@@ -18,7 +18,8 @@ app_ui <- function()
                               ses_cardsUI('ses')),
                     nav_panel(title = 'QC parameters',
                               qc_cardsUI('qc')),
-                    upload_tab())
+                    nav_panel(title = 'Upload Data',
+                              upload_ui('upload')))
 }
 
 
@@ -89,26 +90,6 @@ app_server <- function(input, output, session)
             shared_track_len, shared_track_n,
             shared_ce_filter)
   
-  ################
-  # Uploaded Data #
-  ################
-  
-  upload_data <- reactiveVal()
-  
-  observeEvent(input$upload_files, {
-    
-    # process uploaded data
-    processed_data <- process_uploaded_data(input$upload_files,
-                                            ledge_upper = input$ledge_upper,
-                                            ledge_lower = input$ledge_lower,
-                                            ledge_dist = input$ledge_dist)
-    
-    # save the processed data
-    upload_data(processed_data)
-    
-   # update the contents table
-   output$contents <- renderTable({
-     input$upload_files
-   })
-  })
+  # Upload Data
+  upload_server("upload", con)
 }
