@@ -51,4 +51,8 @@ for(i in 1:length(all_experiments))
   dbinit(con = con, data = processed_data)
 }
 
+# double check that these didn't end up getting added
+dbExecute(con, "DELETE FROM trackRaw WHERE expID = '19000101';")
+dbExecute(con, "DELETE FROM chanSummary WHERE expID = '19000101';")
+
 dbDisconnect(con)
