@@ -15,7 +15,11 @@ To setup and install your own copy of the Chemotaxis Dashboard:
 * Install the Chemotaxis-Dashboard package with:
 
 ```
-devtools::install_github("abcsfrederick/Chemotaxis-Dashboard", ref= "chemo-dash2")
+devtools::install_github("abcsfrederick/Chemotaxis-Dashboard")
 ```
 
-* Run `Chemotaxis-Dashboard::initialize()` - This only needs to be run once and will set up the database and other parts that the shiny app will look for.
+* Run `ChemotaxisDashboard::dbinit('shiny/chemo-dash.sqlite')`
+    - This only needs to be run once and will set up the database and other parts that the shiny app will look for.
+    - `dbinit` takes a few extra argument, `data` and `con`, that allow you to specify a data set and/or an existing database connection. If you run it without those arguments, it will create a new database and populate it with simulated data.
+    - You can use the `data-raw/process_raw_data.R` script to either intialize the database or add additional data to an existing database.
+    - You can also upload data through the app itself. If you upload data for a sample that already exists in the database, it will overwrite/update the existing data for that sample (e.g. if you update the tracks and want to recalculate the summary statistics, you can just upload the new tracks and it will update the summary statistics for that sample).
