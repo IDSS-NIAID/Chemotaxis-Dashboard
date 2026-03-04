@@ -15,7 +15,7 @@ To setup and install your own copy of the Chemotaxis Dashboard:
 * Install the Chemotaxis-Dashboard package with:
 
 ```
-devtools::install_github("abcsfrederick/Chemotaxis-Dashboard")
+devtools::install_github("IDSS-NIAID/Chemotaxis-Dashboard")
 ```
 
 * Run `ChemotaxisDashboard::dbinit('shiny/chemo-dash.sqlite')`
