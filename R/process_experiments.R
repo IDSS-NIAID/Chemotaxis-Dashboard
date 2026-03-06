@@ -68,12 +68,12 @@ process_experiments <- function(experiment, source_dir, results_dir,
                            gsub(pattern = '.csv', replacement = '', fixed = TRUE) |>
                            grep(pattern = '^[0-9]', invert = TRUE, value = TRUE) |> # drop any single digit numbers
                            grep(pattern = 'CH[1-6]', invert = TRUE, value = TRUE) |> # drop channel
-                           grep(pattern = 'fMLF|Basal|Buffer|C5a|SDF|IL.|LTB4', ignore.case = TRUE, invert = TRUE, value = TRUE)}[1]), # drop attractant
+                           grep(pattern = 'fMLF|Basal|Buffer|C5a|SDF|IL.|LTB[0-9-]+', ignore.case = TRUE, invert = TRUE, value = TRUE)}[1]), # drop attractant
                            
     treatment = map_chr(dat, ~
                           {.x |>
                               gsub(pattern = '.csv', replacement = '', fixed = TRUE) |>
-                              grep(pattern = 'fMLF|Basal|Buffer|C5a|SDF|IL.|LTB4',
+                              grep(pattern = 'fMLF|Basal|Buffer|C5a|SDF|IL.|LTB[0-9-]+',
                                    ignore.case = TRUE, value = TRUE)}[1])) |>
 
     mutate(sample = tolower(sample),   # inconsistent capitalization
@@ -173,12 +173,12 @@ process_uploaded_data <- function(uploaded_files, ledge_dist = 260, ledge_upper 
                            gsub(pattern = '.csv', replacement = '', fixed = TRUE) |>
                            grep(pattern = '^[0-9]', invert = TRUE, value = TRUE) |> # drop any single digit numbers
                            grep(pattern = 'CH[1-6]', invert = TRUE, value = TRUE) |> # drop channel
-                           grep(pattern = 'fMLF|Basal|Buffer|C5a|SDF|IL.|LTB4', ignore.case = TRUE, invert = TRUE, value = TRUE)}[1]), # drop attractant
+                           grep(pattern = 'fMLF|Basal|Buffer|C5a|SDF|IL.|LTB[0-9-]+', ignore.case = TRUE, invert = TRUE, value = TRUE)}[1]), # drop attractant
                            
     treatment = map_chr(dat, ~
                           {.x |>
                               gsub(pattern = '.csv', replacement = '', fixed = TRUE) |>
-                              grep(pattern = 'fMLF|Basal|Buffer|C5a|SDF|IL.|LTB4',
+                              grep(pattern = 'fMLF|Basal|Buffer|C5a|SDF|IL.|LTB[0-9-]+',
                                    ignore.case = TRUE, value = TRUE)}[1])) |>
 
     mutate(sample = tolower(sample),   # inconsistent capitalization
