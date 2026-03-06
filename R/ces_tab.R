@@ -104,7 +104,7 @@ ces_cardsUI <- function(id)
 #' 
 #' @export
 #' @importFrom datamods select_group_server
-#' @importFrom dplyr mutate left_join join_by rename
+#' @importFrom dplyr distinct mutate left_join join_by rename
 #' @importFrom DT renderDataTable
 #' @importFrom ggplot2 ggsave
 #' @importFrom shiny downloadHandler moduleServer reactive reactiveValues renderPlot
@@ -226,14 +226,14 @@ ces_server <- function(id, con, shared_time_filter, shared_angle_filter, shared_
 
       # Summary table
       output$ces_sample_table <- DT::renderDataTable({
-        chan_select()
+        distinct(chan_select())
       })
       
       output$ces_sample_table_download <- downloadHandler(
         filename = function() {
           paste0('ces_sample_table_', Sys.Date(), '.csv')},
         content = function(file) {
-          write.csv(chan_select(), file, row.names = FALSE)}
+          write.csv(distinct(chan_select()), file, row.names = FALSE)}
       )
       
       
