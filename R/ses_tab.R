@@ -311,9 +311,10 @@ ses_server <- function(id, con, shared_time_filter, shared_angle_filter, shared_
       # Existing app logic uses: time = frames / 2
       frame_min <- time_filter()[1] * 2
       frame_max <- time_filter()[2] * 2
-      
+
+      exp_id_sql <- DBI::dbQuoteString(con, exp_id)
       where_track_raw <- paste0(
-        "expID = '", exp_id, "' ",
+        "expID = ", exp_id_sql, " ",
         "AND frames BETWEEN ", frame_min, " AND ", frame_max
       )
       
@@ -336,7 +337,7 @@ ses_server <- function(id, con, shared_time_filter, shared_angle_filter, shared_
       chan_dat_raw <- get_dat(con,
                               select = "expID, sID, chanID, treatment",
                               from = "chanSummary",
-                              where = paste0("expID = '", exp_id, "'"))
+                              where = paste0("expID = ", DBI::dbQuoteString(con, exp_id)))
       ses_debug("track_raw_all chanSummary raw query finished: rows=", nrow(chan_dat_raw),
                 ", cols=", ncol(chan_dat_raw),
                 ", size=", ses_size(chan_dat_raw),
