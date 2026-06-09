@@ -10,7 +10,7 @@
 #' 
 #' @return A modularized tagList
 #' @export
-#' @importFrom shiny NS tagList selectizeInput
+#' @importFrom shiny NS tagList selectizeInput tags HTML
 ses_sidebarUI <- function(id)
 {
   ns <- NS(id)
@@ -151,7 +151,7 @@ ses_cardsUI <- function(id)
 #' @param shared_ce_filter reactiveVal from the main server function for filtering on minimum chemotactic efficiency
 #'
 #' @export
-#' @importFrom shiny downloadHandler moduleServer observe reactive reactiveValues renderPlot renderTable req updateNumericInput updateSelectizeInput
+#' @importFrom shiny downloadHandler moduleServer observe observeEvent reactive reactiveValues renderPlot req updateNumericInput updateSelectizeInput
 #' @importFrom dplyr left_join filter
 #' @importFrom ggplot2 ggsave
 #' @importFrom utils write.csv
